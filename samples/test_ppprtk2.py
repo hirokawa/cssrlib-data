@@ -16,7 +16,7 @@ griddef = '../data/clas_grid.def'
 xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)
 
 cs = cssr()
-cs.monlevel = 2
+cs.monlevel = 1
 cs.week = 2176  # 2021/9/22
 cs.read_griddef(griddef)
 
@@ -33,7 +33,7 @@ smode = np.zeros(nep, dtype=int)
 rr0 = [-3961951.1326752,  3381198.11019757,  3668916.0417232]  # from pntpos
 pos_ref = gn.ecef2pos(xyz_ref)
 
-nav.excl_sat = [5,58,65]
+nav.excl_sat = [5, 58, 65]
 nav.armode = 3
 
 if True:
@@ -73,7 +73,7 @@ if True:
         if cstat:
             ppprtkpos(nav, obs, cs)
         t[ne] = gn.timediff(nav.t, t0)
-        sol = nav.xa[0:3] if nav.smode==4 else nav.x[0:3]
+        sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
         smode[ne] = nav.smode
 

@@ -70,7 +70,6 @@ if True:
     plt.grid()
     plt.show()
 
-if True:
     plt.figure()
     plt.plot(enu[:, 0], enu[:, 1])
     plt.xlabel('easting[m]')
@@ -83,6 +82,6 @@ if True:
     plt.plot(t, dop[:, 1:])
     plt.legend(['pdop', 'hdop', 'vdop'])
     plt.grid()
-    plt.axis([0, nep, 0, 6])
+    plt.axis([0, nep, 0, 2])
     plt.xlabel('time[s]')
     plt.show()
