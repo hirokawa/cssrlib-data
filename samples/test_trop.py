@@ -62,7 +62,7 @@ if flg_trop:
 
     plt.grid()
     plt.axis([0, 90, 0, 10])
-    plt.legend(['全体', '静水圧項', '湿潤項'], prop=igfont)
-    plt.xlabel('仰角 [deg]', **igfont)
-    plt.ylabel('対流圏遅延 [m]', **igfont)
+    plt.legend(['total', 'dry', 'wet'], prop=igfont)
+    plt.xlabel('Elevation angle [deg]', **igfont)
+    plt.ylabel('Tropospheric delay [m]', **igfont)
     plt.show()
