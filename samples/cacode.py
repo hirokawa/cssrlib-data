@@ -65,29 +65,29 @@ def codegen(prn=1):
 if __name__ == '__main__':
 
     CLIGHT = 299792458.0
-    crate = 1.023e6    # チップレート[chip/sec]
+    crate = 1.023e6    # chip rate [chip/sec]
 
     prn = 193
-    ca = codegen(prn)  # C/Aコード生成
+    ca = codegen(prn)  # C/A code generation
 
-    P = 36952979.472  # 疑似距離 [m]
-    # P=36953010.338    # 疑似距離(端数調整) [m]
-    dt = P/CLIGHT  # 伝搬時間[s]
+    P = 36952979.472  # Suspected distance [m]
+    # P=36953010.338    # Pseudorange (rounded) [m]
+    dt = P/CLIGHT  # propagation time [s]
     chips = crate*dt
     delay = round(chips) % CA_LEN  # 268
     n = chips//CA_LEN    # 123
-    for i in range(delay):  # コード遅延分シフト
+    for i in range(delay):  # code delay shift
         ca = rotate(ca)
 
-    # 受信機側の処理
+    # Processing on the receiver side
     prn = 193
-    ca_ = codegen(prn)  # PRN193のC/Aコードレプリカ生成
+    ca_ = codegen(prn)  # C/A code replication of PRN193
     c = []
-    for i in range(CA_LEN):  # レプリカを遅延させて相関処理
+    for i in range(CA_LEN):  # Correlate with Delayed Replicas
         c.append(ca@ca_)
         ca_ = rotate(ca_)
 
-    delay_max = np.argmax(c)  # 相関ピークを見つける: 268
+    delay_max = np.argmax(c)  # Find correlation peaks: 268
     P_ = (n*CA_LEN+delay_max)*CLIGHT/crate
 
     plt.figure()
