@@ -1,5 +1,5 @@
 import numpy as np
-from cssrlib.gnss import Nav, ecef2pos, geodist, satazel, timediff
+from cssrlib.gnss import Nav, ecef2pos, geodist, satazel, timediff, uGNSS
 from cssrlib.ephemeris import findeph, eph2pos
 from cssrlib.plot import skyplot, plot_elv
 from cssrlib.rinex import rnxdec
@@ -11,10 +11,10 @@ dec = rnxdec()
 nav = Nav()
 nav = dec.decode_nav(navfile, nav)
 
-nep = 900
-elv = np.ones((nep, dec.MAXSAT))*np.nan
-azm = np.ones((nep, dec.MAXSAT))*np.nan
-mag = np.zeros((nep, dec.MAXSAT), dtype=int)
+nep = 60*15
+elv = np.ones((nep, uGNSS.MAXSAT))*np.nan
+azm = np.ones((nep, uGNSS.MAXSAT))*np.nan
+#mag = np.zeros((nep, uGNSS.MAXSAT), dtype=int)
 t = np.zeros(nep)*np.nan
 if dec.decode_obsh(obsfile) >= 0:
     rr = dec.pos
