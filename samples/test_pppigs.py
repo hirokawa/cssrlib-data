@@ -29,7 +29,7 @@ pos_ref = ecef2pos(xyz_ref)
 ep = [2021, 3, 19, 12, 0, 0]
 time = epoch2time(ep)
 doy = int(time2doy(time))
-nep = 240
+nep = 720  # 600
 
 # Files
 #
@@ -132,6 +132,8 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     for ne in range(nep):
 
+        # print(ne)
+
         obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
 
@@ -149,7 +151,6 @@ if rnx.decode_obsh(obsfile) >= 0:
         cstat = cs.chk_stat()
         if cstat:
             pppigspos(nav, obs, orb, bsx, cs)
-            print(ne)
 
         t[ne] = timediff(nav.t, t0)
         tc[ne] = timediff(cs.time, t0)
@@ -211,7 +212,13 @@ elif fig_type == 2:
     plt.legend()
     #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
-plt.show()
+
+plotFileFormat = 'eps'
+plotFileName = '.'.join(('test_pppigs', plotFileFormat))
+
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
+
+# plt.show()
 
 if nav.fout is not None:
     nav.fout.close()
