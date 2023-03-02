@@ -4,10 +4,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from os.path import expanduser
-import cssrlib.gnss as gn
 import sys
+
+import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
-from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff
+from cssrlib.gnss import ecef2pos, Nav, time2gpst, time2doy, timediff, epoch2time
+from cssrlib.peph import peph, readpcv, searchpcv, biasdec
 from cssrlib.pppigs import rtkinit, pppigspos
 from cssrlib.rinex import rnxdec
 
@@ -22,9 +24,34 @@ xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
 """
 
-navfile = '~/GNSS_NAV/IGS/2021/BRDC00IGS_R_20210780000_01D_MN.rnx'
-#obsfile = '~/GNSS_OBS/VGS/HIGHRATE/2021/078/CHOF00JPN_R_20210781200_15M_01S_MO.rnx'
-obsfile = '~/GNSS_OBS/IGS/HIGHRATE/2021/078/CHOF00JPN_S_20210781200_15M_01S_MO.rnx'
+# Start epoch and number of epochs
+#
+ep = [2021, 3, 19, 12, 0, 0]
+time = epoch2time(ep)
+doy = int(time2doy(time))
+nep = 240
+
+# Files
+#
+atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
+
+orbfile = expanduser(
+    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3')\
+    .format(ep[0], ep[0], doy)
+clkfile = expanduser(
+    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
+    .format(ep[0], ep[0], doy)
+
+bsxfile = expanduser('~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
+    .format(ep[0], ep[0], doy)
+
+navfile = expanduser('~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
+    .format(ep[0], ep[0], doy)
+
+obsfile = expanduser('~/GNSS_OBS/IGS/HIGHRATE/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_15M_01S_MO.rnx')\
+    .format(ep[0], doy, ep[0], doy, ep[3], ep[4])
+
+
 xyz_ref = [-3946217.2224, 3366689.3786, 3698971.7536]
 pos_ref = ecef2pos(xyz_ref)
 
@@ -33,11 +60,30 @@ cs.monlevel = 1
 cs.week = 2149
 cs.read_griddef(griddef)
 
-dec = rnxdec()
+rnx = rnxdec()
 nav = Nav()
-nav = dec.decode_nav(expanduser(navfile), nav)
-nep = 720
+orb = peph()
 
+# Decode RINEX NAV data
+#
+nav = rnx.decode_nav(navfile, nav)
+
+# Load precise orbits and clock offsets
+#
+nav = orb.parse_sp3(orbfile, nav)
+nav = rnx.decode_clk(clkfile, nav)
+
+# Load code and phase biases from Bias-SINEX
+#
+bsx = biasdec()
+bsx.parse(bsxfile)
+
+# Load ANTEX data for satellites and stations
+#
+nav.pcvs, pcvr = readpcv(atxfile)
+
+# Intialize data structures for results
+#
 t = np.zeros(nep)
 tc = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
@@ -46,11 +92,37 @@ dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
-if dec.decode_obsh(expanduser(obsfile)) >= 0:
+# Load RINEX OBS file header
+#
+if rnx.decode_obsh(obsfile) >= 0:
 
-    rr = dec.pos
-    rtkinit(nav, dec.pos)
+    # Get equipment information
+    #
+    rcv = rnx.rcv
+    ant = rnx.ant
+    print("Receiver:", rcv)
+    print("Antenna :", ant)
+
+    if 'UNKNOWN' in ant or ant.strip() == "":
+        print("ERROR: missing antenna type in RINEX OBS header!")
+        sys.exit(-1)
+
+    # Set PCO/PCV information
+    #
+    pcv = searchpcv(ant, time, pcvr)
+    if pcv is None:
+        print("ERROR: missing antenna type <{}> in ANTEX file!".format(ant))
+        sys.exit(-1)
+
+    # TODO: set the PCO,PCV for receiver antenna properly!!
+    #nav.ant_pco = pcv.off
+
+    # Position
+    #
+    rr = rnx.pos
+    rtkinit(nav, rnx.pos)
     pos = ecef2pos(rr)
+
     inet = cs.find_grid_index(pos)
 
     fc = open(l6file, 'rb')
@@ -60,7 +132,7 @@ if dec.decode_obsh(expanduser(obsfile)) >= 0:
 
     for ne in range(nep):
 
-        obs = dec.decode_obs()
+        obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
 
         cs.decode_l6msg(fc.read(250), 0)
@@ -76,7 +148,7 @@ if dec.decode_obsh(expanduser(obsfile)) >= 0:
 
         cstat = cs.chk_stat()
         if cstat:
-            pppigspos(nav, obs, cs)
+            pppigspos(nav, obs, orb, bsx, cs)
             print(ne)
 
         t[ne] = timediff(nav.t, t0)
@@ -89,7 +161,7 @@ if dec.decode_obsh(expanduser(obsfile)) >= 0:
         smode[ne] = nav.smode
 
     fc.close()
-    dec.fobs.close()
+    rnx.fobs.close()
 
 fig_type = 1
 ylim = 0.4
