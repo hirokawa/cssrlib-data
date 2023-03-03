@@ -4,17 +4,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from os.path import expanduser
-import sys
-
 import cssrlib.gnss as gn
-from cssrlib.cssrlib import cssr
 from cssrlib.gnss import ecef2pos, Nav, time2gpst, time2doy, timediff, epoch2time
 from cssrlib.peph import peph, readpcv, searchpcv, biasdec
 from cssrlib.pppigs import rtkinit, pppigspos
 from cssrlib.rinex import rnxdec
+import sys
 
-l6file = '../data/2021078M.l6'
-griddef = '../data/clas_grid.def'
 """
 navfile = '../data/SEPT078M.21P'
 obsfile = '../data/SEPT078M.21O'
@@ -29,7 +25,7 @@ pos_ref = ecef2pos(xyz_ref)
 ep = [2021, 3, 19, 12, 0, 0]
 time = epoch2time(ep)
 doy = int(time2doy(time))
-nep = 720  # 600
+nep = 300  # 600
 
 # Files
 #
@@ -54,11 +50,6 @@ obsfile = expanduser('~/GNSS_OBS/IGS/HIGHRATE/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03
 
 xyz_ref = [-3946217.2224, 3366689.3786, 3698971.7536]
 pos_ref = ecef2pos(xyz_ref)
-
-cs = cssr()
-cs.monlevel = 1
-cs.week = 2149
-cs.read_griddef(griddef)
 
 rnx = rnxdec()
 nav = Nav()
@@ -123,37 +114,31 @@ if rnx.decode_obsh(obsfile) >= 0:
     rtkinit(nav, rnx.pos)
     pos = ecef2pos(rr)
 
-    inet = cs.find_grid_index(pos)
-
-    fc = open(l6file, 'rb')
-    if not fc:
-        print("L6 messsage file cannot open.")
-        sys.exit(-1)
-
+    # Loop over number of epoch from file start
+    #
     for ne in range(nep):
-
-        # print(ne)
 
         obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
 
-        cs.decode_l6msg(fc.read(250), 0)
-        if cs.fcnt == 5:  # end of sub-frame
-            cs.week = week
-            cs.decode_cssr(cs.buff, 0)
-
+        # Set intial epoch
+        #
         if ne == 0:
             t0 = nav.t = obs.t
             t0.time = t0.time//30*30
-            cs.time = obs.t
             nav.time_p = t0
 
-        cstat = cs.chk_stat()
-        if cstat:
-            pppigspos(nav, obs, orb, bsx, cs)
+        # Call PPP module with IGS products
+        #
+        # TODO: find problem at first 20 epochs!
+        if ne < 20:
+            continue
 
+        pppigspos(nav, obs, orb, bsx)
+
+        # Save output
+        #
         t[ne] = timediff(nav.t, t0)
-        tc[ne] = timediff(cs.time, t0)
 
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
@@ -161,7 +146,6 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[idx] if nav.smode == 4 else nav.x[idx]
         smode[ne] = nav.smode
 
-    fc.close()
     rnx.fobs.close()
 
 fig_type = 1
@@ -175,7 +159,7 @@ fig = plt.figure(figsize=[7, 9])
 
 if fig_type == 1:
 
-    lbl_t = ['east[m]', 'north[m]', 'up[m]']
+    lbl_t = ['East [m]', 'North [m]', 'Up [m]']
     for k in range(3):
         plt.subplot(4, 1, k+1)
         plt.plot(t[idx0], enu[idx0, k], 'r.')
@@ -192,9 +176,9 @@ if fig_type == 1:
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
     plt.xticks(np.arange(0, nep+1, step=30))
-    plt.ylabel('ztd [cm]')
+    plt.ylabel('ZTD [cm]')
     plt.grid()
-    plt.xlabel('time[s]')
+    plt.xlabel('Time [s]')
     plt.legend()
 
 elif fig_type == 2:
@@ -206,7 +190,7 @@ elif fig_type == 2:
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
     plt.xlabel('easting [m]')
-    plt.ylabel('northing [m]')
+    plt.ylabel('Northing [m]')
     plt.grid()
     plt.axis('equal')
     plt.legend()
