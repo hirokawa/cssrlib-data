@@ -24,6 +24,7 @@ pos_ref = ecef2pos(xyz_ref)
 #
 ep = [2021, 3, 19, 12, 0, 0]
 time = epoch2time(ep)
+year = ep[0]
 doy = int(time2doy(time))
 nep = 300  # 600
 
@@ -33,22 +34,22 @@ atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
 
 orbfile = expanduser(
     '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3')\
-    .format(ep[0], ep[0], doy)
+    .format(year, year, doy)
 clkfile = expanduser(
     '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
-    .format(ep[0], ep[0], doy)
+    .format(year, year, doy)
 
 bsxfile = expanduser('~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
-    .format(ep[0], ep[0], doy)
+    .format(year, year, doy)
 
 navfile = expanduser('~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
-    .format(ep[0], ep[0], doy)
+    .format(year, year, doy)
 
 obsfile = expanduser('~/GNSS_OBS/IGS/HIGHRATE/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_15M_01S_MO.rnx')\
-    .format(ep[0], doy, ep[0], doy, ep[3], ep[4])
+    .format(year, doy, year, doy, ep[3], ep[4])
 
 
-xyz_ref = [-3946217.2224, 3366689.3786, 3698971.7536]
+xyz_ref = [-3946217.173, 3366689.450, 3698971.766]
 pos_ref = ecef2pos(xyz_ref)
 
 rnx = rnxdec()
@@ -89,21 +90,21 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Get equipment information
     #
-    rcv = rnx.rcv
-    ant = rnx.ant
-    print("Receiver:", rcv)
-    print("Antenna :", ant)
+    print("Receiver:", rnx.rcv)
+    print("Antenna :", rnx.ant)
 
-    if 'UNKNOWN' in ant or ant.strip() == "":
+    """
+    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         print("ERROR: missing antenna type in RINEX OBS header!")
         sys.exit(-1)
 
     # Set PCO/PCV information
     #
-    pcv = searchpcv(ant, time, pcvr)
+    pcv = searchpcv(rnx.ant, time, pcvr)
     if pcv is None:
-        print("ERROR: missing antenna type <{}> in ANTEX file!".format(ant))
+        print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
         sys.exit(-1)
+    """
 
     # TODO: set the PCO,PCV for receiver antenna properly!!
     #nav.ant_pco = pcv.off
