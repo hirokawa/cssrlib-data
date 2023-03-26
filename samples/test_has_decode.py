@@ -10,7 +10,7 @@ example of Galileo HAS correction data decoder
 """
 
 import numpy as np
-from ppp_has import has_decoder
+from cssrlib.ppp_has import has_decoder
 
 def parse_has_data_sample (file,ex=1):
     """ load HAS pages from file attached with Galileo HAS ICD """

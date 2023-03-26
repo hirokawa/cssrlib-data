@@ -9,6 +9,7 @@ from cssrlib.cssrlib import cssr
 from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff
 from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.rinex import rnxdec
+#from cssrlib.pntpos import stdinit, pntpos
 
 l6file = '../data/2021078M.l6'
 griddef = '../data/clas_grid.def'

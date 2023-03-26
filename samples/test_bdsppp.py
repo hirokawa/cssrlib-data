@@ -10,7 +10,7 @@ Interface Control Document Precise Point Positioning Service Signal PPP-B2b
 import numpy as np
 
 import bitstruct as bs
-from ppp_bds import bds_decoder
+from cssrlib.ppp_bds import bds_decoder
 from binascii import unhexlify
 
 # receiver log
