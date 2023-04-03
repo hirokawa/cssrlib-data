@@ -3,6 +3,7 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
+from os.path import expanduser
 import cssrlib.gnss as gn
 import sys
 from cssrlib.cssrlib import cssr
@@ -19,6 +20,13 @@ obsfile = '../data/SEPT078M.21O'
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
 
+"""
+navfile = '~/GNSS_NAV/IGS/2021/BRDC00IGS_R_20210780000_01D_MN.rnx'
+obsfile = '~/GNSS_OBS/IGS/HIGHRATE/2021/078/CHOF00JPN_S_20210781200_15M_01S_MO.rnx'
+xyz_ref = [-3946217.2224, 3366689.3786, 3698971.7536]
+pos_ref = ecef2pos(xyz_ref)
+"""
+
 cs = cssr()
 cs.monlevel = 1
 cs.week = 2149
@@ -26,7 +34,7 @@ cs.read_griddef(griddef)
 
 dec = rnxdec()
 nav = Nav()
-nav = dec.decode_nav(navfile, nav)
+nav = dec.decode_nav(expanduser(navfile), nav)
 nep = 180
 
 t = np.zeros(nep)
@@ -35,7 +43,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 dop = np.zeros((nep, 4))
 smode = np.zeros(nep, dtype=int)
-if dec.decode_obsh(obsfile) >= 0:
+if dec.decode_obsh(expanduser(obsfile)) >= 0:
     rr = dec.pos
     rtkinit(nav, dec.pos)
     pos = ecef2pos(rr)
@@ -85,6 +93,7 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 
 if fig_type == 1:
+
     lbl_t = ['east[m]', 'north[m]', 'up[m]']
     for k in range(3):
         plt.subplot(3, 1, k+1)
@@ -97,19 +106,23 @@ if fig_type == 1:
             plt.xlabel('time[s]')
         plt.ylabel(lbl_t[k])
         plt.grid()
-        plt.axis([0, ne, -ylim, ylim])
+        #plt.axis([0, ne, -ylim, ylim])
+
 elif fig_type == 2:
+
     ax = fig.add_subplot(111)
 
-    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
     plt.xlabel('easting [m]')
     plt.ylabel('northing [m]')
     plt.grid()
-    plt.axis('equal')
+    # plt.legend()
+    ylim = 0.05
     ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    # plt.axis('equal')
 
 plt.show()
 
