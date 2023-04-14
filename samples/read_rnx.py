@@ -14,7 +14,7 @@ nav = dec.decode_nav(navfile, nav)
 nep = 60*15
 elv = np.ones((nep, uGNSS.MAXSAT))*np.nan
 azm = np.ones((nep, uGNSS.MAXSAT))*np.nan
-#mag = np.zeros((nep, uGNSS.MAXSAT), dtype=int)
+
 t = np.zeros(nep)*np.nan
 if dec.decode_obsh(obsfile) >= 0:
     rr = dec.pos
@@ -29,7 +29,6 @@ if dec.decode_obsh(obsfile) >= 0:
             rs, dts = eph2pos(obs.t, eph)
             r, e = geodist(rs, rr)
             azm[ne, sat-1], elv[ne, sat-1] = satazel(pos, e)
-            # mag[ne,sat-1]=obs.mag[k,0]
 
     dec.fobs.close()
 
