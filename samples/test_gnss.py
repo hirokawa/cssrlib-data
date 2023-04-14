@@ -16,9 +16,14 @@ signals.update(
 
 for gns, sigs in signals.items():
     for sig in sigs:
-        rnxSig = rSigRnx(gns, uTYP.C, sig)
+        rnxSig = rSigRnx(gns, uTYP.L, sig)
         print("{} {} {:9.4f} MHz {:5.2f} cm".format(
               gns, rnxSig.str(),
               rnxSig.frequency(k=-6)*1e-6,
               rnxSig.wavelength(k=-6)*1e2))
     print()
+
+rnxSig = rSigRnx()
+rnxSig.str2sig(uGNSS.GPS, 'L1X')
+print(rnxSig.str())
+print()
