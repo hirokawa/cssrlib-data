@@ -17,14 +17,7 @@ if dec.decode_obsh(obsfile) >= 0:
             rSigRnx(uGNSS.GPS, uTYP.C, uSIG.L2W),
             rSigRnx(uGNSS.GPS, uTYP.L, uSIG.L1C),
             rSigRnx(uGNSS.GPS, uTYP.L, uSIG.L2W)]
-
-    for sig in sigs:
-        if sig.gns not in dec.sig_tab:
-            dec.sig_tab.update({sig.gns: {}})
-        if sig.typ not in dec.sig_tab[sig.gns]:
-            dec.sig_tab[sig.gns].update({sig.typ: []})
-        if sig.sig not in dec.sig_tab[sig.gns][sig.typ]:
-            dec.sig_tab[sig.gns][sig.typ].append(sig.sig)
+    dec.setSignals(sigs)
 
     for ne in range(nep):
         obs = dec.decode_obs()
