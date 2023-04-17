@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cssrlib.rinex import rnxdec
 from cssrlib.gnss import ecef2pos, timediff, dops, ecef2enu
+from cssrlib.gnss import rSigRnx, uGNSS, uTYP, uSIG
 from cssrlib.pntpos import stdinit, pntpos
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
@@ -14,6 +15,13 @@ navfile = '../data/SEPT078M.21P'
 obsfile = '../data/SEPT078M.21O'
 
 dec = rnxdec()
+
+# Define signals to be processed
+#
+sigs = [rSigRnx(uGNSS.GPS, uTYP.C, uSIG.L1C), ]
+dec.setSignals(sigs)
+
+
 nav = stdinit()
 nav = dec.decode_nav(navfile, nav)
 nep = 360
