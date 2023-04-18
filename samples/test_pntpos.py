@@ -18,7 +18,8 @@ dec = rnxdec()
 
 # Define signals to be processed
 #
-sigs = [rSigRnx(uGNSS.GPS, uTYP.C, uSIG.L1C), ]
+sigs = [rSigRnx(uGNSS.GPS, uTYP.C, uSIG.L1C),
+        rSigRnx(uGNSS.GAL, uTYP.C, uSIG.L1C), ]
 dec.setSignals(sigs)
 
 
