@@ -23,7 +23,15 @@ for gns, sigs in signals.items():
               rnxSig.wavelength(k=-6)*1e2))
     print()
 
-rnxSig = rSigRnx()
-rnxSig.str2sig(uGNSS.GPS, 'L1X')
-print(rnxSig.str())
-print()
+sig = rSigRnx(uGNSS.GPS, 'L1X')
+print(sig)
+print("<{:s}>".format(sig.__repr__()))
+
+sig = sig.toTyp(uTYP.C)
+print("<{:s}>".format(sig.__repr__()))
+
+sig = sig.toAtt()
+print("<{:s}>".format(sig.__repr__()))
+
+sig = sig.toTyp(uTYP.D).toAtt('X')
+print("<{:s}>".format(sig.__repr__()))

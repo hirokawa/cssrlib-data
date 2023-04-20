@@ -1,36 +1,16 @@
-from cssrlib.gnss import rSigRnx, uGNSS, uTYP, uSIG
-from cssrlib.gnss import sat2id, sat2prn
-from cssrlib.rinex import rnxdec
+from cssrlib.gnss import rSigRnx, uGNSS, uTYP, uSIG, sys2char
 
-obsfile = '../data/SEPT078M.21O'
+sig = rSigRnx()
+print(sys2char(sig.sys), sig.str())
 
-sigs = [rSigRnx(uGNSS.GPS, uTYP.C, uSIG.L1C),
-        rSigRnx(uGNSS.GPS, uTYP.C, uSIG.L2W),
-        rSigRnx(uGNSS.GPS, uTYP.L, uSIG.L1C),
-        rSigRnx(uGNSS.GPS, uTYP.L, uSIG.L2W)]
+sig = rSigRnx("EC5K")
+print(sys2char(sig.sys), sig.str())
 
-dec = rnxdec()
-dec.setSignals(sigs)
+sig = rSigRnx(uGNSS.GPS, "D1X")
+print(sys2char(sig.sys), sig.str())
 
-nep = 1
-if dec.decode_obsh(obsfile) >= 0:
+sig = rSigRnx(uGNSS.IRN, uTYP.S, uSIG.L1X)
+print(sys2char(sig.sys), sig.str())
 
-    for ne in range(nep):
-
-        obs = dec.decode_obs()
-
-        for i, sat in enumerate(obs.sat):
-
-            txt = "{} ".format(sat2id(sat))
-
-            sys, _ = sat2prn(sat)
-            sigs = dec.getSignals(sys, uTYP.C)
-            for j, sig in enumerate(sigs):
-                txt += "{} {:13.3f}  ".format(sig.str(), obs.P[i, j])
-            sigs = dec.getSignals(sys, uTYP.L)
-            for j, sig in enumerate(sigs):
-                txt += "{} {:13.3f}  ".format(sig.str(), obs.L[i, j])
-
-            print(txt)
-
-    dec.fobs.close()
+sig = rSigRnx(uGNSS.GPS, "D1X", "what??")
+print(sys2char(sig.sys), sig.str())

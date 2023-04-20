@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cssrlib.rinex import rnxdec
 from cssrlib.gnss import ecef2pos, timediff, dops, ecef2enu
-from cssrlib.gnss import rSigRnx, uGNSS, uTYP, uSIG
+from cssrlib.gnss import rSigRnx
 from cssrlib.pntpos import stdinit, pntpos
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
@@ -18,8 +18,7 @@ dec = rnxdec()
 
 # Define signals to be processed
 #
-sigs = [rSigRnx(uGNSS.GPS, uTYP.C, uSIG.L1C),
-        rSigRnx(uGNSS.GAL, uTYP.C, uSIG.L1C), ]
+sigs = [rSigRnx("GC1C"), rSigRnx("EC1C")]
 dec.setSignals(sigs)
 
 
