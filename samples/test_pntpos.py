@@ -14,11 +14,11 @@ pos_ref = ecef2pos(xyz_ref)
 navfile = '../data/SEPT078M.21P'
 obsfile = '../data/SEPT078M.21O'
 
-dec = rnxdec()
-
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("EC1C")]
+sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("JC1C")]
+
+dec = rnxdec()
 dec.setSignals(sigs)
 
 
