@@ -61,7 +61,9 @@ pos_ref = ecef2pos(xyz_ref)
 sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EC1C"), rSigRnx("EC5Q"),
         rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q")]
+        rSigRnx("EL1C"), rSigRnx("EL5Q"),
+        rSigRnx("GS1C"), rSigRnx("GS2W"),
+        rSigRnx("ES1C"), rSigRnx("ES5Q")]
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
