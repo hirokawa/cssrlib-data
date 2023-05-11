@@ -5,8 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from os.path import expanduser
 import cssrlib.gnss as gn
-from cssrlib.gnss import ecef2pos, Nav, time2gpst, time2doy, timediff, epoch2time
-from cssrlib.peph import peph, readpcv, searchpcv, biasdec
+from cssrlib.gnss import ecef2pos, Nav
+from cssrlib.gnss import time2gpst, time2doy, timediff, epoch2time
+from cssrlib.gnss import rSigRnx
+from cssrlib.peph import atxdec, searchpcv
+from cssrlib.peph import peph, biasdec
 from cssrlib.pppigs import rtkinit, pppigspos
 from cssrlib.rinex import rnxdec
 import sys
@@ -26,7 +29,7 @@ ep = [2021, 3, 19, 12, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 300  # 600
+nep = 3500  # 600
 
 # Files
 #
@@ -45,14 +48,24 @@ bsxfile = expanduser('~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D
 navfile = expanduser('~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
     .format(year, year, doy)
 
-obsfile = expanduser('~/GNSS_OBS/IGS/HIGHRATE/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_15M_01S_MO.rnx')\
+obsfile = expanduser('~/GNSS_OBS/VGS/HOURLY/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_01H_01S_MO.rnx')\
     .format(year, doy, year, doy, ep[3], ep[4])
 
 
 xyz_ref = [-3946217.173, 3366689.450, 3698971.766]
 pos_ref = ecef2pos(xyz_ref)
 
+
+# Define signals to be processed
+#
+sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
+        rSigRnx("EC1C"), rSigRnx("EC5Q"),
+        rSigRnx("GL1C"), rSigRnx("GL2W"),
+        rSigRnx("EL1C"), rSigRnx("EL5Q")]
+
 rnx = rnxdec()
+rnx.setSignals(sigs)
+
 nav = Nav()
 orb = peph()
 
@@ -70,9 +83,18 @@ nav = rnx.decode_clk(clkfile, nav)
 bsx = biasdec()
 bsx.parse(bsxfile)
 
+# Set rover and base antenna
+#
+#rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
+
 # Load ANTEX data for satellites and stations
 #
-nav.pcvs, pcvr = readpcv(atxfile)
+atx = atxdec()
+atx.readpcv(atxfile)
+
+# Set satelite antenna PCO/PCV data
+#
+nav.sat_ant = atx.pcvs
 
 # Intialize data structures for results
 #
@@ -93,21 +115,16 @@ if rnx.decode_obsh(obsfile) >= 0:
     print("Receiver:", rnx.rcv)
     print("Antenna :", rnx.ant)
 
-    """
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         print("ERROR: missing antenna type in RINEX OBS header!")
         sys.exit(-1)
 
     # Set PCO/PCV information
     #
-    pcv = searchpcv(rnx.ant, time, pcvr)
-    if pcv is None:
+    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+    if nav.rcv_ant is None:
         print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
         sys.exit(-1)
-    """
-
-    # TODO: set the PCO,PCV for receiver antenna properly!!
-    #nav.ant_pco = pcv.off
 
     # Position
     #
@@ -132,8 +149,10 @@ if rnx.decode_obsh(obsfile) >= 0:
         # Call PPP module with IGS products
         #
         # TODO: find problem at first 20 epochs!
+        """
         if ne < 20:
             continue
+        """
 
         pppigspos(nav, obs, orb, bsx)
 
