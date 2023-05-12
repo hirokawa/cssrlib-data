@@ -29,7 +29,7 @@ ep = [2021, 3, 19, 12, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 3500  # 600
+nep = 2
 
 # Files
 #
@@ -59,14 +59,18 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
         rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
         rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q")]
+        rSigRnx("EC1X"), rSigRnx("EC5X"),
+        rSigRnx("EL1X"), rSigRnx("EL5X"),
+        rSigRnx("ES1X"), rSigRnx("ES5X")]
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
+
+# Set rover antenna
+#
+#rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
 nav = Nav()
 orb = peph()
@@ -84,10 +88,6 @@ nav = rnx.decode_clk(clkfile, nav)
 #
 bsx = biasdec()
 bsx.parse(bsxfile)
-
-# Set rover and base antenna
-#
-#rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
 # Load ANTEX data for satellites and stations
 #
@@ -150,12 +150,6 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with IGS products
         #
-        # TODO: find problem at first 20 epochs!
-        """
-        if ne < 20:
-            continue
-        """
-
         pppigspos(nav, obs, orb, bsx)
 
         # Save output
