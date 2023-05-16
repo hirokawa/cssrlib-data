@@ -3,11 +3,12 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from os.path import expanduser
+from os.path import expanduser, exists
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2gpst, time2doy, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
+from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
 from cssrlib.pppigs import rtkinit, pppigspos
@@ -25,36 +26,42 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Start epoch and number of epochs
 #
-ep = [2021, 3, 19, 12, 0, 0]
+#ep = [2021, 3, 19, 12, 0, 0]
+ep = [2022, 4, 1, 12, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 2
+nep = 3600
 
 # Files
 #
 atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
 
 orbfile = expanduser(
-    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3')\
+    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
     .format(year, year, doy)
+
 clkfile = expanduser(
     '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
     .format(year, year, doy)
 
-bsxfile = expanduser('~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
+bsxfile = expanduser(
+    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
     .format(year, year, doy)
 
-navfile = expanduser('~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
+navfile = expanduser(
+    '~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
     .format(year, year, doy)
 
-obsfile = expanduser('~/GNSS_OBS/VGS/HOURLY/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_01H_01S_MO.rnx')\
+obsfile = expanduser(
+    '~/GNSS_OBS/VGS/HOURLY/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_01H_01S_MO.rnx')\
     .format(year, doy, year, doy, ep[3], ep[4])
 
+if not exists(orbfile):
+    orbfile = orbfile.replace('05M_ORB', '15M_ORB')
 
-xyz_ref = [-3946217.173, 3366689.450, 3698971.766]
+xyz_ref = [-3946217.1932, 3366689.4557, 3698971.7703]
 pos_ref = ecef2pos(xyz_ref)
-
 
 # Define signals to be processed
 #
@@ -116,6 +123,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     print("Receiver:", rnx.rcv)
     print("Antenna :", rnx.ant)
+    print()
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         print("ERROR: missing antenna type in RINEX OBS header!")
@@ -128,11 +136,32 @@ if rnx.decode_obsh(obsfile) >= 0:
         print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
         sys.exit(-1)
 
+    # Print available signals
+    #
+    print("Available signals")
+    for sys, sigs in rnx.sig_map.items():
+        txt = "{:7s} {}".format(sys2str(sys),
+                                ' '.join([sig.str() for sig in sigs.values()]))
+        print(txt)
+    print()
+
+    print("Selected signals")
+    for sys, tmp in rnx.sig_tab.items():
+        txt = "{:7s} ".format(sys2str(sys))
+        for _, sigs in tmp.items():
+            txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
+        print(txt)
+    print()
+
     # Position
     #
     rr = rnx.pos
     rtkinit(nav, rnx.pos)
     pos = ecef2pos(rr)
+
+    # TODO: disabled for testing!
+    #
+    nav.tidecorr = False
 
     # Loop over number of epoch from file start
     #
