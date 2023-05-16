@@ -6,7 +6,7 @@ import numpy as np
 from os.path import expanduser, exists
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
-from cssrlib.gnss import time2gpst, time2doy, timediff, epoch2time
+from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
@@ -31,7 +31,7 @@ ep = [2022, 4, 1, 12, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 3600
+nep = 900
 
 # Files
 #
@@ -162,6 +162,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # TODO: disabled for testing!
     #
     nav.tidecorr = False
+    nav.monlevel = 1
 
     # Loop over number of epoch from file start
     #
@@ -190,6 +191,12 @@ if rnx.decode_obsh(obsfile) >= 0:
         idx = nav.idx_ztd
         ztd[ne] = nav.xa[idx] if nav.smode == 4 else nav.x[idx]
         smode[ne] = nav.smode
+
+        print("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}"
+              .format(time2str(obs.t),
+                      sol[0], sol[1], sol[2],
+                      enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                      smode[ne]))
 
     rnx.fobs.close()
 
