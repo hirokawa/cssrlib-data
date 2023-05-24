@@ -4,14 +4,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from os.path import expanduser
-import cssrlib.gnss as gn
 import sys
+
+import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
 from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff
+from cssrlib.gnss import rSigRnx
+from cssrlib.peph import atxdec, searchpcv
 from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.rinex import rnxdec
+
 #from cssrlib.pntpos import stdinit, pntpos
 
+atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
 l6file = '../data/2021078M.l6'
 griddef = '../data/clas_grid.def'
 navfile = '../data/SEPT078M.21P'
@@ -33,10 +38,29 @@ cs.monlevel = 1
 cs.week = 2149
 cs.read_griddef(griddef)
 
+# Define signals to be processed
+#
+sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
+        rSigRnx("EC1C"), rSigRnx("EC5Q"),
+        rSigRnx("JC1C"), rSigRnx("JC2X"),
+        rSigRnx("GL1C"), rSigRnx("GL2W"),
+        rSigRnx("EL1C"), rSigRnx("EL5Q"),
+        rSigRnx("JL1C"), rSigRnx("JL2X"),
+        rSigRnx("GS1C"), rSigRnx("GS2W"),
+        rSigRnx("ES1C"), rSigRnx("ES5Q"),
+        rSigRnx("JS1C"), rSigRnx("JS2X")]
+
 dec = rnxdec()
+dec.setSignals(sigs)
+
 nav = Nav()
 nav = dec.decode_nav(expanduser(navfile), nav)
 nep = 180
+
+# Load ANTEX data for satellites and stations
+#
+atx = atxdec()
+atx.readpcv(atxfile)
 
 t = np.zeros(nep)
 tc = np.zeros(nep)
@@ -45,6 +69,26 @@ sol = np.zeros((nep, 4))
 dop = np.zeros((nep, 4))
 smode = np.zeros(nep, dtype=int)
 if dec.decode_obsh(expanduser(obsfile)) >= 0:
+
+    if 'UNKNOWN' in dec.ant:
+        dec.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
+
+    # Get equipment information
+    #
+    print("Receiver:", dec.rcv)
+    print("Antenna :", dec.ant)
+
+    if 'UNKNOWN' in dec.ant or dec.ant.strip() == "":
+        print("ERROR: missing antenna type in RINEX OBS header!")
+        sys.exit(-1)
+
+    # Set PCO/PCV information
+    #
+    nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
+    if nav.rcv_ant is None:
+        print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
+        sys.exit(-1)
+
     rr = dec.pos
     rtkinit(nav, dec.pos)
     pos = ecef2pos(rr)
