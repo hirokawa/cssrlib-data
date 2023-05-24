@@ -3,7 +3,6 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from os.path import expanduser
 import sys
 
 import cssrlib.rinex as rn
@@ -13,7 +12,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkinit, relpos
 
-atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
+atxfile = '../data/igs14.atx'
 navfile = '../data/SEPT2650.21P'
 obsfile = '../data/SEPT265G.21O'
 basefile = '../data/3034265G.21O'
@@ -70,17 +69,29 @@ pos_ref = gn.ecef2pos(xyz_ref)
 rtkinit(nav, rr0)
 rr = rr0
 
-# Load ANTEX data for satellites and stations
-#
-atx = atxdec()
-atx.readpcv(atxfile)
-
 if 'UNKNOWN' in dec.ant or dec.ant.strip() == "":
     dec.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 if 'UNKNOWN' in decb.ant or decb.ant.strip() == "":
     decb.ant = "{:16s}{:4s}".format("TRM59800.80", "NONE")
 
-# Get equipment information
+# Load ANTEX data for satellites and stations
+#
+atx = atxdec()
+atx.readpcv(atxfile)
+
+# Set PCO/PCV information
+#
+nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
+if nav.rcv_ant is None:
+    print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
+    sys.exit(-1)
+
+nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
+if nav.rcv_ant_b is None:
+    print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
+    sys.exit(-1)
+
+# Print equipment information
 #
 print("Rover:")
 print("  Receiver:", dec.rcv)
@@ -90,17 +101,6 @@ print("Base:")
 print("  Receiver:", decb.rcv)
 print("  Antenna :", decb.ant)
 print()
-
-# Set PCO/PCV information
-#
-nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
-if nav.rcv_ant is None:
-    print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
-    sys.exit(-1)
-nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
-if nav.rcv_ant_b is None:
-    print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
-    sys.exit(-1)
 
 for ne in range(nep):
     obs, obsb = rn.sync_obs(dec, decb)

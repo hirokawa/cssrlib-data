@@ -3,7 +3,6 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from os.path import expanduser
 import sys
 
 from cssrlib.cssrlib import cssr
@@ -13,23 +12,13 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.peph import atxdec, searchpcv
 
-atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
-
+atxfile = '../dat/igs14.atx'
 navfile = '../data/SEPT2650.21P'
 obsfile = '../data/SEPT265G.21O'
 l6file = '../data/2021265G.l6'
 griddef = '../data/clas_grid.def'
 
 xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)
-
-"""
-navfile = '~/GNSS_NAV/IGS/2021/BRDC00IGS_R_20212650000_01D_MN.rnx'
-obsfile = '~/GNSS_OBS/IGS/HIGHRATE/2021/265/CHOF00JPN_S_20212650630_15M_01S_MO.rnx'
-l6file = '../data/2021265G.l6'
-griddef = '../data/clas_grid.def'
-
-xyz_ref = [-3946217.2224, 3366689.3786, 3698971.7536]
-"""
 
 # Intial position guess
 #
@@ -61,8 +50,8 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
 dec = rn.rnxdec()
 dec.setSignals(sigs)
 nav = gn.Nav()
-dec.decode_nav(expanduser(navfile), nav)
-dec.decode_obsh(expanduser(obsfile))
+dec.decode_nav(navfile, nav)
+dec.decode_obsh(obsfile)
 
 
 if 'UNKNOWN' in dec.ant:
@@ -151,8 +140,8 @@ if True:
         plt.subplot(3, 1, k+1)
         plt.plot(t, enu[:, k], '-', color='gray')
         # plt.plot(t[idx1], enu[idx1, k], 'm.', label='stdpos')
-        plt.plot(t[idx5], enu[idx5, k], 'g.', markersize=ms, label='float')
-        plt.plot(t[idx4], enu[idx4, k], 'b.', markersize=ms, label='fix')
+        plt.plot(t[idx5], enu[idx5, k], 'y.', markersize=ms, label='float')
+        plt.plot(t[idx4], enu[idx4, k], 'g.', markersize=ms, label='fix')
         plt.xticks(np.arange(0, nep+1, step=30))
         plt.ylabel(lbl_t[k])
         plt.xlabel('time[s]')
@@ -163,8 +152,8 @@ if True:
 
     plt.plot(enu[:, 0], enu[:, 1], '-', color='gray')
     # plt.plot(enu[idx1, 0], enu[idx1, 1], 'm.', markersize=ms, label='stdpos')
-    plt.plot(enu[idx5, 0], enu[idx5, 1], 'g.', markersize=ms, label='float')
-    plt.plot(enu[idx4, 0], enu[idx4, 1], 'b.', markersize=ms, label='fix')
+    plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', markersize=ms, label='float')
+    plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', markersize=ms, label='fix')
 
     plt.xlabel('easting [m]')
     plt.ylabel('northing [m]')

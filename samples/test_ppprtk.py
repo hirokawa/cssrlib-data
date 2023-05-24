@@ -3,7 +3,6 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from os.path import expanduser
 import sys
 
 import cssrlib.gnss as gn
@@ -16,7 +15,7 @@ from cssrlib.rinex import rnxdec
 
 #from cssrlib.pntpos import stdinit, pntpos
 
-atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
+atxfile = '../data/igs14.atx'
 l6file = '../data/2021078M.l6'
 griddef = '../data/clas_grid.def'
 navfile = '../data/SEPT078M.21P'
@@ -25,13 +24,6 @@ obsfile = '../data/SEPT078M.21O'
 # based on GSI F5 solution
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
-
-"""
-navfile = '~/GNSS_NAV/IGS/2021/BRDC00IGS_R_20210780000_01D_MN.rnx'
-obsfile = '~/GNSS_OBS/IGS/HIGHRATE/2021/078/CHOF00JPN_S_20210781200_15M_01S_MO.rnx'
-xyz_ref = [-3946217.2224, 3366689.3786, 3698971.7536]
-pos_ref = ecef2pos(xyz_ref)
-"""
 
 cs = cssr()
 cs.monlevel = 1
@@ -54,7 +46,7 @@ dec = rnxdec()
 dec.setSignals(sigs)
 
 nav = Nav()
-nav = dec.decode_nav(expanduser(navfile), nav)
+nav = dec.decode_nav(navfile, nav)
 nep = 180
 
 # Load ANTEX data for satellites and stations
@@ -68,7 +60,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 dop = np.zeros((nep, 4))
 smode = np.zeros(nep, dtype=int)
-if dec.decode_obsh(expanduser(obsfile)) >= 0:
+if dec.decode_obsh(obsfile) >= 0:
 
     if 'UNKNOWN' in dec.ant:
         dec.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
