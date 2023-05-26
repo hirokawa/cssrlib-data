@@ -50,7 +50,7 @@ else:
 
     # Start epoch and number of epochs
     #
-    ep = [2021, 3, 19, 12, 0, 0]
+    ep = [2022, 4, 1, 12, 0, 0]
     time = epoch2time(ep)
     year = ep[0]
     doy = int(time2doy(time))
