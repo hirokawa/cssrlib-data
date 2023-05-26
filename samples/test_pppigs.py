@@ -11,57 +11,79 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import rtkinit, pppigspos
+from cssrlib.pppigs import rtkinit, pppigspos, IT
 from cssrlib.rinex import rnxdec
 import sys
 
-"""
-navfile = '../data/SEPT078M.21P'
-obsfile = '../data/SEPT078M.21O'
+igs = True
+if not igs:
 
-# based on GSI F5 solution
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
-pos_ref = ecef2pos(xyz_ref)
-"""
+    # Start epoch and number of epochs
+    #
+    ep = [2021, 3, 19, 12, 0, 0]
 
-# Start epoch and number of epochs
-#
-#ep = [2021, 3, 19, 12, 0, 0]
-ep = [2022, 4, 1, 12, 0, 0]
-time = epoch2time(ep)
-year = ep[0]
-doy = int(time2doy(time))
-nep = 900
+    time = epoch2time(ep)
+    year = ep[0]
+    doy = int(time2doy(time))
+    nep = 900
 
-# Files
-#
-atxfile = expanduser('~/GNSS_DAT/IGS/ANTEX/igs14.atx')
+    navfile = '../data/SEPT078M.21P'
+    obsfile = '../data/SEPT078M.21O'
 
-orbfile = expanduser(
-    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
-    .format(year, year, doy)
+    orbfile = expanduser(
+        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
+        .format(year, year, doy)
 
-clkfile = expanduser(
-    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
-    .format(year, year, doy)
+    clkfile = expanduser(
+        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
+        .format(year, year, doy)
 
-bsxfile = expanduser(
-    '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
-    .format(year, year, doy)
+    bsxfile = expanduser(
+        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
+        .format(year, year, doy)
 
-navfile = expanduser(
-    '~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
-    .format(year, year, doy)
+    # based on GSI F5 solution
+    xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+    pos_ref = ecef2pos(xyz_ref)
 
-obsfile = expanduser(
-    '~/GNSS_OBS/VGS/HOURLY/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_01H_01S_MO.rnx')\
-    .format(year, doy, year, doy, ep[3], ep[4])
+else:
+
+    # Start epoch and number of epochs
+    #
+    ep = [2021, 3, 19, 12, 0, 0]
+    time = epoch2time(ep)
+    year = ep[0]
+    doy = int(time2doy(time))
+    nep = 900
+
+    orbfile = expanduser(
+        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
+        .format(year, year, doy)
+
+    clkfile = expanduser(
+        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
+        .format(year, year, doy)
+
+    bsxfile = expanduser(
+        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
+        .format(year, year, doy)
+
+    navfile = expanduser(
+        '~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
+        .format(year, year, doy)
+
+    obsfile = expanduser(
+        '~/GNSS_OBS/VGS/HOURLY/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_01H_01S_MO.rnx')\
+        .format(year, doy, year, doy, ep[3], ep[4])
+
+    xyz_ref = [-3946217.1932, 3366689.4557, 3698971.7703]
+    pos_ref = ecef2pos(xyz_ref)
+
 
 if not exists(orbfile):
     orbfile = orbfile.replace('05M_ORB', '15M_ORB')
 
-xyz_ref = [-3946217.1932, 3366689.4557, 3698971.7703]
-pos_ref = ecef2pos(xyz_ref)
+atxfile = '../data/igs14.atx'
 
 # Define signals to be processed
 #
@@ -118,6 +140,9 @@ smode = np.zeros(nep, dtype=int)
 # Load RINEX OBS file header
 #
 if rnx.decode_obsh(obsfile) >= 0:
+
+    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
+        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
@@ -184,12 +209,12 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Save output
         #
-        t[ne] = timediff(nav.t, t0)
+        t[ne] = timediff(nav.t, t0)/60
 
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
-        idx = nav.idx_ztd
-        ztd[ne] = nav.xa[idx] if nav.smode == 4 else nav.x[idx]
+
+        ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
         print("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}"
@@ -212,13 +237,15 @@ fig = plt.figure(figsize=[7, 9])
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
+    x_ticks = np.arange(0, nep/60+1, step=1)
+
     for k in range(3):
         plt.subplot(4, 1, k+1)
         plt.plot(t[idx0], enu[idx0, k], 'r.')
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        plt.xticks(np.arange(0, nep+1, step=30))
+        plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
         #plt.axis([0, ne, -ylim, ylim])
@@ -227,10 +254,10 @@ if fig_type == 1:
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.xticks(np.arange(0, nep+1, step=30))
+    plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
     plt.grid()
-    plt.xlabel('Time [s]')
+    plt.xlabel('Time [min]')
     plt.legend()
 
 elif fig_type == 2:
