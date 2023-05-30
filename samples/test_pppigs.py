@@ -46,6 +46,15 @@ if not igs:
     xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
     pos_ref = ecef2pos(xyz_ref)
 
+    # Define signals to be processed
+    #
+    sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
+            rSigRnx("GL1C"), rSigRnx("GL2W"),
+            rSigRnx("GS1C"), rSigRnx("GS2W"),
+            rSigRnx("EC1C"), rSigRnx("EC5Q"),
+            rSigRnx("EL1C"), rSigRnx("EL5Q"),
+            rSigRnx("ES1C"), rSigRnx("ES5Q")]
+
 else:
 
     # Start epoch and number of epochs
@@ -73,26 +82,26 @@ else:
         .format(year, year, doy)
 
     obsfile = expanduser(
-        '~/GNSS_OBS/VGS/HOURLY/{:4d}/{:03d}/CHOF00JPN_S_{:4d}{:03d}{:02d}{:02d}_01H_01S_MO.rnx')\
+        '~/GNSS_OBS/IGS/HIGHRATE/{:4d}/{:03d}/AIRA00JPN_R_{:4d}{:03d}{:02d}{:02d}_15M_01S_MO.rnx')\
         .format(year, doy, year, doy, ep[3], ep[4])
 
-    xyz_ref = [-3946217.1932, 3366689.4557, 3698971.7703]
+    xyz_ref = [-3530185.9290,  4118797.1852,  3344036.6761]
     pos_ref = ecef2pos(xyz_ref)
+
+    # Define signals to be processed
+    #
+    sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
+            rSigRnx("GL1C"), rSigRnx("GL2W"),
+            rSigRnx("GS1C"), rSigRnx("GS2W"),
+            rSigRnx("EC1X"), rSigRnx("EC5X"),
+            rSigRnx("EL1X"), rSigRnx("EL5X"),
+            rSigRnx("ES1X"), rSigRnx("ES5X")]
 
 
 if not exists(orbfile):
     orbfile = orbfile.replace('05M_ORB', '15M_ORB')
 
 atxfile = '../data/igs14.atx'
-
-# Define signals to be processed
-#
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("EC1X"), rSigRnx("EC5X"),
-        rSigRnx("EL1X"), rSigRnx("EL5X"),
-        rSigRnx("ES1X"), rSigRnx("ES5X")]
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
