@@ -106,10 +106,6 @@ atxfile = '../data/igs14.atx'
 rnx = rnxdec()
 rnx.setSignals(sigs)
 
-# Set rover antenna
-#
-#rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
-
 nav = Nav()
 orb = peph()
 
