@@ -59,7 +59,7 @@ else:
 
     # Start epoch and number of epochs
     #
-    ep = [2022, 4, 1, 12, 0, 0]
+    ep = [2022, 4, 1, 18, 0, 0]
     time = epoch2time(ep)
     year = ep[0]
     doy = int(time2doy(time))
@@ -100,6 +100,13 @@ else:
 
 if not exists(orbfile):
     orbfile = orbfile.replace('05M_ORB', '15M_ORB')
+
+
+crzfile = obsfile.replace('.rnx', '.crx.gz')
+if not exists(obsfile) and exists(crzfile):
+    import os
+    os.system("CRZ2RNX {}".format(crzfile))
+
 
 atxfile = '../data/igs14.atx'
 
@@ -189,9 +196,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     rtkinit(nav, rnx.pos)
     pos = ecef2pos(rr)
 
-    # TODO: disabled for testing!
-    #
-    nav.tidecorr = False
     nav.monlevel = 1
 
     # Loop over number of epoch from file start
