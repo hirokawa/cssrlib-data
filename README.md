@@ -26,3 +26,4 @@ Pre-installation of CSSRlib is required.
 - [ ] Check and improve observation noise settings
 - [ ] Check slant iono process noise settings
 - [ ] Add residual output
+- [ ] Add check for observations, must be on different frequencies
