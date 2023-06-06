@@ -26,14 +26,14 @@ nep = 900
 navfile = '../data/SEPT078M.21P'
 obsfile = '../data/SEPT078M.21O'
 
-orbfile = expanduser('../data/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
-        .format(year, doy)
+orbfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
+    .format(year, doy)
 
-clkfile = expanduser('../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
-        .format(year, doy)
+clkfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+    .format(year, doy)
 
-bsxfile = expanduser('../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
-        .format(year, doy)
+bsxfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+    .format(year, doy)
 
 # based on GSI F5 solution
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
@@ -47,9 +47,6 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EC1C"), rSigRnx("EC5Q"),
         rSigRnx("EL1C"), rSigRnx("EL5Q"),
         rSigRnx("ES1C"), rSigRnx("ES5Q")]
-
-if not exists(orbfile):
-    orbfile = orbfile.replace('05M_ORB', '15M_ORB')
 
 atxfile = '../data/igs14.atx'
 
@@ -112,14 +109,12 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         print("ERROR: missing antenna type in RINEX OBS header!")
-        sys.exit(-1)
 
     # Set PCO/PCV information
     #
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
         print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
-        sys.exit(-1)
 
     # Print available signals
     #
