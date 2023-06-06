@@ -3,7 +3,7 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from os.path import expanduser, exists
+
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
@@ -13,100 +13,43 @@ from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
 from cssrlib.pppigs import rtkinit, pppigspos, IT
 from cssrlib.rinex import rnxdec
-import sys
 
-igs = True
-if not igs:
+# Start epoch and number of epochs
+#
+ep = [2021, 3, 19, 12, 0, 0]
 
-    # Start epoch and number of epochs
-    #
-    ep = [2021, 3, 19, 12, 0, 0]
+time = epoch2time(ep)
+year = ep[0]
+doy = int(time2doy(time))
+nep = 900
 
-    time = epoch2time(ep)
-    year = ep[0]
-    doy = int(time2doy(time))
-    nep = 900
+navfile = '../data/SEPT078M.21P'
+obsfile = '../data/SEPT078M.21O'
 
-    navfile = '../data/SEPT078M.21P'
-    obsfile = '../data/SEPT078M.21O'
+orbfile = expanduser('../data/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
+        .format(year, doy)
 
-    orbfile = expanduser(
-        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
-        .format(year, year, doy)
+clkfile = expanduser('../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
+        .format(year, doy)
 
-    clkfile = expanduser(
-        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
-        .format(year, year, doy)
+bsxfile = expanduser('../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
+        .format(year, doy)
 
-    bsxfile = expanduser(
-        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
-        .format(year, year, doy)
+# based on GSI F5 solution
+xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+pos_ref = ecef2pos(xyz_ref)
 
-    # based on GSI F5 solution
-    xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
-    pos_ref = ecef2pos(xyz_ref)
-
-    # Define signals to be processed
-    #
-    sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-            rSigRnx("GL1C"), rSigRnx("GL2W"),
-            rSigRnx("GS1C"), rSigRnx("GS2W"),
-            rSigRnx("EC1C"), rSigRnx("EC5Q"),
-            rSigRnx("EL1C"), rSigRnx("EL5Q"),
-            rSigRnx("ES1C"), rSigRnx("ES5Q")]
-
-else:
-
-    # Start epoch and number of epochs
-    #
-    ep = [2022, 4, 1, 18, 0, 0]
-    time = epoch2time(ep)
-    year = ep[0]
-    doy = int(time2doy(time))
-    nep = 900
-
-    orbfile = expanduser(
-        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_05M_ORB.SP3')\
-        .format(year, year, doy)
-
-    clkfile = expanduser(
-        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK')\
-        .format(year, year, doy)
-
-    bsxfile = expanduser(
-        '~/GNSS_DAT/COD0IGSRAP/{:4d}/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA')\
-        .format(year, year, doy)
-
-    navfile = expanduser(
-        '~/GNSS_NAV/IGS/{:4d}/BRDC00IGS_R_{:4d}{:03d}0000_01D_MN.rnx')\
-        .format(year, year, doy)
-
-    obsfile = expanduser(
-        '~/GNSS_OBS/IGS/HIGHRATE/{:4d}/{:03d}/AIRA00JPN_R_{:4d}{:03d}{:02d}{:02d}_15M_01S_MO.rnx')\
-        .format(year, doy, year, doy, ep[3], ep[4])
-
-    xyz_ref = [-3530185.9290,  4118797.1852,  3344036.6761]
-    pos_ref = ecef2pos(xyz_ref)
-
-    # Define signals to be processed
-    #
-    sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-            rSigRnx("GL1C"), rSigRnx("GL2W"),
-            rSigRnx("GS1C"), rSigRnx("GS2W"),
-            rSigRnx("EC1X"), rSigRnx("EC5X"),
-            rSigRnx("EL1X"), rSigRnx("EL5X"),
-            rSigRnx("ES1X"), rSigRnx("ES5X")]
-
+# Define signals to be processed
+#
+sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
+        rSigRnx("GL1C"), rSigRnx("GL2W"),
+        rSigRnx("GS1C"), rSigRnx("GS2W"),
+        rSigRnx("EC1C"), rSigRnx("EC5Q"),
+        rSigRnx("EL1C"), rSigRnx("EL5Q"),
+        rSigRnx("ES1C"), rSigRnx("ES5Q")]
 
 if not exists(orbfile):
     orbfile = orbfile.replace('05M_ORB', '15M_ORB')
-
-
-crzfile = obsfile.replace('.rnx', '.crx.gz')
-if not exists(obsfile) and exists(crzfile):
-    import os
-    os.system("CRZ2RNX {}".format(crzfile))
-
 
 atxfile = '../data/igs14.atx'
 
@@ -115,6 +58,11 @@ rnx.setSignals(sigs)
 
 nav = Nav()
 orb = peph()
+
+# Positioning mode
+# 0:static, 1:kinematic
+#
+nav.pmode = 0
 
 # Decode RINEX NAV data
 #
@@ -196,7 +144,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     rtkinit(nav, rnx.pos)
     pos = ecef2pos(rr)
 
-    nav.monlevel = 1
+    nav.monlevel = 1  # TODO: enabled for testing!
 
     # Loop over number of epoch from file start
     #
@@ -284,13 +232,9 @@ elif fig_type == 2:
     plt.legend()
     #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
-
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppigs', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
 
 # plt.show()
-
-if nav.fout is not None:
-    nav.fout.close()
