@@ -220,7 +220,7 @@ elif fig_type == 2:
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
-    plt.xlabel('easting [m]')
+    plt.xlabel('Easting [m]')
     plt.ylabel('Northing [m]')
     plt.grid()
     plt.axis('equal')
