@@ -6,6 +6,7 @@ import numpy as np
 from cssrlib.rinex import rnxdec
 from cssrlib.gnss import ecef2pos, timediff, dops, ecef2enu, pos2ecef, xyz2enu
 from cssrlib.pntpos import stdinit, pntpos
+from cssrlib.gnss import rSigRnx
 
 rr0 = xyz_ref = pos2ecef([35.342058098, 139.521986657, 47.5515], True)
 pos_ref = ecef2pos(xyz_ref)
@@ -15,6 +16,12 @@ navfile = '../data/SEPT2650.21P'
 obsfile = '../data/SEPT265G.21O'
 
 dec = rnxdec()
+
+# Define signals to be processed
+#
+sigs = [rSigRnx("GC1C"), rSigRnx("EC1C")]
+dec.setSignals(sigs)
+
 nav = stdinit()
 nav = dec.decode_nav(navfile, nav)
 nep = 360

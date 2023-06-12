@@ -12,44 +12,47 @@ example of Galileo HAS correction data decoder
 import numpy as np
 from cssrlib.ppp_has import has_decoder
 
-def parse_has_data_sample (file,ex=1):
+
+def parse_has_data_sample(file, ex=1):
     """ load HAS pages from file attached with Galileo HAS ICD """
-    rec=[]
+    rec = []
     valid = False
     nd = 256
     nc = 53
-    has_pages = np.zeros((nd-1,nc),dtype=int)
-    
-    with open(file,"r") as fh:
+    has_pages = np.zeros((nd-1, nc), dtype=int)
+
+    with open(file, "r") as fh:
         for line in fh:
             if "* HAS MESSAGE DECODING EXAMPLE {:d} *".format(ex) in line:
-                valid=True
+                valid = True
             if "* END HAS MESSAGE DECODING EXAMPLE {:d} *".format(ex) in line:
-                valid=False 
-                
+                valid = False
+
             if valid:
                 if '// PID' in line:
-                    pid=int(fh.readline())
+                    pid = int(fh.readline())
                     rec += [pid-1]
                 elif '// HAS encoded page' in line:
                     line = fh.readline()
-                    has_pages[pid-1,:]=np.genfromtxt(line.split()[1:-1],dtype="u1")
+                    has_pages[pid-1,
+                              :] = np.genfromtxt(line.split()[1:-1], dtype="u1")
     return rec, has_pages
+
 
 # available from Galileo HAS ICD
 file = 'Galileo-HAS-SIS-ICD-1.0_Annex_D_HAS_Message_Decoding_Example.txt'
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 
-gMat = np.genfromtxt(file_gm,dtype="u1",delimiter=",")
+gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 
 dec = has_decoder()
 dec.mon_level = 2
 
 # example 1 MS=15 mask/orbit/cbias/pbias
-rec, has_pages = parse_has_data_sample(file,1)
+rec, has_pages = parse_has_data_sample(file, 1)
 HASmsg = dec.decode_page(rec, has_pages, gMat, 15)
 dec.decode(HASmsg)
 # example 2 MS=2 clock
-rec, has_pages = parse_has_data_sample(file,2)
+rec, has_pages = parse_has_data_sample(file, 2)
 HASmsg = dec.decode_page(rec, has_pages, gMat, 2)
 dec.decode(HASmsg)

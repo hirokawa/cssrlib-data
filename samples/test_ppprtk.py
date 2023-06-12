@@ -3,14 +3,19 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import cssrlib.gnss as gn
 import sys
+
+import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
 from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff
+from cssrlib.gnss import rSigRnx
+from cssrlib.peph import atxdec, searchpcv
 from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.rinex import rnxdec
+
 #from cssrlib.pntpos import stdinit, pntpos
 
+atxfile = '../data/igs14.atx'
 l6file = '../data/2021078M.l6'
 griddef = '../data/clas_grid.def'
 navfile = '../data/SEPT078M.21P'
@@ -25,10 +30,29 @@ cs.monlevel = 1
 cs.week = 2149
 cs.read_griddef(griddef)
 
+# Define signals to be processed
+#
+sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
+        rSigRnx("EC1C"), rSigRnx("EC5Q"),
+        rSigRnx("JC1C"), rSigRnx("JC2L"),
+        rSigRnx("GL1C"), rSigRnx("GL2W"),
+        rSigRnx("EL1C"), rSigRnx("EL5Q"),
+        rSigRnx("JL1C"), rSigRnx("JL2L"),
+        rSigRnx("GS1C"), rSigRnx("GS2W"),
+        rSigRnx("ES1C"), rSigRnx("ES5Q"),
+        rSigRnx("JS1C"), rSigRnx("JS2L")]
+
 dec = rnxdec()
+dec.setSignals(sigs)
+
 nav = Nav()
 nav = dec.decode_nav(navfile, nav)
 nep = 180
+
+# Load ANTEX data for satellites and stations
+#
+atx = atxdec()
+atx.readpcv(atxfile)
 
 t = np.zeros(nep)
 tc = np.zeros(nep)
@@ -37,6 +61,26 @@ sol = np.zeros((nep, 4))
 dop = np.zeros((nep, 4))
 smode = np.zeros(nep, dtype=int)
 if dec.decode_obsh(obsfile) >= 0:
+
+    if 'UNKNOWN' in dec.ant:
+        dec.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
+
+    # Get equipment information
+    #
+    print("Receiver:", dec.rcv)
+    print("Antenna :", dec.ant)
+
+    if 'UNKNOWN' in dec.ant or dec.ant.strip() == "":
+        print("ERROR: missing antenna type in RINEX OBS header!")
+        sys.exit(-1)
+
+    # Set PCO/PCV information
+    #
+    nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
+    if nav.rcv_ant is None:
+        print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
+        sys.exit(-1)
+
     rr = dec.pos
     rtkinit(nav, dec.pos)
     pos = ecef2pos(rr)
@@ -86,6 +130,7 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 
 if fig_type == 1:
+
     lbl_t = ['east[m]', 'north[m]', 'up[m]']
     for k in range(3):
         plt.subplot(3, 1, k+1)
@@ -98,19 +143,23 @@ if fig_type == 1:
             plt.xlabel('time[s]')
         plt.ylabel(lbl_t[k])
         plt.grid()
-        plt.axis([0, ne, -ylim, ylim])
+        #plt.axis([0, ne, -ylim, ylim])
+
 elif fig_type == 2:
+
     ax = fig.add_subplot(111)
 
-    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
     plt.xlabel('easting [m]')
     plt.ylabel('northing [m]')
     plt.grid()
-    plt.axis('equal')
+    # plt.legend()
+    ylim = 0.05
     ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    # plt.axis('equal')
 
 plt.show()
 

@@ -20,3 +20,12 @@ Pre-installation of CSSRlib is required.
 - test_rtk2.py RTK positioning
 - test_ppprtk2.py PPP-RTK positioning
 
+## ToDo-List
+
+- [ ] Implement pole tide displacements
+- [ ] Check and improve observation noise settings
+- [ ] Check slant iono process noise settings
+- [ ] Add residual output
+- [ ] Add check for observations, must be on different frequencies
+- [ ] Number of frequencies `nav.nf` should be set automatically depending on specified signals
+- [ ] Code/phase error ratio `nav.eratio` should also work for > 2 signals
