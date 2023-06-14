@@ -28,4 +28,4 @@ Pre-installation of CSSRlib is required.
 - [ ] Add residual output
 - [ ] Add check for observations, must be on different frequencies
 - [ ] Number of frequencies `nav.nf` should be set automatically depending on specified signals
-- [ ] Code/phase error ratio `nav.eratio` should also work for > 2 signals
+- [ ] Code/phase error ratio `nav.erratio` should also work for > 2 signals
