@@ -5,10 +5,17 @@ Created on Sun Aug 22 21:01:49 2021
 @author: ruihi
 """
 
-import matplotlib.pyplot as plt
-from cssrlib.gnss import Nav, time2gpst, epoch2time, time2epoch, timeadd, \
-    antmodel, tropmodel, tropmapf
 import numpy as np
+import matplotlib.pyplot as plt
+from cssrlib.gnss import Nav
+from cssrlib.gnss import rSigRnx
+from cssrlib.gnss import time2gpst, epoch2time, time2epoch, timeadd
+from cssrlib.gnss import tropmodel, tropmapf
+from cssrlib.gnss import pos2ecef
+from cssrlib.peph import atxdec, searchpcv, antModelRx
+
+bdir = '../data/'
+atxfile = bdir+"igs14.atx"
 
 igfont = {'family': 'Meiryo'}
 
@@ -17,18 +24,40 @@ ep = time2epoch(t)
 week, tow = time2gpst(t)
 t1 = timeadd(t, 300)
 
+
+# Receiver position
+#
+lat = np.deg2rad(45)
+lon = np.deg2rad(11)
+hgt = 0
+
+rr = pos2ecef(np.array([lat, lon, hgt]))
+
+atx = atxdec()
+atx.readpcv(atxfile)
+
+# Retrieve station antennas
+#
+antr = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
+antb = "{:16s}{:4s}".format("TRM59800.80", "NONE")
+
 nav = Nav()
+nav.rcv_ant = searchpcv(atx.pcvr, antr, t1)
+nav.rcv_ant_b = searchpcv(atx.pcvr, antb, t1)
+
+sigs = [rSigRnx("GC1C"), rSigRnx("GC2W")]
 
 el_t = np.arange(10, 90)
-nf = 2
-ofst_r = np.zeros((len(el_t), nf))
-ofst_b = np.zeros((len(el_t), nf))
+ofst_r = np.zeros((len(el_t), len(sigs)))
+ofst_b = np.zeros((len(el_t), len(sigs)))
 for k, el in enumerate(el_t):
-    ofst_r[k, :] = antmodel(nav, np.deg2rad(el), nf, 1)
-    ofst_b[k, :] = antmodel(nav, np.deg2rad(el), nf, 0)
+    el = np.deg2rad(el)
+    e = np.array([0, np.cos(el), np.sin(el)])
+    ofst_r[k, :] = antModelRx(nav, rr, e, sigs, 0)
+    ofst_b[k, :] = antModelRx(nav, rr, e, sigs, 1)
 
-flg_ant = False
-flg_trop = True
+flg_ant = True  # False
+flg_trop = False  # True
 
 plt.figure()
 if flg_ant:
@@ -38,6 +67,7 @@ if flg_ant:
     plt.legend()
     plt.xlabel('elevation[deg]')
     plt.ylabel('range correction for antenna offset [cm]')
+
 if flg_trop:
     ep = [2021, 4, 1, 0, 0, 0]
     t = epoch2time(ep)
@@ -65,4 +95,4 @@ if flg_trop:
     plt.legend(['total', 'dry', 'wet'], prop=igfont)
     plt.xlabel('Elevation angle [deg]', **igfont)
     plt.ylabel('Tropospheric delay [m]', **igfont)
-    plt.show()
+plt.show()
