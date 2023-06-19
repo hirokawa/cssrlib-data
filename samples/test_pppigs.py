@@ -113,8 +113,8 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Get equipment information
     #
-    nav.fout.write("Receiver: {}".format(rnx.rcv))
-    nav.fout.write("Antenna : {}".format(rnx.ant))
+    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
+    nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
