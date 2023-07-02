@@ -11,7 +11,8 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import rtkinit, pppigspos, IT
+#from cssrlib.pppigs import rtkinit, pppigspos, IT
+from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -140,6 +141,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     pos = ecef2pos(rr)
 
     nav.monlevel = 1  # TODO: enabled for testing!
+    nav.ephopt = 4
+    nav.armode = 3
 
     # Loop over number of epoch from file start
     #
@@ -157,7 +160,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with IGS products
         #
-        pppigspos(nav, obs, orb, bsx)
+        ppppos(nav, obs, orb = orb, bsx = bsx)
 
         # Save output
         #
