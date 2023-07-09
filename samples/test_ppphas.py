@@ -10,7 +10,7 @@ from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.peph import peph, biasdec
+from cssrlib.peph import peph
 from cssrlib.cssr_has import cssr_has
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
@@ -19,33 +19,25 @@ import bitstruct.c as bs
 
 # Start epoch and number of epochs
 #
-ep = [2023, 6, 29, 0, 0, 0]
+ep = [2023, 7, 8, 4, 0, 0]
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 nep = 900
 
-#navfile = '../data/sep2180a.nav'
-navfile = '../data/BRDC00IGS_R_20231800000_01D_MN.rnx'
-obsfile = '../data/SEPT1800.23O'
+navfile = '../data/SEPT1890.23P'
+#navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
+obsfile = '../data/SEPT1890.23O'
 
-#orbfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
-#   .format(year, doy)
 
-#clkfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
-#    .format(year, doy)
-
-#bsxfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
-#    .format(year, doy)
-
-file_has = '../data/gale6_2023180a.txt'
+file_has = '../data/gale6_189e.txt'
+#file_has = '../data/gale6_2023180a.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'),('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
-#xyz_ref = [405345562.018780,   6177299679.04945,  486939590.063263]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
@@ -75,20 +67,11 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-# Load precise orbits and clock offsets
-#
-#nav = orb.parse_sp3(orbfile, nav)
-#nav = rnx.decode_clk(clkfile, nav)
 cs = cssr_has()
 cs.mon_level = 2
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
-
-# Load code and phase biases from Bias-SINEX
-#
-#bsx = biasdec()
-#bsx.parse(bsxfile)
 
 # Load ANTEX data for satellites and stations
 #
@@ -157,6 +140,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.monlevel = 1  # TODO: enabled for testing!
 
     mid_ = -1
+    ms_ = -1
+    icnt = 0
     rec = []
     mid_decoded = []
     has_pages = np.zeros((255,53),dtype=int)
@@ -167,7 +152,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
         cs.week = week
-        cs.tow0 = tow//30*30
+        cs.tow0 = tow//3600*3600
 
         # Set intial epoch
         #
@@ -180,17 +165,21 @@ if rnx.decode_obsh(obsfile) >= 0:
         for vn in vi:
             buff = unhexlify(vn['nav'])           
             i=14
-            hass,res,mt,mid,ms,pid=bs.unpack_from('u2u2u2u5u5u8',buff,i)            
             if bs.unpack_from('u24',buff,i)[0]==0xaf3bc3:
                 continue
+            hass,res=bs.unpack_from('u2u2',buff,i) 
+            i+=4
+            if hass>=2: # 0:test,1:operational,2:res,3:dnu
+                continue 
+            mt,mid,ms,pid=bs.unpack_from('u2u5u5u8',buff,i) 
+        
             cs.msgtype = mt
             ms+=1
-            i+=24
-            if hass>=2: # 0:test,1:operational,2:res,3:dnu
-                continue
+            i+=20
         
             if mid_ == -1 and mid not in mid_decoded:
                 mid_ = mid
+                ms_  = ms
             if mid==mid_ and pid-1 not in rec:
                 page = bs.unpack_from('u8'*53,buff,i)
                 rec += [pid-1]
@@ -198,9 +187,9 @@ if rnx.decode_obsh(obsfile) >= 0:
 
             #print(f"{mt} {mid} {ms} {pid}")
 
-        if len(rec)>=ms:
-            print("data collected mid={:2d} ms={:2d}".format(mid_,ms))
-            HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms)
+        if len(rec)>=ms_:
+            print("data collected mid={:2d} ms={:2d}".format(mid_,ms_))
+            HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             rec = []
 
@@ -208,6 +197,13 @@ if rnx.decode_obsh(obsfile) >= 0:
             mid_ = -1            
             if len(mid_decoded)>10:
                 mid_decoded = mid_decoded[1:]
+        else:
+            icnt += 1
+            if icnt>10 and mid_!=-1:
+                icnt = 0
+                print(f"reset mid={mid_} ms={ms_}")
+                rec = []
+                mid_ = -1
 
 
         # Call PPP module with IGS products
