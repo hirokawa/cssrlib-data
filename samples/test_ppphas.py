@@ -26,15 +26,15 @@ year = ep[0]
 doy = int(time2doy(time))
 nep = 900
 
-navfile = '../data/SEPT1890.23P'
-#navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
+#navfile = '../data/SEPT1890.23P'
+navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
 
 file_has = '../data/gale6_189e.txt'
 #file_has = '../data/gale6_2023180a.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'),('len', 'int'), ('nav', 'S124')]
+         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
@@ -92,18 +92,28 @@ dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
+# Logging level
+#
+nav.monlevel = 2  # TODO: enabled for testing!
+
 # Load RINEX OBS file header
 #
 if rnx.decode_obsh(obsfile) >= 0:
+
+    # Initialize position
+    #
+    rr = rnx.pos
+    pos = ecef2pos(rr)
+    rtkinit(nav, rnx.pos, 'test_ppphas.log')
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
-    print("Receiver:", rnx.rcv)
-    print("Antenna :", rnx.ant)
-    print()
+    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
+    nav.fout.write("Antenna : {}\n".format(rnx.ant))
+    nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         print("ERROR: missing antenna type in RINEX OBS header!")
@@ -112,39 +122,33 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
-        print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
+        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                       .format(rnx.ant))
 
     # Print available signals
     #
-    print("Available signals")
+    nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}".format(sys2str(sys),
-                                ' '.join([sig.str() for sig in sigs.values()]))
-        print(txt)
-    print()
+        txt = "{:7s} {}\n".format(sys2str(sys),
+                                  ' '.join([sig.str() for sig in sigs.values()]))
+        nav.fout.write(txt)
+    nav.fout.write("\n")
 
-    print("Selected signals")
+    nav.fout.write("Selected signals\n")
     for sys, tmp in rnx.sig_tab.items():
         txt = "{:7s} ".format(sys2str(sys))
         for _, sigs in tmp.items():
             txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        print(txt)
-    print()
-
-    # Position
-    #
-    rr = rnx.pos
-    rtkinit(nav, rnx.pos)
-    pos = ecef2pos(rr)
-
-    nav.monlevel = 1  # TODO: enabled for testing!
+        nav.fout.write(txt+"\n")
+    nav.fout.write("\n")
 
     mid_ = -1
     ms_ = -1
     icnt = 0
     rec = []
     mid_decoded = []
-    has_pages = np.zeros((255,53),dtype=int)
+    has_pages = np.zeros((255, 53), dtype=int)
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
@@ -161,56 +165,55 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[v['tow']==tow]
+        vi = v[v['tow'] == tow]
         for vn in vi:
-            buff = unhexlify(vn['nav'])           
-            i=14
-            if bs.unpack_from('u24',buff,i)[0]==0xaf3bc3:
+            buff = unhexlify(vn['nav'])
+            i = 14
+            if bs.unpack_from('u24', buff, i)[0] == 0xaf3bc3:
                 continue
-            hass,res=bs.unpack_from('u2u2',buff,i) 
-            i+=4
-            if hass>=2: # 0:test,1:operational,2:res,3:dnu
-                continue 
-            mt,mid,ms,pid=bs.unpack_from('u2u5u5u8',buff,i) 
-        
+            hass, res = bs.unpack_from('u2u2', buff, i)
+            i += 4
+            if hass >= 2:  # 0:test,1:operational,2:res,3:dnu
+                continue
+            mt, mid, ms, pid = bs.unpack_from('u2u5u5u8', buff, i)
+
             cs.msgtype = mt
-            ms+=1
-            i+=20
-        
+            ms += 1
+            i += 20
+
             if mid_ == -1 and mid not in mid_decoded:
                 mid_ = mid
-                ms_  = ms
-            if mid==mid_ and pid-1 not in rec:
-                page = bs.unpack_from('u8'*53,buff,i)
+                ms_ = ms
+            if mid == mid_ and pid-1 not in rec:
+                page = bs.unpack_from('u8'*53, buff, i)
                 rec += [pid-1]
-                has_pages[pid-1,:] = page
+                has_pages[pid-1, :] = page
 
             #print(f"{mt} {mid} {ms} {pid}")
 
-        if len(rec)>=ms_:
-            print("data collected mid={:2d} ms={:2d}".format(mid_,ms_))
+        if len(rec) >= ms_:
+            print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             rec = []
 
             mid_decoded += [mid_]
-            mid_ = -1            
-            if len(mid_decoded)>10:
+            mid_ = -1
+            if len(mid_decoded) > 10:
                 mid_decoded = mid_decoded[1:]
         else:
             icnt += 1
-            if icnt>10 and mid_!=-1:
+            if icnt > 10 and mid_ != -1:
                 icnt = 0
                 print(f"reset mid={mid_} ms={ms_}")
                 rec = []
                 mid_ = -1
 
-
         # Call PPP module with IGS products
         #
         # pppigspos(nav, obs, orb, bsx)
         if (cs.lc[0].cstat & 0xf) == 0xf:
-            ppppos(nav, obs, cs = cs)
+            ppppos(nav, obs, cs=cs)
 
         # Save output
         #
@@ -222,12 +225,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        if True:
-            print("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}"
-                  .format(time2str(obs.t),
-                          sol[0], sol[1], sol[2],
-                          enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                          smode[ne]))
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
+                       .format(time2str(obs.t),
+                               sol[0], sol[1], sol[2],
+                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               smode[ne]))
 
     rnx.fobs.close()
 

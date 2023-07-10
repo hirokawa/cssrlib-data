@@ -130,7 +130,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                        .format(rnx.ant))
 
-    # nav.fout.write available signals
+    # Print available signals
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
