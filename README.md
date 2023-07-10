@@ -2,6 +2,14 @@
 Sample scripts and dataset for CSSRlib
 Pre-installation of CSSRlib is required.
 
+## Prerequisites:
+
+Additional python packages are required as prerequisites and can be installed via the following commands
+
+```
+pip install ephem pandas
+```
+
 ## Ephemeris: RINEX/TLE
 - test_eph.py reading/plotting ephemeris from RINEX 3
 - test_tlesim.py reading/plotting TLE orbit
@@ -24,8 +32,8 @@ Pre-installation of CSSRlib is required.
 
 - [ ] Implement pole tide displacements
 - [ ] Check and improve observation noise settings
-- [ ] Check slant iono process noise settings
 - [ ] Add residual output
-- [ ] Add check for observations, must be on different frequencies
+- [ ] Add check for observations, first two observations must be on different frequencies
 - [ ] Number of frequencies `nav.nf` should be set automatically depending on specified signals
-- [ ] Code/phase error ratio `nav.eratio` should also work for > 2 signals
+- [ ] Check triple-frequency processing for PPP
+- [ ] Code/phase error ratio `nav.erratio` should also work for > 2 signals
