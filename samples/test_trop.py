@@ -24,7 +24,6 @@ ep = time2epoch(t)
 week, tow = time2gpst(t)
 t1 = timeadd(t, 300)
 
-
 # Receiver position
 #
 lat = np.deg2rad(45)

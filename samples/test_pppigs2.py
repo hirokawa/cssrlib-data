@@ -137,6 +137,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("\n")
 
     nav.fout.write("Selected signals\n")
+
     for sys, tmp in rnx.sig_tab.items():
         txt = "{:7s} ".format(sys2str(sys))
         for _, sigs in tmp.items():
