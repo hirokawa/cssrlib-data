@@ -3,42 +3,54 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
+from os.path import exists
+from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
-from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
+from cssrlib.gnss import time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-#from cssrlib.pppigs import rtkinit, pppigspos, IT
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-ep = [2021, 3, 19, 12, 0, 0]
+dataset = 0
+
+if dataset == 0:
+    ep = [2021, 3, 19, 12, 0, 0]
+    let = 'M'
+    xyz_ref = [-3962108.6617, 3381309.5232, 3668678.6410]
+else:
+    ep = [2023, 7, 8, 4, 15, 0]
+    let = '0'
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 900
 
-navfile = '../data/SEPT078M.21P'
-obsfile = '../data/SEPT078M.21O'
+nep = 300
+
+pos_ref = ecef2pos(xyz_ref)
+
+navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
+obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
 orbfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
     .format(year, doy)
+
+if not exists(orbfile):
+    orbfile = orbfile.replace('_15M_', '_05M_')
 
 clkfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
     .format(year, doy)
 
 bsxfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(year, doy)
-
-# based on GSI F5 solution
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
-pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
@@ -49,7 +61,10 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EL1C"), rSigRnx("EL5Q"),
         rSigRnx("ES1C"), rSigRnx("ES5Q")]
 
-atxfile = '../data/igs14.atx'
+if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
+else:
+    atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -105,17 +120,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rr = rnx.pos
-    pos = ecef2pos(rr)
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
     nav.ephopt = 4
     nav.armode = 3
-    
+
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
+    nav.fout.write("FileName: {}\n".format(obsfile))
+    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
+    nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
     nav.fout.write("Receiver: {}\n".format(rnx.rcv))
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
@@ -147,12 +163,19 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
+    # Skip epoch until start time
+    #
+    if time > rnx.ts:
+
+        obs = rnx.decode_obs()
+        while time > obs.t:
+            obs = rnx.decode_obs()
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
 
         obs = rnx.decode_obs()
-        week, tow = time2gpst(obs.t)
 
         # Set intial epoch
         #
@@ -163,7 +186,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with IGS products
         #
-        ppppos(nav, obs, orb = orb, bsx = bsx)
+        ppppos(nav, obs, orb=orb, bsx=bsx)
 
         # Save output
         #
@@ -180,6 +203,12 @@ if rnx.decode_obsh(obsfile) >= 0:
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
+
+        #
+        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             smode[ne]))
 
     rnx.fobs.close()
 
