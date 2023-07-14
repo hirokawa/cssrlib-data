@@ -103,7 +103,12 @@ if True:
                 cs.decode_cssr(cs.buff, 0)
 
     for ne in range(nep):
+
+        # Get new epoch, exit after last epoch
+        #
         obs = dec.decode_obs()
+        if obs.t.time == 0:
+            break
         week, tow = gn.time2gpst(obs.t)
 
         cs.decode_l6msg(fc.read(250), 0)

@@ -1,6 +1,7 @@
 """
  static test for PPP (IGS)
 """
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from os.path import exists
@@ -13,14 +14,14 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppssr import rtkinit, ppppos, IT
+from cssrlib.pppigs import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 0
+dataset = 2
 
-if dataset == 0:
+if dataset == 0:  # SETP078.21O
     ep = [2021, 3, 19, 12, 0, 0]
     let = 'M'
     xyz_ref = [-3962108.6617, 3381309.5232, 3668678.6410]
@@ -118,6 +119,10 @@ nav.monlevel = 2  # TODO: enabled for testing!
 #
 if rnx.decode_obsh(obsfile) >= 0:
 
+    # Auto-substitute signals
+    #
+    rnx.autoSubstituteSignals()
+
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
@@ -131,7 +136,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("FileName: {}\n".format(obsfile))
     nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
-    nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
+    if rnx.te is not None:
+        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
     nav.fout.write("Receiver: {}\n".format(rnx.rcv))
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
@@ -168,19 +174,24 @@ if rnx.decode_obsh(obsfile) >= 0:
     if time > rnx.ts:
 
         obs = rnx.decode_obs()
-        while time > obs.t:
+        while time > obs.t and obs.t.time != 0:
             obs = rnx.decode_obs()
 
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
 
+        # Get new epoch, exit after last epoch
+        #
         obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
 
-        # Set intial epoch
+        # Set initial epoch
         #
         if ne == 0:
-            t0 = nav.t = obs.t
+            nav.t = deepcopy(obs.t)
+            t0 = deepcopy(obs.t)
             t0.time = t0.time//30*30
             nav.time_p = t0
 
@@ -204,12 +215,17 @@ if rnx.decode_obsh(obsfile) >= 0:
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
 
+        # Log to standard output
         #
         stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
                              smode[ne]))
 
+    stdout.write('\n')
+
+    # Close RINEX OBS file
+    #
     rnx.fobs.close()
 
 fig_type = 1
@@ -220,6 +236,7 @@ idx5 = np.where(smode == 5)[0]
 idx0 = np.where(smode == 0)[0]
 
 fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
 
 if fig_type == 1:
 
@@ -265,6 +282,6 @@ elif fig_type == 2:
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppigs', plotFileFormat))
 
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()

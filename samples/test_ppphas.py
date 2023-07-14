@@ -1,6 +1,7 @@
 """
  static test for PPP (Galileo HAS)
 """
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -100,6 +101,10 @@ nav.monlevel = 2  # TODO: enabled for testing!
 #
 if rnx.decode_obsh(obsfile) >= 0:
 
+    # Auto-substitute signals
+    #
+    rnx.autoSubstituteSignals()
+
     # Initialize position
     #
     rr = rnx.pos
@@ -149,19 +154,34 @@ if rnx.decode_obsh(obsfile) >= 0:
     mid_decoded = []
     has_pages = np.zeros((255, 53), dtype=int)
 
+    # Skip epochs until start time
+    #
+    if time > rnx.ts:
+
+        obs = rnx.decode_obs()
+
+        while time > obs.t and obs.t.time != 0:
+            obs = rnx.decode_obs()
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
 
+        # Get new epoch, exit after last epoch
+        #
         obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
+
         week, tow = time2gpst(obs.t)
         cs.week = week
         cs.tow0 = tow//3600*3600
 
-        # Set intial epoch
+        # Set initial epoch
         #
         if ne == 0:
-            t0 = nav.t = obs.t
+            nav.t = deepcopy(obs.t)
+            t0 = deepcopy(obs.t)
             t0.time = t0.time//30*30
             nav.time_p = t0
 
