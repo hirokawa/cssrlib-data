@@ -10,12 +10,10 @@ from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.peph import peph
 from cssrlib.cssrlib import cssr
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
-import bitstruct.c as bs
 
 # Start epoch and number of epochs
 #
@@ -240,7 +238,7 @@ elif fig_type == 2:
     #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_ppphas', plotFileFormat))
+plotFileName = '.'.join(('test_pppmdc', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
 
