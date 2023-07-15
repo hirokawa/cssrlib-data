@@ -1,5 +1,5 @@
 """
- static test for PPP (BeiDou PPP)
+ static test for PPP (MADOCA PPP)
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,10 +11,11 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph
-from cssrlib.cssr_bds import cssr_bds
+from cssrlib.cssrlib import cssr
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
+import bitstruct.c as bs
 
 # Start epoch and number of epochs
 #
@@ -26,14 +27,17 @@ doy = int(time2doy(time))
 nep = 900
 
 #navfile = '../data/SEPT1890.23P'
-navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
-#navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
+navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
-file_bds = '../data/bdsb2b_189e.txt'
+
+file_l6 = '../data/qzsl6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'),('len', 'int'), ('nav', 'S124')]
-v = np.genfromtxt(file_bds, dtype=dtype)
+         ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
+v = np.genfromtxt(file_l6, dtype=dtype)
+
+prn_ref = 199 # QZSS PRN
+l6_ch = 1 # 0:L6D, 1:L6E
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
@@ -41,11 +45,14 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
+        rSigRnx("EC1C"), rSigRnx("EC5Q"),
+        rSigRnx("JC1C"), rSigRnx("JC2L"),
         rSigRnx("GL1C"), rSigRnx("GL2W"),
+        rSigRnx("EL1C"), rSigRnx("EL5Q"),
+        rSigRnx("JL1C"), rSigRnx("JL2L"),
         rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("CC1P"), rSigRnx("CC5P"),
-        rSigRnx("CL1P"), rSigRnx("CL5P"),
-        rSigRnx("CS1P"), rSigRnx("CS5P")]
+        rSigRnx("ES1C"), rSigRnx("ES5Q"),
+        rSigRnx("JS1C"), rSigRnx("JS2L")]
 
 atxfile = '../data/igs14.atx'
 
@@ -53,7 +60,6 @@ rnx = rnxdec()
 rnx.setSignals(sigs)
 
 nav = Nav()
-orb = peph()
 
 # Positioning mode
 # 0:static, 1:kinematic
@@ -65,7 +71,7 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr_bds()
+cs = cssr()
 cs.mon_level = 2
 
 # Load ANTEX data for satellites and stations
@@ -87,18 +93,28 @@ dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
+# Logging level
+#
+nav.monlevel = 2  # TODO: enabled for testing!
+
 # Load RINEX OBS file header
 #
 if rnx.decode_obsh(obsfile) >= 0:
+
+    # Initialize position
+    #
+    rr = rnx.pos
+    pos = ecef2pos(rr)
+    rtkinit(nav, rnx.pos, 'test_pppmdc.log')
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
-    print("Receiver:", rnx.rcv)
-    print("Antenna :", rnx.ant)
-    print()
+    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
+    nav.fout.write("Antenna : {}\n".format(rnx.ant))
+    nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         print("ERROR: missing antenna type in RINEX OBS header!")
@@ -107,33 +123,26 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
-        print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
+        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                       .format(rnx.ant))
 
     # Print available signals
     #
-    print("Available signals")
+    nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}".format(sys2str(sys),
-                                ' '.join([sig.str() for sig in sigs.values()]))
-        print(txt)
-    print()
+        txt = "{:7s} {}\n".format(sys2str(sys),
+                                  ' '.join([sig.str() for sig in sigs.values()]))
+        nav.fout.write(txt)
+    nav.fout.write("\n")
 
-    print("Selected signals")
+    nav.fout.write("Selected signals\n")
     for sys, tmp in rnx.sig_tab.items():
         txt = "{:7s} ".format(sys2str(sys))
         for _, sigs in tmp.items():
             txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        print(txt)
-    print()
+        nav.fout.write(txt+"\n")
+    nav.fout.write("\n")
 
-    # Position
-    #
-    rr = rnx.pos
-    rtkinit(nav, rnx.pos)
-    pos = ecef2pos(rr)
-
-    nav.monlevel = 1  # TODO: enabled for testing!
-    prn_ref = 59
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
@@ -141,7 +150,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
         cs.week = week
-        cs.tow0 = tow//86400*86400
+        cs.tow0 = tow//3600*3600
 
         # Set intial epoch
         #
@@ -150,16 +159,17 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow']==tow) & (v['prn']==prn_ref)]
-        buff = unhexlify(vi['nav'][0])  
-
-        #prn, rev = bs.unpack_from('u6u6',buff,0)
-        cs.decode_cssr(buff,0)
-     
+        vi = v[(v['tow'] == tow) & (v['type']==l6_ch) & (v['prn']==prn_ref)]
+        msg = unhexlify(vi['nav'][0])
+        cs.decode_l6msg(msg, 0)
+        if cs.fcnt == 5:  # end of sub-frame
+            cs.decode_cssr(cs.buff, 0)
+            
         # Call PPP module with IGS products
         #
+        # pppigspos(nav, obs, orb, bsx)
         if (cs.lc[0].cstat & 0xf) == 0xf:
-            ppppos(nav, obs, cs = cs)
+            ppppos(nav, obs, cs=cs)
 
         # Save output
         #
@@ -171,12 +181,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        if False:
-            print("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}"
-                  .format(time2str(obs.t),
-                          sol[0], sol[1], sol[2],
-                          enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                          smode[ne]))
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
+                       .format(time2str(obs.t),
+                               sol[0], sol[1], sol[2],
+                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               smode[ne]))
 
     rnx.fobs.close()
 
@@ -231,7 +240,7 @@ elif fig_type == 2:
     #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_pppbds', plotFileFormat))
+plotFileName = '.'.join(('test_ppphas', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
 
