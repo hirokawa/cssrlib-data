@@ -134,10 +134,6 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     nav.monlevel = 1  # TODO: enabled for testing!
     prn_ref = 59
-    mid_ = -1
-    rec = []
-    mid_decoded = []
-    has_pages = np.zeros((255,53),dtype=int)
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
