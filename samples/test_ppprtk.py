@@ -1,6 +1,7 @@
 """
  static test for PPP-RTK (QZSS CLAS)
 """
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
@@ -92,7 +93,13 @@ if dec.decode_obsh(obsfile) >= 0:
         sys.exit(-1)
 
     for ne in range(nep):
+
+        # Get new epoch, exit after last epoch
+        #
         obs = dec.decode_obs()
+        if obs.t.time == 0:
+            break
+
         week, tow = time2gpst(obs.t)
 
         cs.decode_l6msg(fc.read(250), 0)
@@ -101,7 +108,8 @@ if dec.decode_obsh(obsfile) >= 0:
             cs.decode_cssr(cs.buff, 0)
 
         if ne == 0:
-            t0 = nav.t = obs.t
+            nav.t = deepcopy(obs.t)
+            t0 = deepcopy(obs.t)
             t0.time = t0.time//30*30
             cs.time = obs.t
             nav.time_p = t0

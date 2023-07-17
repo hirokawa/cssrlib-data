@@ -1,6 +1,7 @@
 """
  static test for PPP (BeiDou PPP)
 """
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -32,7 +33,7 @@ obsfile = '../data/SEPT1890.23O'
 
 file_bds = '../data/bdsb2b_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'),('len', 'int'), ('nav', 'S124')]
+         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_bds, dtype=dtype)
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
@@ -134,6 +135,10 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     nav.monlevel = 1  # TODO: enabled for testing!
     prn_ref = 59
+    mid_ = -1
+    rec = []
+    mid_decoded = []
+    has_pages = np.zeros((255, 53), dtype=int)
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
@@ -146,20 +151,21 @@ if rnx.decode_obsh(obsfile) >= 0:
         # Set intial epoch
         #
         if ne == 0:
-            t0 = nav.t = obs.t
+            nav.t = deepcopy(obs.t)
+            t0 = deepcopy(obs.t)
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow']==tow) & (v['prn']==prn_ref)]
-        buff = unhexlify(vi['nav'][0])  
+        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+        buff = unhexlify(vi['nav'][0])
 
         #prn, rev = bs.unpack_from('u6u6',buff,0)
-        cs.decode_cssr(buff,0)
-     
+        cs.decode_cssr(buff, 0)
+
         # Call PPP module with IGS products
         #
         if (cs.lc[0].cstat & 0xf) == 0xf:
-            ppppos(nav, obs, cs = cs)
+            ppppos(nav, obs, cs=cs)
 
         # Save output
         #

@@ -3,24 +3,27 @@
 """
 
 from cssrlib.rinex import rnxdec
-from cssrlib.gnss import uGNSS, uTYP, uSIG, rSigRnx
+from cssrlib.gnss import uTYP,  rSigRnx
 from cssrlib.gnss import sat2id, sat2prn
 
 from os.path import expanduser
 
-obsfile = '~/GNSS_OBS/IGS/DAILY/2021/078/CHOF00JPN_S_20210780000_01D_30S_MO.rnx'
 #obsfile = '../data/SEPT078M.21O'
+#obsfile = '../data/SEPT1890.23O'
+obsfile = '../data/3034078M.21O'
 
-sigs = [rSigRnx("GC1C"), rSigRnx("EC1X"),
-        rSigRnx("GC2W"), rSigRnx("EC5X"),
-        rSigRnx("GL1C"), rSigRnx("EL1X"),
-        rSigRnx("GL2W"), rSigRnx("EL5X")]
+sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("JC1C"),
+        rSigRnx("GC2W"), rSigRnx("EC5Q"), rSigRnx("JC2L"),
+        rSigRnx("GL1C"), rSigRnx("EL1C"), rSigRnx("JL1C"),
+        rSigRnx("GL2W"), rSigRnx("EL5Q"), rSigRnx("JL2L")]
 
 dec = rnxdec()
 dec.setSignals(sigs)
 
 nep = 1
 if dec.decode_obsh(expanduser(obsfile)) >= 0:
+
+    dec.autoSubstituteSignals()
 
     for ne in range(nep):
 
@@ -40,6 +43,6 @@ if dec.decode_obsh(expanduser(obsfile)) >= 0:
 
             print(txt)
 
-    print()
+        print()
 
     dec.fobs.close()
