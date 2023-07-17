@@ -192,8 +192,6 @@ if rnx.decode_obsh(obsfile) >= 0:
         if ne == 0:
             nav.t = deepcopy(obs.t)
             t0 = deepcopy(obs.t)
-            t0.time = t0.time//30*30
-            nav.time_p = t0
 
         # Call PPP module with IGS products
         #
