@@ -50,7 +50,10 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EL1C"), rSigRnx("EL7Q"),
         rSigRnx("ES1C"), rSigRnx("ES7Q")]
 
-atxfile = '../data/igs14.atx'
+if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
+else:
+    atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -261,6 +264,7 @@ idx5 = np.where(smode == 5)[0]
 idx0 = np.where(smode == 0)[0]
 
 fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
 
 if fig_type == 1:
 
@@ -306,6 +310,6 @@ elif fig_type == 2:
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_ppphas', plotFileFormat))
 
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()
