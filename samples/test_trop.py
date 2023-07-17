@@ -56,7 +56,7 @@ for k, el in enumerate(el_t):
     ofst_b[k, :] = antModelRx(nav, rr, e, sigs, 1)
 
 flg_ant = True  # False
-flg_trop = False  # True
+flg_trop = True  # True
 
 plt.figure()
 if flg_ant:
@@ -66,6 +66,7 @@ if flg_ant:
     plt.legend()
     plt.xlabel('elevation[deg]')
     plt.ylabel('range correction for antenna offset [cm]')
+    plt.show()
 
 if flg_trop:
     ep = [2021, 4, 1, 0, 0, 0]
@@ -94,4 +95,4 @@ if flg_trop:
     plt.legend(['total', 'dry', 'wet'], prop=igfont)
     plt.xlabel('Elevation angle [deg]', **igfont)
     plt.ylabel('Tropospheric delay [m]', **igfont)
-plt.show()
+    plt.show()

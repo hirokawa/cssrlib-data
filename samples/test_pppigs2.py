@@ -1,17 +1,18 @@
 """
  static test for PPP (IGS)
 """
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
-from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
+from cssrlib.gnss import time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import rtkinit, pppigspos, IT
+from cssrlib.pppigs import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -149,19 +150,21 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     for ne in range(nep):
 
+        # Get new epoch, exit after last epoch
+        #
         obs = rnx.decode_obs()
-        week, tow = time2gpst(obs.t)
+        if obs.t.time == 0:
+            break
 
-        # Set intial epoch
+        # Set initial epoch
         #
         if ne == 0:
-            t0 = nav.t = obs.t
-            t0.time = t0.time//30*30
-            nav.time_p = t0
+            nav.t = deepcopy(obs.t)
+            t0 = deepcopy(obs.t)
 
         # Call PPP module with IGS products
         #
-        pppigspos(nav, obs, orb, bsx)
+        ppppos(nav, obs, orb, bsx)
 
         # Save output
         #
