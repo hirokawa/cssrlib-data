@@ -48,7 +48,10 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("CL1P"), rSigRnx("CL5P"),
         rSigRnx("CS1P"), rSigRnx("CS5P")]
 
-atxfile = '../data/igs14.atx'
+if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
+else:
+    atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -88,52 +91,62 @@ dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
+# Logging level
+#
+nav.monlevel = 2  # TODO: enabled for testing!
+
 # Load RINEX OBS file header
 #
 if rnx.decode_obsh(obsfile) >= 0:
+
+    # Auto-substitute signals
+    #
+    rnx.autoSubstituteSignals()
+
+    # Initialize position
+    #
+    rtkinit(nav, rnx.pos, 'test_pppigs.log')
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
-    print("Receiver:", rnx.rcv)
-    print("Antenna :", rnx.ant)
-    print()
+    nav.fout.write("FileName: {}\n".format(obsfile))
+    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
+    if rnx.te is not None:
+        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
+    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
+    nav.fout.write("Antenna : {}\n".format(rnx.ant))
+    nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        print("ERROR: missing antenna type in RINEX OBS header!")
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
 
     # Set PCO/PCV information
     #
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
-        print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
+        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                       .format(rnx.ant))
 
     # Print available signals
     #
-    print("Available signals")
+    nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}".format(sys2str(sys),
-                                ' '.join([sig.str() for sig in sigs.values()]))
-        print(txt)
-    print()
+        txt = "{:7s} {}\n".format(sys2str(sys),
+                                  ' '.join([sig.str() for sig in sigs.values()]))
+        nav.fout.write(txt)
+    nav.fout.write("\n")
 
-    print("Selected signals")
+    nav.fout.write("Selected signals\n")
     for sys, tmp in rnx.sig_tab.items():
         txt = "{:7s} ".format(sys2str(sys))
         for _, sigs in tmp.items():
             txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        print(txt)
-    print()
+        nav.fout.write(txt+"\n")
+    nav.fout.write("\n")
 
-    # Position
-    #
-    rr = rnx.pos
-    rtkinit(nav, rnx.pos)
-    pos = ecef2pos(rr)
-
-    nav.monlevel = 1  # TODO: enabled for testing!
     prn_ref = 59
     mid_ = -1
     rec = []
@@ -177,12 +190,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        if False:
-            print("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}"
-                  .format(time2str(obs.t),
-                          sol[0], sol[1], sol[2],
-                          enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                          smode[ne]))
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
+                       .format(time2str(obs.t),
+                               sol[0], sol[1], sol[2],
+                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               smode[ne]))
 
     rnx.fobs.close()
 
@@ -194,6 +206,7 @@ idx5 = np.where(smode == 5)[0]
 idx0 = np.where(smode == 0)[0]
 
 fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
 
 if fig_type == 1:
 
@@ -239,6 +252,6 @@ elif fig_type == 2:
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppbds', plotFileFormat))
 
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()
