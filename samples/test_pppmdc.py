@@ -1,6 +1,7 @@
 """
  static test for PPP (MADOCA PPP)
 """
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -34,8 +35,8 @@ dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
 v = np.genfromtxt(file_l6, dtype=dtype)
 
-prn_ref = 199 # QZSS PRN
-l6_ch = 1 # 0:L6D, 1:L6E
+prn_ref = 199  # QZSS PRN
+l6_ch = 1  # 0:L6D, 1:L6E
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
@@ -153,19 +154,20 @@ if rnx.decode_obsh(obsfile) >= 0:
         # Set intial epoch
         #
         if ne == 0:
-            t0 = nav.t = obs.t
+            nav.t = deepcopy(obs.t)
+            t0 = deepcopy(obs.t)
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow'] == tow) & (v['type']==l6_ch) & (v['prn']==prn_ref)]
+        vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
+               & (v['prn'] == prn_ref)]
         msg = unhexlify(vi['nav'][0])
         cs.decode_l6msg(msg, 0)
         if cs.fcnt == 5:  # end of sub-frame
             cs.decode_cssr(cs.buff, 0)
-            
-        # Call PPP module with IGS products
+
+        # Call PPP module
         #
-        # pppigspos(nav, obs, orb, bsx)
         if (cs.lc[0].cstat & 0xf) == 0xf:
             ppppos(nav, obs, cs=cs)
 
@@ -195,6 +197,7 @@ idx5 = np.where(smode == 5)[0]
 idx0 = np.where(smode == 0)[0]
 
 fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
 
 if fig_type == 1:
 
@@ -240,6 +243,6 @@ elif fig_type == 2:
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppmdc', plotFileFormat))
 
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()
