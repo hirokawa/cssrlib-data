@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 2
+dataset = 0
 
 if dataset == 0:  # SETP078.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -34,7 +34,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 300
+nep = 900
 
 pos_ref = ecef2pos(xyz_ref)
 
@@ -169,21 +169,13 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Skip epoch until start time
     #
-    if time > rnx.ts:
-
+    obs = rnx.decode_obs()
+    while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
-        while time > obs.t and obs.t.time != 0:
-            obs = rnx.decode_obs()
 
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
 
         # Set initial epoch
         #
@@ -217,6 +209,12 @@ if rnx.decode_obsh(obsfile) >= 0:
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
                              smode[ne]))
+
+        # Get new epoch, exit after last epoch
+        #
+        obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
 
     stdout.write('\n')
 
