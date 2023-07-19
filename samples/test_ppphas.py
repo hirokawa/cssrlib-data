@@ -119,12 +119,16 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Get equipment information
     #
+    nav.fout.write("FileName: {}\n".format(obsfile))
+    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
+    if rnx.te is not None:
+        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
     nav.fout.write("Receiver: {}\n".format(rnx.rcv))
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        print("ERROR: missing antenna type in RINEX OBS header!")
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
 
     # Set PCO/PCV information
     #
@@ -159,22 +163,13 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Skip epochs until start time
     #
-    if time > rnx.ts:
-
+    obs = rnx.decode_obs()
+    while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
-
-        while time > obs.t and obs.t.time != 0:
-            obs = rnx.decode_obs()
 
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
 
         week, tow = time2gpst(obs.t)
         cs.week = week
@@ -234,7 +229,6 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with IGS products
         #
-        # pppigspos(nav, obs, orb, bsx)
         if (cs.lc[0].cstat & 0xf) == 0xf:
             ppppos(nav, obs, cs=cs)
 
@@ -253,6 +247,12 @@ if rnx.decode_obsh(obsfile) >= 0:
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
+
+        # Get new epoch, exit after last epoch
+        #
+        obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
 
     rnx.fobs.close()
 

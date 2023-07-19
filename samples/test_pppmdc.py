@@ -53,7 +53,10 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("ES1C"), rSigRnx("ES5Q"),
         rSigRnx("JS1C"), rSigRnx("JS2L")]
 
-atxfile = '../data/igs14.atx'
+if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
+else:
+    atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -100,6 +103,10 @@ nav.monlevel = 2  # TODO: enabled for testing!
 #
 if rnx.decode_obsh(obsfile) >= 0:
 
+    # Auto-substitute signals
+    #
+    rnx.autoSubstituteSignals()
+
     # Initialize position
     #
     rr = rnx.pos
@@ -111,12 +118,16 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Get equipment information
     #
+    nav.fout.write("FileName: {}\n".format(obsfile))
+    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
+    if rnx.te is not None:
+        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
     nav.fout.write("Receiver: {}\n".format(rnx.rcv))
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        print("ERROR: missing antenna type in RINEX OBS header!")
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
 
     # Set PCO/PCV information
     #
@@ -142,16 +153,21 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
+    # Skip epochs until start time
+    #
+    obs = rnx.decode_obs()
+    while time > obs.t and obs.t.time != 0:
+        obs = rnx.decode_obs()
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
 
-        obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
         cs.week = week
         cs.tow0 = tow//3600*3600
 
-        # Set intial epoch
+        # Set initial epoch
         #
         if ne == 0:
             nav.t = deepcopy(obs.t)
@@ -186,6 +202,12 @@ if rnx.decode_obsh(obsfile) >= 0:
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
+
+        # Get new epoch, exit after last epoch
+        #
+        obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
 
     rnx.fobs.close()
 

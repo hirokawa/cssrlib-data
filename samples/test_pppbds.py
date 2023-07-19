@@ -105,7 +105,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rtkinit(nav, rnx.pos, 'test_pppigs.log')
+    rtkinit(nav, rnx.pos, 'test_pppbds.log')
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -152,11 +152,17 @@ if rnx.decode_obsh(obsfile) >= 0:
     rec = []
     mid_decoded = []
     has_pages = np.zeros((255, 53), dtype=int)
+
+    # Skip epochs until start time
+    #
+    obs = rnx.decode_obs()
+    while time > obs.t and obs.t.time != 0:
+        obs = rnx.decode_obs()
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
 
-        obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
         cs.week = week
         cs.tow0 = tow//86400*86400
@@ -195,6 +201,12 @@ if rnx.decode_obsh(obsfile) >= 0:
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
+
+        # Get new epoch, exit after last epoch
+        #
+        obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
 
     rnx.fobs.close()
 
