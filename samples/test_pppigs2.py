@@ -4,6 +4,8 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+from os.path import exists
+from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
@@ -30,6 +32,9 @@ obsfile = '../data/SEPT265G.21O'
 orbfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
     .format(year, doy)
 
+if not exists(orbfile):
+    orbfile = orbfile.replace('_15M_', '_05M_')
+
 clkfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
     .format(year, doy)
 
@@ -49,7 +54,10 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EL1C"), rSigRnx("EL5Q"),
         rSigRnx("ES1C"), rSigRnx("ES5Q")]
 
-atxfile = '../data/igs14.atx'
+if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
+else:
+    atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -97,23 +105,29 @@ smode = np.zeros(nep, dtype=int)
 
 # Logging level
 #
-nav.monlevel = 2  # TODO: enabled for testing!
+nav.monlevel = 1  # TODO: enabled for testing!
 
 # Load RINEX OBS file header
 #
 if rnx.decode_obsh(obsfile) >= 0:
 
-    # Position
+    # Auto-substitute signals
     #
-    rr = rnx.pos
+    rnx.autoSubstituteSignals()
+
+    # Initialize position
+    #
     rtkinit(nav, rnx.pos, 'test_pppigs2.log')
-    pos = ecef2pos(rr)
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
+    nav.fout.write("FileName: {}\n".format(obsfile))
+    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
+    if rnx.te is not None:
+        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
     nav.fout.write("Receiver: {}\n".format(rnx.rcv))
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
@@ -128,7 +142,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                        .format(rnx.ant))
 
-    # nav.fout.write available signals
+    # Print available signals
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
@@ -138,7 +152,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("\n")
 
     nav.fout.write("Selected signals\n")
-
     for sys, tmp in rnx.sig_tab.items():
         txt = "{:7s} ".format(sys2str(sys))
         for _, sigs in tmp.items():
@@ -146,15 +159,15 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
+    # Skip epoch until start time
+    #
+    obs = rnx.decode_obs()
+    while time > obs.t and obs.t.time != 0:
+        obs = rnx.decode_obs()
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
 
         # Set initial epoch
         #
@@ -164,7 +177,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with IGS products
         #
-        ppppos(nav, obs, orb, bsx)
+        ppppos(nav, obs, orb=orb, bsx=bsx)
 
         # Save output
         #
@@ -182,6 +195,23 @@ if rnx.decode_obsh(obsfile) >= 0:
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
 
+        # Log to standard output
+        #
+        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             smode[ne]))
+
+        # Get new epoch, exit after last epoch
+        #
+        obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
+
+    stdout.write('\n')
+
+    # Close RINEX OBS file
+    #
     rnx.fobs.close()
 
 fig_type = 1
@@ -192,6 +222,7 @@ idx5 = np.where(smode == 5)[0]
 idx0 = np.where(smode == 0)[0]
 
 fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
 
 if fig_type == 1:
 
@@ -227,7 +258,7 @@ elif fig_type == 2:
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
-    plt.xlabel('easting [m]')
+    plt.xlabel('Easting [m]')
     plt.ylabel('Northing [m]')
     plt.grid()
     plt.axis('equal')
@@ -237,6 +268,6 @@ elif fig_type == 2:
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppigs2', plotFileFormat))
 
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()
