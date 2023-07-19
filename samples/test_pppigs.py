@@ -113,7 +113,7 @@ smode = np.zeros(nep, dtype=int)
 
 # Logging level
 #
-nav.monlevel = 2  # TODO: enabled for testing!
+nav.monlevel = 1  # TODO: enabled for testing!
 
 # Load RINEX OBS file header
 #
@@ -222,6 +222,11 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rnx.fobs.close()
 
+    # Close output file
+    #
+    if nav.fout is not None:
+        nav.fout.close()
+
 fig_type = 1
 ylim = 0.4
 
@@ -277,5 +282,4 @@ plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppigs', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-
 # plt.show()

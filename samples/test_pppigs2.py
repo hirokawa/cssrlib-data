@@ -105,7 +105,7 @@ smode = np.zeros(nep, dtype=int)
 
 # Logging level
 #
-nav.monlevel = 2  # TODO: enabled for testing!
+nav.monlevel = 1  # TODO: enabled for testing!
 
 # Load RINEX OBS file header
 #
