@@ -29,17 +29,17 @@ nep = 360
 navfile = '../data/SEPT2650.21P'
 obsfile = '../data/SEPT265G.21O'
 
-orbfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
+orbfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
+    .format(year, doy)
+
+clkfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+    .format(year, doy)
+
+bsxfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(year, doy)
 
 if not exists(orbfile):
     orbfile = orbfile.replace('_15M_', '_05M_')
-
-clkfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
-    .format(year, doy)
-
-bsxfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
-    .format(year, doy)
 
 # based on pnt solution
 xyz_ref = [-3961951.1326752,  3381198.11019757,  3668916.0417232]

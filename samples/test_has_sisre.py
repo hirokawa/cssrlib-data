@@ -31,13 +31,13 @@ step = 1
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 
-orbfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
+orbfile = '../data/COD0OPSFIN_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
     .format(year, doy)
 
-clkfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+clkfile = '../data/COD0OPSFIN_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
     .format(year, doy)
 
-bsxfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+bsxfile = '../data/COD0OPSFIN_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(year, doy)
 
 if not exists(orbfile):

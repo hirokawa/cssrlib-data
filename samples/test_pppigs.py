@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 0
+dataset = 0  # 0: SEPT078M.21O, 1: SEPT1890.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -44,17 +44,17 @@ pos_ref = ecef2pos(xyz_ref)
 navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
 obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
-orbfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
+orbfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
+    .format(year, doy)
+
+clkfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+    .format(year, doy)
+
+bsxfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(year, doy)
 
 if not exists(orbfile):
     orbfile = orbfile.replace('_15M_', '_05M_')
-
-clkfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
-    .format(year, doy)
-
-bsxfile = '../data/COD0IGSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
-    .format(year, doy)
 
 # Define signals to be processed
 #

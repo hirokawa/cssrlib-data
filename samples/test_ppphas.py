@@ -25,6 +25,7 @@ ep = [2023, 7, 8, 4, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
+
 nep = 900
 
 #navfile = '../data/SEPT1890.23P'
@@ -70,7 +71,6 @@ orb = peph()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
-#nav.maxout = 100
 
 # Decode RINEX NAV data
 #
