@@ -5,13 +5,13 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from os.path import exists
-from sys import stdout
+from sys import stdout, exit
 
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
-from cssrlib.gnss import sys2str
+from cssrlib.gnss import sys2str, id2sat
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
 from cssrlib.pppigs import rtkinit, ppppos, IT
@@ -19,22 +19,25 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 0
+dataset = 1
 
-if dataset == 0:  # SETP078.21O
+if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
     let = 'M'
     xyz_ref = [-3962108.6617, 3381309.5232, 3668678.6410]
-else:
-    ep = [2023, 7, 8, 4, 15, 0]
+elif dataset == 1:  # SETP1890.23O
+    ep = [2023, 7, 8, 4, 35, 0]
     let = '0'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+else:
+    print("ERROR: no RINEX data set selcted!")
+    exit(1)
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900
+nep = 3300
 
 pos_ref = ecef2pos(xyz_ref)
 
@@ -97,10 +100,6 @@ bsx.parse(bsxfile)
 atx = atxdec()
 atx.readpcv(atxfile)
 
-# Set satelite antenna PCO/PCV data
-#
-nav.sat_ant = atx.pcvs
-
 # Intialize data structures for results
 #
 t = np.zeros(nep)
@@ -126,6 +125,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
+    nav.excl_sat = [id2sat('E31'), ]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -145,6 +145,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set PCO/PCV information
     #
+    nav.sat_ant = atx.pcvs
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
         nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
@@ -240,7 +241,7 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    x_ticks = np.arange(0, nep/60+1, step=1)
+    #x_ticks = np.arange(0, nep/60+1, step=1 if nep < 900 else 15)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -248,7 +249,7 @@ if fig_type == 1:
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        plt.xticks(x_ticks)
+        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
         #plt.axis([0, ne, -ylim, ylim])
@@ -257,7 +258,7 @@ if fig_type == 1:
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.xticks(x_ticks)
+    # plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.xlabel('Time [min]')
