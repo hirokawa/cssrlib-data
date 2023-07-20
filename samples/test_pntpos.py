@@ -30,8 +30,11 @@ enu = np.zeros((nep, 3))
 sol = np.zeros((nep, nav.nx))
 dop = np.zeros((nep, 4))
 nsat = np.zeros(nep, dtype=int)
+
 if dec.decode_obsh(obsfile) >= 0:
+
     nav.x[0:3] = dec.pos
+
     for ne in range(nep):
         obs = dec.decode_obs()
         if ne == 0:

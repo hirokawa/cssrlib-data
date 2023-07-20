@@ -19,14 +19,14 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 1
+dataset = 0
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
     let = 'M'
     xyz_ref = [-3962108.6617, 3381309.5232, 3668678.6410]
 elif dataset == 1:  # SETP1890.23O
-    ep = [2023, 7, 8, 4, 35, 0]
+    ep = [2023, 7, 8, 4, 0, 0]
     let = '0'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 else:
@@ -37,7 +37,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 3300
+nep = 900
 
 pos_ref = ecef2pos(xyz_ref)
 

@@ -89,9 +89,6 @@ bsx.parse(bsxfile)
 atx = atxdec()
 atx.readpcv(atxfile)
 
-# Set satelite antenna PCO/PCV data
-#
-nav.sat_ant = atx.pcvs
 
 # Intialize data structures for results
 #
@@ -137,6 +134,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set PCO/PCV information
     #
+    nav.sat_ant = atx.pcvs
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
         nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"

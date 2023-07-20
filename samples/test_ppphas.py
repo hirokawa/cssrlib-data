@@ -31,13 +31,15 @@ nep = 900
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
-
+# Read Galile HAS corrections file
+#
 file_has = '../data/gale6_189e.txt'
-#file_has = '../data/gale6_2023180a.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)
 
+# Set user reference position
+#
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
 
@@ -82,10 +84,6 @@ gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 atx = atxdec()
 atx.readpcv(atxfile)
 
-# Set satelite antenna PCO/PCV data
-#
-nav.sat_ant = atx.pcvs
-
 # Intialize data structures for results
 #
 t = np.zeros(nep)
@@ -110,9 +108,8 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rr = rnx.pos
-    pos = ecef2pos(rr)
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
+    nav.excl_sat = [16, 26]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -132,6 +129,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set PCO/PCV information
     #
+    nav.sat_ant = atx.pcvs
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
         nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
@@ -227,7 +225,7 @@ if rnx.decode_obsh(obsfile) >= 0:
                 rec = []
                 mid_ = -1
 
-        # Call PPP module with IGS products
+        # Call PPP module with HAS corrections
         #
         if (cs.lc[0].cstat & 0xf) == 0xf:
             ppppos(nav, obs, cs=cs)
