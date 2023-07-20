@@ -52,10 +52,13 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EL1C"), rSigRnx("EL7Q"),
         rSigRnx("ES1C"), rSigRnx("ES7Q")]
 
+"""
 if time > epoch2time([2022, 11, 22, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
     atxfile = '../data/igs14.atx'
+"""
+atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
