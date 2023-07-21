@@ -112,6 +112,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
+    nav.sig_p0 = 0.0
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -269,7 +270,7 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    x_ticks = np.arange(0, nep/60+1, step=1)
+    #x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -277,7 +278,7 @@ if fig_type == 1:
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        plt.xticks(x_ticks)
+        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
         #plt.axis([0, ne, -ylim, ylim])
@@ -286,7 +287,8 @@ if fig_type == 1:
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.xticks(x_ticks)
+
+    # plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.xlabel('Time [min]')
@@ -311,5 +313,4 @@ plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_ppphas', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-
 # plt.show()
