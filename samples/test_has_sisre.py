@@ -116,11 +116,13 @@ rec = []
 mid_decoded = []
 has_pages = np.zeros((255, 53), dtype=int)
 
+ns2m = rCST.CLIGHT*1e-9
+
 # Loop over number of epochs from start time
 #
 for ne in range(nep):
 
-    # print(time2str(time))
+    print(time2str(time))
 
     week, tow = time2gpst(time)
     cs.week = week
@@ -244,9 +246,6 @@ for ne in range(nep):
                           rs[j,0], rs[j,1], rs[j,2], dts[j]*1e6))
             """
 
-            # Convert to CoM using ANTEX PCO corrections
-            #
-
             # Select PCO reference signals for Galileo HAS
             #
             if sys == ug.GPS:
@@ -257,12 +256,14 @@ for ne in range(nep):
                 print("ERROR: invalid sytem {}".format(sys2str(sys)))
                 continue
 
+            # Convert to CoM using ANTEX PCO corrections
+            #
             rs[j, :] += apc2com(nav, sat, time, rs[j, :], sig0)
 
-            # Select PCO reference signals for CODE reference products
+            # Select user reference signals
             #
             if sys == ug.GPS:
-                sigs = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+                sigs = (rSigRnx("GC1C"), rSigRnx("GC2W"))
             elif sys == ug.GAL:
                 sigs = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
             else:
@@ -273,27 +274,29 @@ for ne in range(nep):
             facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
                     -freq[1]**2/(freq[0]**2-freq[1]**2))
 
-            print(sat, type(cs.sat_n), np.where(cs.sat_n == int(sat)))
-
-            idx_n = np.where(cs.sat_n == sat)[0][0]
+            # Get HAS biases
+            #
+            idx_n = np.where(np.array(cs.sat_n) == sat)[0][0]
             kidx = [-1]*len(sigs)
-            nsig = 0
             for k, sig in enumerate(cs.sig_n[idx_n]):
                 for f in range(len(sigs)):
                     if cs.cssrmode == 1 and sys == ug.GPS and sig == sSigGPS.L2P:
                         sig = sSigGPS.L2W  # work-around
                     if ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
                         kidx[f] = k
-                        nsig += 1
-            if nsig < nav.nf:
-                continue
 
-            cbias = np.zeros(nav.nf)
-            pbias = np.zeros(nav.nf)
+            cbias = np.zeros(len(sigs))
             if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
-                cbias = cs.lc[0].cbias[idx_n][kidx]
+                cbias = -1*cs.lc[0].cbias[idx_n][kidx]
 
-            print(cbias)
+            # Get CODE biases
+            #
+            cbias_ = np.zeros(len(sigs))
+            for i, sig in enumerate(sigs):
+                cbias_[i] = bsx.getosb(sat, time, sig)*ns2m
+
+            osb = facs[0]*cbias[0]+facs[1]*cbias[1]
+            osb_ = facs[0]*cbias_[0]+facs[1]*cbias_[1]
 
             # Along-track, cross-track and radial conversion
             #
@@ -312,7 +315,7 @@ for ne in range(nep):
             # NOTE: For Galileo HAS, add the orbit corrections to the BRDC orbit
             #
             rs[j, :] += dorb_e
-            dts[j] += dclk/rCST.CLIGHT
+            dts[j] += dclk/rCST.CLIGHT  # [m] -> [s]
 
             """
             print("{} {} hasc xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
@@ -325,10 +328,15 @@ for ne in range(nep):
             d_rs[j, :] = (rs[j, :] - rs0[j, :])@A.T
             d_dts[j, 0] = dts[j, 0] - dts0[j, 0]
 
-            print("{} {} diff rac [m] {:14.3f} {:14.3f} {:14.3f} clk [ns] {:12.6f} dclk [m] {:14.3f}"
+            print("{} {} diff rac [m] {:8.3f} {:8.3f} {:8.3f} "
+                  "clk [m] {:12.6f} "
+                  "bias HAS [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
+                  "bias COD [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
                   .format(time2str(time), sat2id(sat),
-                          d_rs[j, 0], d_rs[j, 1], d_rs[j, 2], d_dts[j, 0]*1e9,
-                          dclk))
+                          d_rs[j, 0], d_rs[j, 1], d_rs[j, 2],
+                          d_dts[j, 0]*rCST.CLIGHT,
+                          sigs[0], cbias[0], sigs[1], cbias[1], osb,
+                          sigs[0], cbias_[0], sigs[1], cbias_[1], osb_))
 
             orb_r[ne, sat-1] = d_rs[j, 0]
             orb_a[ne, sat-1] = d_rs[j, 1]
