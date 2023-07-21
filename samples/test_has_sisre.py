@@ -8,11 +8,14 @@ from os.path import exists
 
 from cssrlib.ephemeris import eph2pos, findeph
 from cssrlib.gnss import Nav, sat2prn, sat2id, vnorm
-from cssrlib.gnss import time2gpst, time2doy, timeadd, timediff, epoch2time, time2str
-from cssrlib.gnss import uGNSS, rSigRnx, rCST, sys2str
+from cssrlib.gnss import time2gpst, time2doy, epoch2time, time2str
+from cssrlib.gnss import timeadd, timediff
+from cssrlib.gnss import uGNSS as ug
+from cssrlib.gnss import rSigRnx, uTYP, rCST, sys2str
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, biasdec, apc2com
 from cssrlib.cssr_has import cssr_has
+from cssrlib.cssrlib import ssig2rsig, sCType, sSigGPS
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 import bitstruct.c as bs
@@ -49,15 +52,6 @@ file_has = '../data/gale6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)
-
-# Define signals to be processed
-#
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("EC1C"), rSigRnx("EC7Q"),
-        rSigRnx("EL1C"), rSigRnx("EL7Q"),
-        rSigRnx("ES1C"), rSigRnx("ES7Q")]
 
 """
 if time > epoch2time([2022, 11, 22, 0, 0, 0]):
@@ -108,10 +102,10 @@ nav.sat_ant = atx.pcvs
 # Intialize data structures for results
 #
 t = np.zeros(nep)
-orb_r = np.zeros((nep, uGNSS.MAXSAT))*np.nan
-orb_a = np.zeros((nep, uGNSS.MAXSAT))*np.nan
-orb_c = np.zeros((nep, uGNSS.MAXSAT))*np.nan
-clk = np.zeros((nep, uGNSS.MAXSAT))*np.nan
+orb_r = np.zeros((nep, ug.MAXSAT))*np.nan
+orb_a = np.zeros((nep, ug.MAXSAT))*np.nan
+orb_c = np.zeros((nep, ug.MAXSAT))*np.nan
+clk = np.zeros((nep, ug.MAXSAT))*np.nan
 
 # Initialize HAS decoding
 #
@@ -126,7 +120,7 @@ has_pages = np.zeros((255, 53), dtype=int)
 #
 for ne in range(nep):
 
-    print(time2str(time))
+    # print(time2str(time))
 
     week, tow = time2gpst(time)
     cs.week = week
@@ -240,6 +234,11 @@ for ne in range(nep):
             rs[j, :], vs[j, :], dts[j] = eph2pos(time, eph, True)
 
             """
+            dt_rel = -2*(rs[j, :]@vs[j, :])/rCST.CLIGHT**2
+            dts[j] += dt_rel
+            """
+
+            """
             print("{} {} brdc xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
                           rs[j,0], rs[j,1], rs[j,2], dts[j]*1e6))
@@ -248,17 +247,53 @@ for ne in range(nep):
             # Convert to CoM using ANTEX PCO corrections
             #
 
-            # Select PCO reference signals
+            # Select PCO reference signals for Galileo HAS
             #
-            if sys == uGNSS.GPS:
-                sigs = (rSigRnx("GC1W"), rSigRnx("GC2W"))
-            elif sys == uGNSS.GAL:
-                sigs = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+            if sys == ug.GPS:
+                sig0 = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+            elif sys == ug.GAL:
+                sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
             else:
                 print("ERROR: invalid sytem {}".format(sys2str(sys)))
                 continue
 
-            rs[j, :] += apc2com(nav, sat, time, rs[j, :], sigs)
+            rs[j, :] += apc2com(nav, sat, time, rs[j, :], sig0)
+
+            # Select PCO reference signals for CODE reference products
+            #
+            if sys == ug.GPS:
+                sigs = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+            elif sys == ug.GAL:
+                sigs = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+            else:
+                print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                continue
+
+            freq = [s.frequency() for s in sigs]
+            facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
+                    -freq[1]**2/(freq[0]**2-freq[1]**2))
+
+            print(sat, type(cs.sat_n), np.where(cs.sat_n == int(sat)))
+
+            idx_n = np.where(cs.sat_n == sat)[0][0]
+            kidx = [-1]*len(sigs)
+            nsig = 0
+            for k, sig in enumerate(cs.sig_n[idx_n]):
+                for f in range(len(sigs)):
+                    if cs.cssrmode == 1 and sys == ug.GPS and sig == sSigGPS.L2P:
+                        sig = sSigGPS.L2W  # work-around
+                    if ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
+                        kidx[f] = k
+                        nsig += 1
+            if nsig < nav.nf:
+                continue
+
+            cbias = np.zeros(nav.nf)
+            pbias = np.zeros(nav.nf)
+            if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                cbias = cs.lc[0].cbias[idx_n][kidx]
+
+            print(cbias)
 
             # Along-track, cross-track and radial conversion
             #
@@ -290,14 +325,17 @@ for ne in range(nep):
             d_rs[j, :] = (rs[j, :] - rs0[j, :])@A.T
             d_dts[j, 0] = dts[j, 0] - dts0[j, 0]
 
-            print("{} {} diff rac [m] {:14.3f} {:14.3f} {:14.3f} clk [ns] {:12.6f}"
+            print("{} {} diff rac [m] {:14.3f} {:14.3f} {:14.3f} clk [ns] {:12.6f} dclk [m] {:14.3f}"
                   .format(time2str(time), sat2id(sat),
-                          d_rs[j, 0], d_rs[j, 1], d_rs[j, 2], d_dts[j, 0]*1e9))
+                          d_rs[j, 0], d_rs[j, 1], d_rs[j, 2], d_dts[j, 0]*1e9,
+                          dclk))
 
             orb_r[ne, sat-1] = d_rs[j, 0]
             orb_a[ne, sat-1] = d_rs[j, 1]
             orb_c[ne, sat-1] = d_rs[j, 2]
-            clk[ne, sat-1] = d_dts[j, 0]*1e9
+            clk[ne, sat-1] = d_dts[j, 0]*rCST.CLIGHT
+
+    print()
 
     # Save output
     #
@@ -310,25 +348,29 @@ for ne in range(nep):
 fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
-lbl_t = ['Radial [m]', 'Along [m]', 'Cross [m]', 'Clock [ns]']
+lbl_t = ['Radial [m]', 'Along [m]', 'Cross [m]', 'Clock [m]']
 
 plt.subplot(4, 1, 1)
-plt.plot(t, orb_r, 'r.')
+plt.plot(t, orb_r[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
+plt.plot(t, orb_r[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
 plt.ylabel(lbl_t[0])
 plt.grid()
 
 plt.subplot(4, 1, 2)
-plt.plot(t, orb_a, 'r.')
+plt.plot(t, orb_a[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
+plt.plot(t, orb_a[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
 plt.ylabel(lbl_t[1])
 plt.grid()
 
 plt.subplot(4, 1, 3)
-plt.plot(t, orb_c, 'r.')
+plt.plot(t, orb_c[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
+plt.plot(t, orb_c[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
 plt.ylabel(lbl_t[2])
 plt.grid()
 
 plt.subplot(4, 1, 4)
-plt.plot(t, clk, 'r.')
+plt.plot(t, clk[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
+plt.plot(t, clk[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
 plt.ylabel(lbl_t[3])
 plt.grid()
 
@@ -336,5 +378,4 @@ plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_has_sisre', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-
-plt.show()
+# plt.show()
