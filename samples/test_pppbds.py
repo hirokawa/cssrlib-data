@@ -23,7 +23,7 @@ ep = [2023, 7, 8, 4, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 900
+nep = 900*2
 
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
@@ -34,6 +34,8 @@ file_bds = '../data/bdsb2b_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'),('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_bds, dtype=dtype)
+
+prn_ref = 59  # satellite PRN to receive BDS PPP collection
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
@@ -87,18 +89,28 @@ dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
+# Logging level
+#
+nav.monlevel = 2  # TODO: enabled for testing!
+
 # Load RINEX OBS file header
 #
 if rnx.decode_obsh(obsfile) >= 0:
+    
+    # Initialize position
+    #
+    rr = rnx.pos
+    pos = ecef2pos(rr)
+    rtkinit(nav, rnx.pos, 'test_pppbds.log')
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
-    print("Receiver:", rnx.rcv)
-    print("Antenna :", rnx.ant)
-    print()
+    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
+    nav.fout.write("Antenna : {}\n".format(rnx.ant))
+    nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         print("ERROR: missing antenna type in RINEX OBS header!")
@@ -107,33 +119,26 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
-        print("ERROR: missing antenna type <{}> in ANTEX file!".format(rnx.ant))
+        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                       .format(rnx.ant))
 
     # Print available signals
     #
-    print("Available signals")
+    nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}".format(sys2str(sys),
-                                ' '.join([sig.str() for sig in sigs.values()]))
-        print(txt)
-    print()
+        txt = "{:7s} {}\n".format(sys2str(sys),
+                                  ' '.join([sig.str() for sig in sigs.values()]))
+        nav.fout.write(txt)
+    nav.fout.write("\n")
 
-    print("Selected signals")
+    nav.fout.write("Selected signals\n")
     for sys, tmp in rnx.sig_tab.items():
         txt = "{:7s} ".format(sys2str(sys))
         for _, sigs in tmp.items():
             txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        print(txt)
-    print()
+        nav.fout.write(txt+"\n")
+    nav.fout.write("\n")
 
-    # Position
-    #
-    rr = rnx.pos
-    rtkinit(nav, rnx.pos)
-    pos = ecef2pos(rr)
-
-    nav.monlevel = 1  # TODO: enabled for testing!
-    prn_ref = 59
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
@@ -181,7 +186,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     rnx.fobs.close()
 
 fig_type = 1
-ylim = 0.4
+ylim = 1.0
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -203,6 +208,7 @@ if fig_type == 1:
         plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
+        plt.ylim([-ylim,ylim])
         #plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)

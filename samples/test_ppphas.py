@@ -192,7 +192,7 @@ if rnx.decode_obsh(obsfile) >= 0:
             #print(f"{mt} {mid} {ms} {pid}")
 
         if len(rec) >= ms_:
-            print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
+            print("data collected mid={:2d} ms={:2d} tow={:.0f}".format(mid_, ms_, tow))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             rec = []
@@ -203,15 +203,14 @@ if rnx.decode_obsh(obsfile) >= 0:
                 mid_decoded = mid_decoded[1:]
         else:
             icnt += 1
-            if icnt > 10 and mid_ != -1:
+            if icnt > 2*ms_ and mid_ != -1:
                 icnt = 0
-                print(f"reset mid={mid_} ms={ms_}")
+                print(f"reset mid={mid_} ms={ms_} tow={tow}")
                 rec = []
                 mid_ = -1
 
         # Call PPP module with IGS products
         #
-        # pppigspos(nav, obs, orb, bsx)
         if (cs.lc[0].cstat & 0xf) == 0xf:
             ppppos(nav, obs, cs=cs)
 
