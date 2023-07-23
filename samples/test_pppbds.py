@@ -149,12 +149,6 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    prn_ref = 59
-    mid_ = -1
-    rec = []
-    mid_decoded = []
-    has_pages = np.zeros((255, 53), dtype=int)
-
     # Skip epochs until start time
     #
     obs = rnx.decode_obs()
