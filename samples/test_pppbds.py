@@ -1,6 +1,7 @@
 """
  static test for PPP (BeiDou PPP)
 """
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -32,7 +33,7 @@ obsfile = '../data/SEPT1890.23O'
 
 file_bds = '../data/bdsb2b_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'),('len', 'int'), ('nav', 'S124')]
+         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_bds, dtype=dtype)
 
 prn_ref = 59  # satellite PRN to receive BDS PPP collection
@@ -49,7 +50,10 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("CL1P"), rSigRnx("CL5P"),
         rSigRnx("CS1P"), rSigRnx("CS5P")]
 
-atxfile = '../data/igs14.atx'
+if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
+else:
+    atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -91,16 +95,18 @@ smode = np.zeros(nep, dtype=int)
 
 # Logging level
 #
-nav.monlevel = 2  # TODO: enabled for testing!
+nav.monlevel = 1  # TODO: enabled for testing!
 
 # Load RINEX OBS file header
 #
 if rnx.decode_obsh(obsfile) >= 0:
-    
+
+    # Auto-substitute signals
+    #
+    rnx.autoSubstituteSignals()
+
     # Initialize position
     #
-    rr = rnx.pos
-    pos = ecef2pos(rr)
     rtkinit(nav, rnx.pos, 'test_pppbds.log')
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
@@ -108,12 +114,16 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Get equipment information
     #
+    nav.fout.write("FileName: {}\n".format(obsfile))
+    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
+    if rnx.te is not None:
+        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
     nav.fout.write("Receiver: {}\n".format(rnx.rcv))
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        print("ERROR: missing antenna type in RINEX OBS header!")
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
 
     # Set PCO/PCV information
     #
@@ -139,11 +149,22 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
+    prn_ref = 59
+    mid_ = -1
+    rec = []
+    mid_decoded = []
+    has_pages = np.zeros((255, 53), dtype=int)
+
+    # Skip epochs until start time
+    #
+    obs = rnx.decode_obs()
+    while time > obs.t and obs.t.time != 0:
+        obs = rnx.decode_obs()
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
 
-        obs = rnx.decode_obs()
         week, tow = time2gpst(obs.t)
         cs.week = week
         cs.tow0 = tow//86400*86400
@@ -151,20 +172,21 @@ if rnx.decode_obsh(obsfile) >= 0:
         # Set intial epoch
         #
         if ne == 0:
-            t0 = nav.t = obs.t
+            nav.t = deepcopy(obs.t)
+            t0 = deepcopy(obs.t)
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow']==tow) & (v['prn']==prn_ref)]
-        buff = unhexlify(vi['nav'][0])  
+        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+        buff = unhexlify(vi['nav'][0])
 
         #prn, rev = bs.unpack_from('u6u6',buff,0)
-        cs.decode_cssr(buff,0)
-     
+        cs.decode_cssr(buff, 0)
+
         # Call PPP module with IGS products
         #
         if (cs.lc[0].cstat & 0xf) == 0xf:
-            ppppos(nav, obs, cs = cs)
+            ppppos(nav, obs, cs=cs)
 
         # Save output
         #
@@ -176,12 +198,17 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        if False:
-            print("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}"
-                  .format(time2str(obs.t),
-                          sol[0], sol[1], sol[2],
-                          enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                          smode[ne]))
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
+                       .format(time2str(obs.t),
+                               sol[0], sol[1], sol[2],
+                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               smode[ne]))
+
+        # Get new epoch, exit after last epoch
+        #
+        obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
 
     rnx.fobs.close()
 
@@ -193,6 +220,7 @@ idx5 = np.where(smode == 5)[0]
 idx0 = np.where(smode == 0)[0]
 
 fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
 
 if fig_type == 1:
 
@@ -239,6 +267,6 @@ elif fig_type == 2:
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppbds', plotFileFormat))
 
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight')
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()
