@@ -24,7 +24,7 @@ ep = [2023, 7, 8, 4, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 900
+nep = 900*2
 
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
@@ -35,6 +35,8 @@ file_bds = '../data/bdsb2b_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_bds, dtype=dtype)
+
+prn_ref = 59  # satellite PRN to receive BDS PPP collection
 
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
@@ -144,12 +146,6 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    prn_ref = 59
-    mid_ = -1
-    rec = []
-    mid_decoded = []
-    has_pages = np.zeros((255, 53), dtype=int)
-
     # Skip epochs until start time
     #
     obs = rnx.decode_obs()
@@ -208,7 +204,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     rnx.fobs.close()
 
 fig_type = 1
-ylim = 0.4
+ylim = 1.0
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -231,6 +227,7 @@ if fig_type == 1:
         plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
+        plt.ylim([-ylim,ylim])
         #plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)
