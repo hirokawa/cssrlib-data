@@ -25,19 +25,22 @@ ep = [2023, 7, 8, 4, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 900
+
+nep = 3600
 
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
-
+# Read Galile HAS corrections file
+#
 file_has = '../data/gale6_189e.txt'
-#file_has = '../data/gale6_2023180a.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)
 
+# Set user reference position
+#
 xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
 
@@ -50,10 +53,13 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EL1C"), rSigRnx("EL7Q"),
         rSigRnx("ES1C"), rSigRnx("ES7Q")]
 
+"""
 if time > epoch2time([2022, 11, 22, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
     atxfile = '../data/igs14.atx'
+"""
+atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -65,7 +71,6 @@ orb = peph()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
-#nav.maxout = 100
 
 # Decode RINEX NAV data
 #
@@ -81,10 +86,6 @@ gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 #
 atx = atxdec()
 atx.readpcv(atxfile)
-
-# Set satelite antenna PCO/PCV data
-#
-nav.sat_ant = atx.pcvs
 
 # Intialize data structures for results
 #
@@ -110,9 +111,8 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rr = rnx.pos
-    pos = ecef2pos(rr)
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
+    nav.sig_p0 = 0.0
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -132,6 +132,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set PCO/PCV information
     #
+    nav.sat_ant = atx.pcvs
     nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
         nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
@@ -227,7 +228,7 @@ if rnx.decode_obsh(obsfile) >= 0:
                 rec = []
                 mid_ = -1
 
-        # Call PPP module with IGS products
+        # Call PPP module with HAS corrections
         #
         if (cs.lc[0].cstat & 0xf) == 0xf:
             ppppos(nav, obs, cs=cs)
@@ -269,7 +270,7 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    x_ticks = np.arange(0, nep/60+1, step=1)
+    #x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -277,7 +278,7 @@ if fig_type == 1:
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        plt.xticks(x_ticks)
+        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
         #plt.axis([0, ne, -ylim, ylim])
@@ -286,7 +287,8 @@ if fig_type == 1:
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.xticks(x_ticks)
+
+    # plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.xlabel('Time [min]')
@@ -311,5 +313,4 @@ plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_ppphas', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-
 # plt.show()

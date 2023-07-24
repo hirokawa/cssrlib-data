@@ -10,7 +10,7 @@ example of Galileo HAS correction data decoder
 """
 
 import numpy as np
-from cssrlib.ppp_has import has_decoder
+from cssrlib.cssr_has import cssr_has
 
 
 def parse_has_data_sample(file, ex=1):
@@ -45,14 +45,15 @@ file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 
-dec = has_decoder()
+dec = cssr_has()
 dec.mon_level = 2
 
 # example 1 MS=15 mask/orbit/cbias/pbias
 rec, has_pages = parse_has_data_sample(file, 1)
-HASmsg = dec.decode_page(rec, has_pages, gMat, 15)
-dec.decode(HASmsg)
+HASmsg = dec.decode_has_page(rec, has_pages, gMat, 15)
+dec.decode_cssr(HASmsg)
+
 # example 2 MS=2 clock
 rec, has_pages = parse_has_data_sample(file, 2)
-HASmsg = dec.decode_page(rec, has_pages, gMat, 2)
-dec.decode(HASmsg)
+HASmsg = dec.decode_has_page(rec, has_pages, gMat, 2)
+dec.decode_cssr(HASmsg)
