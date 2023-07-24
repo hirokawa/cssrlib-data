@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 0  # 0: SEPT078M.21O, 1: SEPT1890.23O
+dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -37,7 +37,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900
+nep = 900*4
 
 pos_ref = ecef2pos(xyz_ref)
 
@@ -55,6 +55,11 @@ bsxfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
 
 if not exists(orbfile):
     orbfile = orbfile.replace('_15M_', '_05M_')
+
+if not exists(orbfile):
+    orbfile = orbfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+    clkfile = clkfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+    bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0OPSFIN')
 
 # Define signals to be processed
 #
@@ -125,7 +130,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
-    nav.excl_sat = [id2sat('E31'), ]
+    #nav.excl_sat = [id2sat('E31'), ]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")

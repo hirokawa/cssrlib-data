@@ -24,7 +24,8 @@ ep = [2023, 7, 8, 4, 0, 0]
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
-nep = 900*2
+
+nep = 900*4
 
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
@@ -38,7 +39,7 @@ v = np.genfromtxt(file_bds, dtype=dtype)
 
 prn_ref = 59  # satellite PRN to receive BDS PPP collection
 
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
@@ -216,7 +217,7 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    x_ticks = np.arange(0, nep/60+1, step=1)
+    #x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -224,17 +225,18 @@ if fig_type == 1:
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        plt.xticks(x_ticks)
+        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
-        plt.ylim([-ylim,ylim])
+        plt.ylim([-ylim, ylim])
         #plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.xticks(x_ticks)
+
+    # plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.xlabel('Time [min]')

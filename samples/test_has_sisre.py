@@ -15,7 +15,8 @@ from cssrlib.gnss import rSigRnx, uTYP, rCST, sys2str
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, biasdec, apc2com
 from cssrlib.cssr_has import cssr_has
-from cssrlib.cssrlib import ssig2rsig, sCType, sSigGPS
+from cssrlib.cssrlib import sCType, sSigGPS
+from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 import bitstruct.c as bs
@@ -276,18 +277,67 @@ for ne in range(nep):
 
             # Get HAS biases
             #
-            idx_n = np.where(np.array(cs.sat_n) == sat)[0][0]
-            kidx = [-1]*len(sigs)
-            for k, sig in enumerate(cs.sig_n[idx_n]):
-                for f in range(len(sigs)):
-                    if cs.cssrmode == 1 and sys == ug.GPS and sig == sSigGPS.L2P:
-                        sig = sSigGPS.L2W  # work-around
-                    if ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
-                        kidx[f] = k
+            idx_n_ = np.where(np.array(cs.sat_n) == sat)[0]
+            if len(idx_n_) == 0:
+                continue
+            idx_n = idx_n_[0]
 
+            kidx = [-1]*nav.nf
+            nsig = 0
+            for k, sig in enumerate(cs.sig_n[idx_n]):
+                if sig < 0:
+                    continue
+                for f in range(len(sigs)):
+                    if cs.cssrmode == sc.GAL_HAS and sys == ug.GPS and sig == sSigGPS.L2P:
+                        sig = sSigGPS.L2W  # work-around
+                    if cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
+                        kidx[f] = k
+                        nsig += 1
+                    elif cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f].toAtt('X'):
+                        kidx[f] = k
+                        nsig += 1
+            if nsig >= nav.nf:
+                if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                    cbias = cs.lc[0].cbias[idx_n][kidx]
+                # For Galileo HAS, switch the sign of the biases
+                if cs.cssrmode == sc.GAL_HAS:
+                    cbias *= -1
+
+            if np.all(cs.lc[0].dorb[idx_n] == np.array([0.0, 0.0, 0.0])):
+                continue
+
+            # Select user reference signals for CODE
+            #
+            if sys == ug.GPS:
+                sigs = (rSigRnx("GC1C"), rSigRnx("GC1W"))
+            elif sys == ug.GAL:
+                sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+
+            # Get CODE biases
+            #
             cbias = np.zeros(len(sigs))
-            if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
-                cbias = -1*cs.lc[0].cbias[idx_n][kidx]
+            for i, sig in enumerate(sigs):
+                cbias[i] = bsx.getosb(sat, time, sig)*ns2m
+
+            if sys == ug.GPS:
+                osb = facs[0]*(cbias[0]-cbias[1])
+            else:
+                osb = 0.0
+
+            dclk += osb
+
+            """
+            if sys == ug.GPS:
+                sigs = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+            elif sys == ug.GAL:
+                sigs = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+            else:
+                print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                continue
+
+            freq = [s.frequency() for s in sigs]
+            facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
+                    -freq[1]**2/(freq[0]**2-freq[1]**2))
 
             # Get CODE biases
             #
@@ -297,6 +347,7 @@ for ne in range(nep):
 
             osb = facs[0]*cbias[0]+facs[1]*cbias[1]
             osb_ = facs[0]*cbias_[0]+facs[1]*cbias_[1]
+            """
 
             # Along-track, cross-track and radial conversion
             #
@@ -330,13 +381,11 @@ for ne in range(nep):
 
             print("{} {} diff rac [m] {:8.3f} {:8.3f} {:8.3f} "
                   "clk [m] {:12.6f} "
-                  "bias HAS [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
                   "bias COD [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
                   .format(time2str(time), sat2id(sat),
                           d_rs[j, 0], d_rs[j, 1], d_rs[j, 2],
                           d_dts[j, 0]*rCST.CLIGHT,
-                          sigs[0], cbias[0], sigs[1], cbias[1], osb,
-                          sigs[0], cbias_[0], sigs[1], cbias_[1], osb_))
+                          sigs[0], cbias[0], sigs[1], cbias[1], osb))
 
             orb_r[ne, sat-1] = d_rs[j, 0]
             orb_a[ne, sat-1] = d_rs[j, 1]
