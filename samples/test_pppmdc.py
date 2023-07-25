@@ -25,7 +25,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*4
+nep = 900*2
 
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'

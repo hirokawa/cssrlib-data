@@ -26,7 +26,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*4
+nep = 900*2
 
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
@@ -112,6 +112,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
+    #nav.sig_p0 = 0.0
+    #nav.eratio = [1000, 1000, 1000]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -210,8 +212,8 @@ if rnx.decode_obsh(obsfile) >= 0:
             #print(f"{mt} {mid} {ms} {pid}")
 
         if len(rec) >= ms_:
-            print("data collected mid={:2d} ms={:2d} tow={:.0f}"
-                  .format(mid_, ms_, tow))
+            print("data collected mid={:2d} ms={:2d} tow={:.0f}".format(
+                mid_, ms_, tow))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             rec = []
