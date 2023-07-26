@@ -28,7 +28,7 @@ doy = int(time2doy(time))
 
 nep = 3600
 
-#navfile = '../data/SEPT1890.23P'
+# navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
@@ -142,8 +142,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
+        txt = "{:7s} {}\n".format(sys2str(sys), ' '
+                                  .join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
@@ -208,10 +208,11 @@ if rnx.decode_obsh(obsfile) >= 0:
                 rec += [pid-1]
                 has_pages[pid-1, :] = page
 
-            #print(f"{mt} {mid} {ms} {pid}")
+            # print(f"{mt} {mid} {ms} {pid}")
 
         if len(rec) >= ms_:
-            print("data collected mid={:2d} ms={:2d} tow={:.0f}".format(mid_, ms_, tow))
+            print("data collected mid={:2d} ms={:2d} tow={:.0f}"
+                  .format(mid_, ms_, tow))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             rec = []
@@ -270,7 +271,7 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    #x_ticks = np.arange(0, nep/60+1, step=1)
+    # x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -281,7 +282,7 @@ if fig_type == 1:
         # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
-        #plt.axis([0, ne, -ylim, ylim])
+        # plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
@@ -298,7 +299,7 @@ elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    # plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
@@ -307,7 +308,7 @@ elif fig_type == 2:
     plt.grid()
     plt.axis('equal')
     plt.legend()
-    #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_ppphas', plotFileFormat))

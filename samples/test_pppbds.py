@@ -26,9 +26,9 @@ year = ep[0]
 doy = int(time2doy(time))
 nep = 900*2
 
-#navfile = '../data/SEPT1890.23P'
+# navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
-#navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
+# navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
 file_bds = '../data/bdsb2b_189e.txt'
@@ -65,14 +65,15 @@ orb = peph()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
-#nav.maxout = 100
+# nav.maxout = 100
 
 # Decode RINEX NAV data
 #
 nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_bds()
-cs.mon_level = 2
+cs.monlevel = 2
+cs.cssrmode == 3
 
 # Load ANTEX data for satellites and stations
 #
@@ -133,8 +134,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
+        txt = "{:7s} {}\n".format(sys2str(sys), ' '
+                                  .join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
@@ -171,7 +172,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
         buff = unhexlify(vi['nav'][0])
 
-        #prn, rev = bs.unpack_from('u6u6',buff,0)
+        # prn, rev = bs.unpack_from('u6u6',buff,0)
         cs.decode_cssr(buff, 0)
 
         # Call PPP module with BDS-PPP corrections
@@ -227,8 +228,8 @@ if fig_type == 1:
         plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
-        plt.ylim([-ylim,ylim])
-        #plt.axis([0, ne, -ylim, ylim])
+        plt.ylim([-ylim, ylim])
+        # plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
@@ -244,7 +245,7 @@ elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    # plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
@@ -253,7 +254,7 @@ elif fig_type == 2:
     plt.grid()
     plt.axis('equal')
     plt.legend()
-    #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppbds', plotFileFormat))
