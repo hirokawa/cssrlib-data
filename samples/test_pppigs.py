@@ -11,7 +11,7 @@ import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
-from cssrlib.gnss import sys2str, id2sat
+from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
 from cssrlib.pppigs import rtkinit, ppppos, IT
@@ -44,22 +44,21 @@ pos_ref = ecef2pos(xyz_ref)
 navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
 obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
-orbfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
-    .format(year, doy)
+#ac = 'COD0OPSFIN'
+#ac = 'COD0OPSRAP'
+ac = 'COD0MGXFIN'
 
-clkfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
-    .format(year, doy)
+orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+    .format(ac, year, doy)
 
-bsxfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
-    .format(year, doy)
+clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+    .format(ac, year, doy)
+
+bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+    .format(ac, year, doy)
 
 if not exists(orbfile):
-    orbfile = orbfile.replace('_15M_', '_05M_')
-
-if not exists(orbfile):
-    orbfile = orbfile.replace('COD0OPSRAP', 'COD0OPSFIN')
-    clkfile = clkfile.replace('COD0OPSRAP', 'COD0OPSFIN')
-    bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+    orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
 #
@@ -71,9 +70,16 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("ES1C"), rSigRnx("ES5Q")]
 
 if time > epoch2time([2022, 11, 22, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
+    if 'COD0MGXFIN' in ac:
+        atxfile = '../data/M20.ATX'
+    else:
+        atxfile = '../data/igs20.atx'
 else:
-    atxfile = '../data/igs14.atx'
+    if 'MGX' in ac:
+        atxfile = '../data/M14.ATX'
+    else:
+        atxfile = '../data/igs14.atx'
+
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -130,7 +136,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
-    #nav.excl_sat = [id2sat('E31'), ]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
