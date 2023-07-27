@@ -34,8 +34,8 @@ def parse_has_data_sample(file, ex=1):
                     rec += [pid-1]
                 elif '// HAS encoded page' in line:
                     line = fh.readline()
-                    has_pages[pid-1,
-                              :] = np.genfromtxt(line.split()[1:-1], dtype="u1")
+                    has_pages[pid-1, :] = \
+                        np.genfromtxt(line.split()[1:-1], dtype="u1")
     return rec, has_pages
 
 
