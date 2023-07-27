@@ -324,7 +324,7 @@ for ne in range(nep):
             else:
                 osb = 0.0
 
-            dclk += osb
+            #dclk += osb
 
             """
             if sys == ug.GPS:
@@ -371,7 +371,7 @@ for ne in range(nep):
             """
             print("{} {} hasc xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
-                          rs[j,0], rs[j,1], rs[j,2], dts[j]*1e6))
+                          rs[j, 0], rs[j, 1], rs[j, 2], dclk))
             """
 
             # HAS vs. precise
