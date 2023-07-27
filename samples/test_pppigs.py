@@ -74,11 +74,8 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EL1C"), rSigRnx("EL5Q"),
         rSigRnx("ES1C"), rSigRnx("ES5Q")]
 
-if time > epoch2time([2022, 11, 22, 0, 0, 0]):
-    if 'COD0MGXFIN' in ac:
-        atxfile = '../data/I20.ATX'
-    else:
-        atxfile = '../data/igs20.atx'
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
 else:
     if 'COD0MGXFIN' in ac:
         atxfile = '../data/M14.ATX'
