@@ -37,7 +37,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*4
+nep = 900
 
 pos_ref = ecef2pos(xyz_ref)
 
