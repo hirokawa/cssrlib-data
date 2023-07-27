@@ -26,7 +26,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 3600
+nep = 900*2
 
 # navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
@@ -41,7 +41,7 @@ v = np.genfromtxt(file_has, dtype=dtype)
 
 # Set user reference position
 #
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
@@ -54,7 +54,7 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("ES1C"), rSigRnx("ES7Q")]
 
 """
-if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
     atxfile = '../data/igs14.atx'
@@ -112,7 +112,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
-    nav.sig_p0 = 0.0
+    #nav.sig_p0 = 0.0
+    #nav.eratio = [1000, 1000, 1000]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -142,8 +143,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys), ' '
-                                  .join([sig.str() for sig in sigs.values()]))
+        txt = "{:7s} {}\n".format(sys2str(sys),
+                                  ' '.join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
