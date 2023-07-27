@@ -215,6 +215,12 @@ if rnx.decode_obsh(obsfile) >= 0:
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
+    stdout.write('\n')
+
+    # Close RINEX observation file
+    #
     rnx.fobs.close()
 
 fig_type = 1
