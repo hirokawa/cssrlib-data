@@ -56,6 +56,15 @@ bsxfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
 if not exists(orbfile):
     orbfile = orbfile.replace('_15M_', '_05M_')
 
+if not exists(orbfile):
+    orbfile = orbfile.replace('PSRAP', 'PSFIN')
+
+if not exists(clkfile):
+    clkfile = clkfile.replace('PSRAP', 'PSFIN')
+
+if not exists(bsxfile):
+    bsxfile = bsxfile.replace('PSRAP', 'PSFIN')
+
 # Define signals to be processed
 #
 sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),

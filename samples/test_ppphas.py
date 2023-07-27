@@ -77,7 +77,7 @@ nav.pmode = 0
 nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_has()
-cs.mon_level = 2
+cs.monlevel = 2
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
@@ -259,7 +259,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     rnx.fobs.close()
 
 fig_type = 1
-ylim = 0.4
+ylim = 1.0
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -282,6 +282,7 @@ if fig_type == 1:
         # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
+        plt.ylim([-ylim, ylim])
         # plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)
