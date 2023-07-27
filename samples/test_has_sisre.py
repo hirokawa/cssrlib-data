@@ -55,7 +55,7 @@ dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
 v = np.genfromtxt(file_has, dtype=dtype)
 
 """
-if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
     atxfile = '../data/igs14.atx'

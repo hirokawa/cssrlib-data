@@ -55,7 +55,7 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("ES1C"), rSigRnx("ES5Q"),
         rSigRnx("JS1C"), rSigRnx("JS2L")]
 
-if time > epoch2time([2022, 11, 22, 0, 0, 0]):
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
     atxfile = '../data/igs14.atx'

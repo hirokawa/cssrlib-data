@@ -76,11 +76,11 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
 
 if time > epoch2time([2022, 11, 22, 0, 0, 0]):
     if 'COD0MGXFIN' in ac:
-        atxfile = '../data/M20.ATX'
+        atxfile = '../data/I20.ATX'
     else:
         atxfile = '../data/igs20.atx'
 else:
-    if 'MGX' in ac:
+    if 'COD0MGXFIN' in ac:
         atxfile = '../data/M14.ATX'
     else:
         atxfile = '../data/igs14.atx'
@@ -141,6 +141,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
+    #nav.sig_p0 = 0.0
+    #nav.excl_sat = [id2sat('E31'), ]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
