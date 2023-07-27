@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O
+dataset = 0  # 0: SEPT078M.21O, 1: SEPT1890.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -45,8 +45,8 @@ navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
 obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
 #ac = 'COD0OPSFIN'
-#ac = 'COD0OPSRAP'
-ac = 'COD0MGXFIN'
+ac = 'COD0OPSRAP'
+#ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -59,6 +59,11 @@ bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
 
 if not exists(orbfile):
     orbfile = orbfile.replace('_05M_', '_15M_')
+
+if not exists(orbfile):
+    orbfile = orbfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+    clkfile = clkfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+    bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0OPSFIN')
 
 # Define signals to be processed
 #
