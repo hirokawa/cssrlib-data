@@ -288,7 +288,8 @@ for ne in range(nep):
                 if sig < 0:
                     continue
                 for f in range(len(sigs)):
-                    if cs.cssrmode == sc.GAL_HAS and sys == ug.GPS and sig == sSigGPS.L2P:
+                    if cs.cssrmode == sc.GAL_HAS_SIS and sys == ug.GPS and \
+                            sig == sSigGPS.L2P:
                         sig = sSigGPS.L2W  # work-around
                     if cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
                         kidx[f] = k
@@ -299,45 +300,9 @@ for ne in range(nep):
             if nsig >= nav.nf:
                 if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
                     cbias = cs.lc[0].cbias[idx_n][kidx]
-                # For Galileo HAS, switch the sign of the biases
-                if cs.cssrmode == sc.GAL_HAS:
-                    cbias *= -1
 
             if np.all(cs.lc[0].dorb[idx_n] == np.array([0.0, 0.0, 0.0])):
                 continue
-
-            # Select user reference signals for CODE
-            #
-            if sys == ug.GPS:
-                sigs = (rSigRnx("GC1C"), rSigRnx("GC1W"))
-            elif sys == ug.GAL:
-                sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
-
-            # Get CODE biases
-            #
-            cbias = np.zeros(len(sigs))
-            for i, sig in enumerate(sigs):
-                cbias[i] = bsx.getosb(sat, time, sig)*ns2m
-
-            if sys == ug.GPS:
-                osb = facs[0]*(cbias[0]-cbias[1])
-            else:
-                osb = 0.0
-
-            #dclk += osb
-
-            """
-            if sys == ug.GPS:
-                sigs = (rSigRnx("GC1W"), rSigRnx("GC2W"))
-            elif sys == ug.GAL:
-                sigs = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
-            else:
-                print("ERROR: invalid sytem {}".format(sys2str(sys)))
-                continue
-
-            freq = [s.frequency() for s in sigs]
-            facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
-                    -freq[1]**2/(freq[0]**2-freq[1]**2))
 
             # Get CODE biases
             #
@@ -347,7 +312,6 @@ for ne in range(nep):
 
             osb = facs[0]*cbias[0]+facs[1]*cbias[1]
             osb_ = facs[0]*cbias_[0]+facs[1]*cbias_[1]
-            """
 
             # Along-track, cross-track and radial conversion
             #
@@ -381,11 +345,13 @@ for ne in range(nep):
 
             print("{} {} diff rac [m] {:8.3f} {:8.3f} {:8.3f} "
                   "clk [m] {:12.6f} "
+                  "bias HAS [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
                   "bias COD [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
                   .format(time2str(time), sat2id(sat),
                           d_rs[j, 0], d_rs[j, 1], d_rs[j, 2],
                           d_dts[j, 0]*rCST.CLIGHT,
-                          sigs[0], cbias[0], sigs[1], cbias[1], osb))
+                          sigs[0], cbias[0], sigs[1], cbias[1], osb,
+                          sigs[0], cbias_[0], sigs[1], cbias_[1], osb_))
 
             orb_r[ne, sat-1] = d_rs[j, 0]
             orb_a[ne, sat-1] = d_rs[j, 1]
