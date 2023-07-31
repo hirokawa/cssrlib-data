@@ -27,6 +27,7 @@ else:
              ('num1', 'int'), ('signal', 'str'), ('num2', 'int'), ('num3', 'int'),
              ('nav', 'S144')]
     v = np.genfromtxt(file_has, dtype=dtype, delimiter=',')
+    v = v[v['validity'] == b'Passed']
 
     # Eliminate whitespace
     for i, nav in enumerate(v['nav']):
