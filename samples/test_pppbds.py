@@ -74,7 +74,6 @@ nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_bds()
 cs.monlevel = 2
-cs.cssrmode == 3
 
 # Load ANTEX data for satellites and stations
 #
