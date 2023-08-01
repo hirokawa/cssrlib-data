@@ -35,17 +35,27 @@ step = 1
 #navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 
-orbfile = '../data/COD0OPSFIN_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
-    .format(year, doy)
+#ac = 'COD0OPSFIN'
+#ac = 'COD0OPSRAP'
+ac = 'COD0MGXFIN'
 
-clkfile = '../data/COD0OPSFIN_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
-    .format(year, doy)
+orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+    .format(ac, year, doy)
 
-bsxfile = '../data/COD0OPSFIN_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
-    .format(year, doy)
+clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+    .format(ac, year, doy)
+
+bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+    .format(ac, year, doy)
 
 if not exists(orbfile):
-    orbfile = orbfile.replace('_15M_', '_05M_')
+    orbfile = orbfile.replace('_05M_', '_15M_')
+
+if not exists(orbfile):
+    orbfile = orbfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+    clkfile = clkfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+    bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0OPSFIN')
+
 
 # Read Galile HAS corrections file
 #
@@ -58,7 +68,7 @@ v = np.genfromtxt(file_has, dtype=dtype)
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
-    atxfile = '../data/igs14.atx'
+    atxfile = '../data/M14.atx'
 """
 
 # NOTE: igs14 values seem to be yield better consistency with
@@ -327,9 +337,7 @@ for ne in range(nep):
 
             # Apply SSR correction
             #
-            # NOTE: For Galileo HAS, add the orbit corrections to the BRDC orbit
-            #
-            rs[j, :] += dorb_e
+            rs[j, :] -= dorb_e
             dts[j] += dclk/rCST.CLIGHT  # [m] -> [s]
 
             """
