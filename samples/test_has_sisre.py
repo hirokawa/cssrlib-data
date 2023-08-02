@@ -1,10 +1,11 @@
 """
- static test for PPP (Galileo HAS)
+ Signal-In-Space Range Error for Galileo HAS
 """
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from os.path import exists
+import sys
 
 from cssrlib.ephemeris import eph2pos, findeph
 from cssrlib.gnss import Nav, sat2prn, sat2id, vnorm
@@ -32,7 +33,6 @@ doy = int(time2doy(time))
 nep = 3600
 step = 1
 
-#navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 
 #ac = 'COD0OPSFIN'
@@ -68,7 +68,7 @@ v = np.genfromtxt(file_has, dtype=dtype)
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
-    atxfile = '../data/M14.atx'
+    atxfile = '../data/igs14.atx'
 """
 
 # NOTE: igs14 values seem to be yield better consistency with
@@ -148,6 +148,7 @@ for ne in range(nep):
 
     vi = v[v['tow'] == tow]
     for vn in vi:
+
         buff = unhexlify(vn['nav'])
         i = 14
         if bs.unpack_from('u24', buff, i)[0] == 0xaf3bc3:
@@ -224,17 +225,22 @@ for ne in range(nep):
                           rs0[j,0], rs0[j,1], rs0[j,2], dts0[j]*1e6))
             """
 
-            # Broadcast ephemeris IODE, orbit and clock corrections for HAS
+            # Broadcast ephemeris IODE, orbit and clock corrections
             #
             idx = cs.sat_n.index(sat)
             iode = cs.lc[0].iode[idx]
-            dorb = cs.lc[0].dorb[idx, :]
+            dorb = cs.lc[0].dorb[idx, :]  # radial,along-track,cross-track
 
-            if sat not in cs.sat_n_p:
-                continue
-            idx = cs.sat_n_p.index(sat)
+            if cs.cssrmode == sc.GAL_HAS_SIS:  # HAS only
+                if cs.mask_id != cs.mask_id_clk:  # mask has changed
+                    if sat not in cs.sat_n_p:
+                        continue
+                    idx = cs.sat_n_p.index(sat)
+
             dclk = cs.lc[0].dclk[idx]
 
+            if sys not in cs.nav_mode.keys():
+                continue
             mode = cs.nav_mode[sys]
 
             # Get position, velocity and clock offset from broadcast ephemerides
@@ -287,6 +293,8 @@ for ne in range(nep):
 
             # Get HAS biases
             #
+            cbias = np.ones(len(sigs))*np.nan
+
             idx_n_ = np.where(np.array(cs.sat_n) == sat)[0]
             if len(idx_n_) == 0:
                 continue
@@ -316,12 +324,19 @@ for ne in range(nep):
 
             # Get CODE biases
             #
-            cbias_ = np.zeros(len(sigs))
+            cbias_ = np.ones(len(sigs))*np.nan
             for i, sig in enumerate(sigs):
                 cbias_[i] = bsx.getosb(sat, time, sig)*ns2m
 
-            osb = facs[0]*cbias[0]+facs[1]*cbias[1]
-            osb_ = facs[0]*cbias_[0]+facs[1]*cbias_[1]
+            dcb = cbias[0]-cbias[1]
+            dcb_ = cbias_[0]-cbias_[1]
+            osbIF = facs[0]*cbias[0]+facs[1]*cbias[1]
+            osbIF_ = facs[0]*cbias_[0]+facs[1]*cbias_[1]
+
+            # Apply ionosphere-free bias correction to clock offsets
+            #
+            dts[j] -= osbIF/rCST.CLIGHT*-1.0  # switch sign of SSR biases
+            dts0[j] -= osbIF_/rCST.CLIGHT
 
             # Along-track, cross-track and radial conversion
             #
@@ -353,13 +368,13 @@ for ne in range(nep):
 
             print("{} {} diff rac [m] {:8.3f} {:8.3f} {:8.3f} "
                   "clk [m] {:12.6f} "
-                  "bias HAS [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
-                  "bias COD [m] {} {:7.3f} {} {:7.3f} IF {:7.3f} "
+                  "bias HAS [m] {} {:7.3f} {} {:7.3f} dcb {:7.3f} "
+                  "bias COD [m] {} {:7.3f} {} {:7.3f} dcb {:7.3f} "
                   .format(time2str(time), sat2id(sat),
                           d_rs[j, 0], d_rs[j, 1], d_rs[j, 2],
                           d_dts[j, 0]*rCST.CLIGHT,
-                          sigs[0], cbias[0], sigs[1], cbias[1], osb,
-                          sigs[0], cbias_[0], sigs[1], cbias_[1], osb_))
+                          sigs[0], cbias[0], sigs[1], cbias[1], dcb,
+                          sigs[0], cbias_[0], sigs[1], cbias_[1], dcb_))
 
             orb_r[ne, sat-1] = d_rs[j, 0]
             orb_a[ne, sat-1] = d_rs[j, 1]
