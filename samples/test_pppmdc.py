@@ -13,6 +13,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.cssrlib import cssr
+from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
@@ -76,7 +77,8 @@ nav.pmode = 0
 nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr()
-cs.mon_level = 2
+cssrmode = sc.QZS_MADOCA
+cs.monlevel = 2
 
 # Load ANTEX data for satellites and stations
 #
