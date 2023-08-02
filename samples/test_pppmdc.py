@@ -47,13 +47,13 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("JC1C"), rSigRnx("JC2L"),
         rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("JL1C"), rSigRnx("JL2L"),
         rSigRnx("GS1C"), rSigRnx("GS2W"),
+        rSigRnx("EC1C"), rSigRnx("EC5Q"),
+        rSigRnx("EL1C"), rSigRnx("EL5Q"),
         rSigRnx("ES1C"), rSigRnx("ES5Q"),
+        rSigRnx("JC1C"), rSigRnx("JC2L"),
+        rSigRnx("JL1C"), rSigRnx("JL2L"),
         rSigRnx("JS1C"), rSigRnx("JS2L")]
 
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
@@ -70,7 +70,6 @@ nav = Nav()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
-#nav.maxout = 100
 
 # Decode RINEX NAV data
 #
@@ -78,7 +77,7 @@ nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr()
 cssrmode = sc.QZS_MADOCA
-cs.monlevel = 2
+cs.monlevel = 0
 
 # Load ANTEX data for satellites and stations
 #
