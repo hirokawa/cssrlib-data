@@ -11,7 +11,7 @@ import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
-from cssrlib.gnss import sys2str
+from cssrlib.gnss import sys2str, id2sat
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
 from cssrlib.pppigs import rtkinit, ppppos, IT
@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 0  # 0: SEPT078M.21O, 1: SEPT1890.23O
+dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -45,8 +45,8 @@ navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
 obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
 #ac = 'COD0OPSFIN'
-ac = 'COD0OPSRAP'
-#ac = 'COD0MGXFIN'
+#ac = 'COD0OPSRAP'
+ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -73,15 +73,11 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EC1C"), rSigRnx("EC5Q"),
         rSigRnx("EL1C"), rSigRnx("EL5Q"),
         rSigRnx("ES1C"), rSigRnx("ES5Q")]
-
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
-else:
-    if 'COD0MGXFIN' in ac:
-        atxfile = '../data/M14.ATX'
-    else:
-        atxfile = '../data/igs14.atx'
-
+"""
+        rSigRnx("CC2I"), rSigRnx("CC6I"),
+        rSigRnx("CL2I"), rSigRnx("CL6I"),
+        rSigRnx("CS2I"), rSigRnx("CS6I")]
+"""
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -110,6 +106,11 @@ bsx.parse(bsxfile)
 
 # Load ANTEX data for satellites and stations
 #
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+else:
+    atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+
 atx = atxdec()
 atx.readpcv(atxfile)
 
@@ -138,8 +139,11 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
-    #nav.sig_p0 = 0.0
-    #nav.excl_sat = [id2sat('E31'), ]
+
+    # Exclude satellites (Block III: 4,18,23,14,11,28)
+    #
+    nav.excl_sat.append(id2sat('G04'))  # GPS III
+    nav.excl_sat.append(id2sat('G11'))  # GPS III
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
