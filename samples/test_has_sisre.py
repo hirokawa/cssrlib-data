@@ -96,7 +96,7 @@ bsx.parse(bsxfile)
 # Setup SSR decoder
 #
 cs = cssr_has()
-cs.mon_level = 2
+cs.monlevel = 2
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
