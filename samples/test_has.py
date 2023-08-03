@@ -5,21 +5,37 @@ Galileo HAS decoding using the live data set
 """
 
 import numpy as np
-
 import bitstruct as bs
-from cssrlib.cssr_has import cssr_has
 from binascii import unhexlify
 
+from cssrlib.cssr_has import cssr_has
+
 # receiver log
-file_has = '../data/gale6.txt'
+dataset = 0
 
-dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+if dataset == 0:
 
-v = np.genfromtxt(file_has, dtype=dtype)
+    file_has = '../data/gale6.txt'
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+    v = np.genfromtxt(file_has, dtype=dtype)
+
+else:
+
+    file_has = '../data/SBF_GALRawCNAV.txt'
+    dtype = [('tow', 'float64'), ('wn', 'int'),  ('prn', 'S3'), ('validity', 'str'),
+             ('num1', 'int'), ('signal', 'str'), ('num2', 'int'), ('num3', 'int'),
+             ('nav', 'S144')]
+    v = np.genfromtxt(file_has, dtype=dtype, delimiter=',')
+    v = v[v['validity'] == b'Passed']
+
+    # Eliminate whitespace
+    for i, nav in enumerate(v['nav']):
+        v[i]['nav'] = (b''.join(nav.split()))
 
 i = 0
 tow = np.unique(v['tow'])
+
 
 mid_ = -1
 mid_decoded = []
@@ -35,7 +51,7 @@ dec.mon_level = 2
 for i, t in enumerate(tow):
     vi = v[v['tow'] == t]
     for vn in vi:
-        prn = int(vn['prn'])
+        prn = (vn['prn'])
         buff = unhexlify(vn['nav'])
 
         i = 14
@@ -46,8 +62,8 @@ for i, t in enumerate(tow):
         i += 24
         if hass >= 2:  # 0:test,1:operational,2:res,3:dnu
             continue
-        print("tow={:6d} prn={:2d} hass={:1d} mt={:1d} mid={:2d} ms={:2d} pid={:3d}".format(
-            t, prn, hass, mt, mid, ms, pid))
+        print("tow={:6d} prn={} hass={:1d} mt={:1d} mid={:2d} ms={:2d} pid={:3d}"
+              .format(int(t), prn, hass, mt, mid, ms, pid))
 
         if mid_ == -1 and mid not in mid_decoded:
             mid_ = mid
