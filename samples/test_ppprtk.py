@@ -4,7 +4,7 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
@@ -150,7 +150,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         if cstat:
             ppprtkpos(nav, obs, cs)
 
-        t[ne] = timediff(nav.t, t0)
+        t[ne] = timediff(nav.t, t0)/60
         tc[ne] = timediff(cs.time, t0)
 
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
@@ -163,12 +163,25 @@ if rnx.decode_obsh(obsfile) >= 0:
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
 
+        # Log to standard output
+        #
+        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             smode[ne]))
+
         # Get new epoch, exit after last epoch
         #
         obs = rnx.decode_obs()
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
+    stdout.write('\n')
+
+    # Close RINEX observation and CLAS correction file
+    #
     fc.close()
     rnx.fobs.close()
 
@@ -196,9 +209,9 @@ if fig_type == 1:
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        plt.xticks(np.arange(0, nep+1, step=30))
+        #plt.xticks(np.arange(0, nep+1, step=30))
         if k == 2:
-            plt.xlabel('time[s]')
+            plt.xlabel('Time [min]')
         plt.ylabel(lbl_t[k])
         plt.grid()
         #plt.axis([0, ne, -ylim, ylim])
