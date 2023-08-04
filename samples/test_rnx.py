@@ -9,13 +9,13 @@ from cssrlib.gnss import sat2id, sat2prn
 from os.path import expanduser
 
 #obsfile = '../data/SEPT078M.21O'
-#obsfile = '../data/SEPT1890.23O'
-obsfile = '../data/3034078M.21O'
+obsfile = '../data/SEPT1890.23O'
+#obsfile = '../data/3034078M.21O'
 
-sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("JC1C"),
-        rSigRnx("GC2W"), rSigRnx("EC5Q"), rSigRnx("JC2L"),
-        rSigRnx("GL1C"), rSigRnx("EL1C"), rSigRnx("JL1C"),
-        rSigRnx("GL2W"), rSigRnx("EL5Q"), rSigRnx("JL2L")]
+sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("CC2I"), rSigRnx("JC1C"),
+        rSigRnx("GC2W"), rSigRnx("EC5Q"), rSigRnx("CC6I"), rSigRnx("JC2L"),
+        rSigRnx("GL1C"), rSigRnx("EL1C"), rSigRnx("CL2I"), rSigRnx("JL1C"),
+        rSigRnx("GL2W"), rSigRnx("EL5Q"), rSigRnx("CL6I"), rSigRnx("JL2L")]
 
 dec = rnxdec()
 dec.setSignals(sigs)
