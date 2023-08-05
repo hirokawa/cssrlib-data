@@ -117,7 +117,6 @@ atx.readpcv(atxfile)
 # Intialize data structures for results
 #
 t = np.zeros(nep)
-tc = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 dop = np.zeros((nep, 4))

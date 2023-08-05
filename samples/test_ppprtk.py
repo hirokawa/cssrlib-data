@@ -57,7 +57,6 @@ atx = atxdec()
 atx.readpcv(atxfile)
 
 t = np.zeros(nep)
-tc = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 dop = np.zeros((nep, 4))
@@ -151,7 +150,6 @@ if rnx.decode_obsh(obsfile) >= 0:
             ppprtkpos(nav, obs, cs)
 
         t[ne] = timediff(nav.t, t0)/60
-        tc[ne] = timediff(cs.time, t0)
 
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
