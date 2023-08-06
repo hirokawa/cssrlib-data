@@ -58,26 +58,27 @@ bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
 if not exists(orbfile):
+    orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+    clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+    bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     orbfile = orbfile.replace('_05M_', '_15M_')
-
-if not exists(orbfile):
-    orbfile = orbfile.replace('COD0OPSRAP', 'COD0OPSFIN')
-    clkfile = clkfile.replace('COD0OPSRAP', 'COD0OPSFIN')
-    bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0OPSFIN')
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q")]
-"""
-        rSigRnx("CC2I"), rSigRnx("CC6I"),
-        rSigRnx("CL2I"), rSigRnx("CL6I"),
-        rSigRnx("CS2I"), rSigRnx("CS6I")]
-"""
+gnss = "GE"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if 'C' in gnss:
+    sigs.extend([rSigRnx("CC2I"), rSigRnx("CC6I"),
+                 rSigRnx("CL2I"), rSigRnx("CL6I"),
+                 rSigRnx("CS2I"), rSigRnx("CS6I")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
