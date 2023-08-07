@@ -14,8 +14,10 @@ obsfile = '../data/SEPT1890.23O'
 
 sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("CC2I"), rSigRnx("JC1C"),
         rSigRnx("GC2W"), rSigRnx("EC5Q"), rSigRnx("CC6I"), rSigRnx("JC2L"),
+        rSigRnx("GC5Q"), rSigRnx("EC6C"), rSigRnx("CC7I"), rSigRnx("JC5Q"),
         rSigRnx("GL1C"), rSigRnx("EL1C"), rSigRnx("CL2I"), rSigRnx("JL1C"),
-        rSigRnx("GL2W"), rSigRnx("EL5Q"), rSigRnx("CL6I"), rSigRnx("JL2L")]
+        rSigRnx("GL2W"), rSigRnx("EL5Q"), rSigRnx("CL6I"), rSigRnx("JL2L"),
+        rSigRnx("GL5Q"), rSigRnx("EL6C"), rSigRnx("CL7I"), rSigRnx("JL5Q"), ]
 
 dec = rnxdec()
 dec.setSignals(sigs)
