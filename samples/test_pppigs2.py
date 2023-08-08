@@ -1,5 +1,5 @@
 """
- static test for PPP (IGS)
+ kinematic test for PPP (IGS)
 """
 from copy import deepcopy
 import matplotlib.pyplot as plt
@@ -21,43 +21,54 @@ from cssrlib.rinex import rnxdec
 #
 ep = [2021, 9, 22, 6, 30, 0]
 
+# based on pnt solution
+xyz_ref = [-3961951.1326752,  3381198.11019757,  3668916.0417232]
+
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
+
 nep = 360
 
-navfile = '../data/SEPT2650.21P'
-obsfile = '../data/SEPT265G.21O'
+pos_ref = ecef2pos(xyz_ref)
 
-orbfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_15M_ORB.SP3'\
-    .format(year, doy)
+navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
+obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
-clkfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
-    .format(year, doy)
+#ac = 'COD0OPSFIN'
+ac = 'COD0MGXFIN'
 
-bsxfile = '../data/COD0OPSRAP_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
-    .format(year, doy)
+orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+    .format(ac, year, doy)
+
+clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+    .format(ac, year, doy)
+
+bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+    .format(ac, year, doy)
 
 if not exists(orbfile):
-    orbfile = orbfile.replace('_15M_', '_05M_')
-
-# based on pnt solution
-xyz_ref = [-3961951.1326752,  3381198.11019757,  3668916.0417232]
-pos_ref = ecef2pos(xyz_ref)
+    orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+    clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+    bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+    orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q")]
-
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
-else:
-    atxfile = '../data/igs14.atx'
+gnss = "GE"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if 'C' in gnss:
+    sigs.extend([rSigRnx("CC2I"), rSigRnx("CC6I"),
+                 rSigRnx("CL2I"), rSigRnx("CL6I"),
+                 rSigRnx("CS2I"), rSigRnx("CS6I")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -86,9 +97,13 @@ bsx.parse(bsxfile)
 
 # Load ANTEX data for satellites and stations
 #
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+else:
+    atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+
 atx = atxdec()
 atx.readpcv(atxfile)
-
 
 # Intialize data structures for results
 #
@@ -211,6 +226,11 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rnx.fobs.close()
 
+    # Close output file
+    #
+    if nav.fout is not None:
+        nav.fout.close()
+
 fig_type = 1
 ylim = 0.4
 
@@ -224,7 +244,7 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    x_ticks = np.arange(0, nep/60+1, step=1)
+    #x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -232,7 +252,7 @@ if fig_type == 1:
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        plt.xticks(x_ticks)
+        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
         #plt.axis([0, ne, -ylim, ylim])
@@ -241,7 +261,7 @@ if fig_type == 1:
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.xticks(x_ticks)
+    # plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.xlabel('Time [min]')
@@ -266,5 +286,4 @@ plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppigs2', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-
 # plt.show()

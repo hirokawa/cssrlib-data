@@ -11,7 +11,7 @@ import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
-from cssrlib.gnss import sys2str, id2sat
+from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
 from cssrlib.pppigs import rtkinit, ppppos, IT
@@ -30,7 +30,7 @@ elif dataset == 1:  # SETP1890.23O
     let = '0'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 else:
-    print("ERROR: no RINEX data set selcted!")
+    print("ERROR: no RINEX data set selected!")
     exit(1)
 
 time = epoch2time(ep)
@@ -45,7 +45,6 @@ navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
 obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
 #ac = 'COD0OPSFIN'
-#ac = 'COD0OPSRAP'
 ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
@@ -139,11 +138,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
-
-    # Exclude satellites (Block III: 4,18,23,14,11,28)
-    #
-    nav.excl_sat.append(id2sat('G04'))  # GPS III
-    nav.excl_sat.append(id2sat('G11'))  # GPS III
+    nav.elmin = np.deg2rad(5.0)
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
