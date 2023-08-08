@@ -46,15 +46,21 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q"),
-        rSigRnx("JC1C"), rSigRnx("JC2L"),
-        rSigRnx("JL1C"), rSigRnx("JL2L"),
-        rSigRnx("JS1C"), rSigRnx("JS2L")]
+
+gnss = "GE"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
+                 rSigRnx("JL1C"), rSigRnx("JL2L"),
+                 rSigRnx("JS1C"), rSigRnx("JS2L")])
 
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
@@ -87,7 +93,6 @@ atx.readpcv(atxfile)
 # Intialize data structures for results
 #
 t = np.zeros(nep)
-tc = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 dop = np.zeros((nep, 4))
