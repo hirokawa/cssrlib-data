@@ -3,8 +3,8 @@ sbf2rin-13.8.0                          20210321 012128 UTC PGM / RUN BY / DATE
 SEPT                                                        MARKER NAME
 Unknown                                                     MARKER NUMBER
 Unknown             Unknown                                 OBSERVER / AGENCY
-Unknown             Unknown             Unknown             REC # / TYPE / VERS
-Unknown             Unknown                                 ANT # / TYPE
+                    SEPT MOSAIC-X5      4.12.1              REC # / TYPE / VERS 
+                    JAVRINGANT_G5T  JAVC                    ANT # / TYPE        
  -3962108.4557  3381308.8777  3668678.1749                  APPROX POSITION XYZ
         0.0000        0.0000        0.0000                  ANTENNA: DELTA H/E/N
 G   14 C1C L1C S1C C1W S1W C2W L2W S2W C2L L2L S2L C5Q L5Q  SYS / # / OBS TYPES
