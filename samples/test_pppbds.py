@@ -29,7 +29,6 @@ nep = 900*2
 
 # navfile = '../data/SEPT1890.23P'
 navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
-# navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
 file_bds = '../data/bdsb2b_189e.txt'
@@ -72,8 +71,8 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr_bds()
-cs.monlevel = 0
+cs = cssr_bds('bds.log')
+cs.monlevel = 2
 
 # Load ANTEX data for satellites and stations
 #
