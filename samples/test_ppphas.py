@@ -1,6 +1,8 @@
 """
  static test for PPP (Galileo HAS)
 """
+from binascii import unhexlify
+import bitstruct.c as bs
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,8 +17,6 @@ from cssrlib.peph import peph
 from cssrlib.cssr_has import cssr_has
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
-from binascii import unhexlify
-import bitstruct.c as bs
 
 # Start epoch and number of epochs
 #
@@ -32,7 +32,7 @@ nep = 900*2
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
-# Read Galile HAS corrections file
+# Read Galileo HAS corrections file
 #
 file_has = '../data/gale6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
@@ -46,26 +46,21 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("EC1C"), rSigRnx("EC7Q"),
-        rSigRnx("EL1C"), rSigRnx("EL7Q"),
-        rSigRnx("ES1C"), rSigRnx("ES7Q")]
-
-"""
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
-else:
-    atxfile = '../data/igs14.atx'
-"""
-atxfile = '../data/igs14.atx'
+gnss = "GE"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC7Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL7Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES7Q")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
 
 nav = Nav()
-orb = peph()
 
 # Positioning mode
 # 0:static, 1:kinematic
@@ -84,6 +79,7 @@ gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 
 # Load ANTEX data for satellites and stations
 #
+atxfile = '../data/igs14.atx'
 atx = atxdec()
 atx.readpcv(atxfile)
 
@@ -92,7 +88,6 @@ atx.readpcv(atxfile)
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
-dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
@@ -111,8 +106,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
-    #nav.sig_p0 = 0.0
-    #nav.eratio = [1000, 1000, 1000]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")

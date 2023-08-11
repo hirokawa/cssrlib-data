@@ -95,7 +95,6 @@ atx.readpcv(atxfile)
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
-dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
@@ -113,8 +112,6 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rr = rnx.pos
-    pos = ecef2pos(rr)
     rtkinit(nav, rnx.pos, 'test_pppmdc.log')
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
