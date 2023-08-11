@@ -35,5 +35,5 @@ pip install ephem pandas
 - [ ] Add residual output
 - [ ] Add check for observations, first two observations must be on different frequencies
 - [ ] Number of frequencies `nav.nf` should be set automatically depending on specified signals
-- [ ] Check triple-frequency processing for PPP
-- [ ] Code/phase error ratio `nav.erratio` should also work for > 2 signals
+- [x] Check triple-frequency processing for PPP
+- [x] Code/phase error ratio `nav.erratio` should also work for > 2 signals
