@@ -112,7 +112,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rtkinit(nav, rnx.pos, 'test_pppmdc.log')
     nav.elmin = np.deg2rad(5.0)
-    nav.armode = 3  # 0:float-ppp,1:continuous,2:instantaneous,3:fix-and-hold
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
