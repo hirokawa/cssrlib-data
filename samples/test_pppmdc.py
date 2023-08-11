@@ -45,7 +45,7 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 
-gnss = "GEJ"
+gnss = "GE"  # "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
