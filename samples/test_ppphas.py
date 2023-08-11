@@ -1,22 +1,22 @@
 """
  static test for PPP (Galileo HAS)
 """
+from binascii import unhexlify
+import bitstruct.c as bs
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from sys import stdout
+
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.peph import peph
 from cssrlib.cssr_has import cssr_has
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
-from binascii import unhexlify
-import bitstruct.c as bs
 
 # Start epoch and number of epochs
 #
@@ -32,7 +32,7 @@ nep = 900*2
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 obsfile = '../data/SEPT1890.23O'
 
-# Read Galile HAS corrections file
+# Read Galileo HAS corrections file
 #
 file_has = '../data/gale6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
@@ -46,23 +46,21 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("EC1C"), rSigRnx("EC7Q"),
-        rSigRnx("EL1C"), rSigRnx("EL7Q"),
-        rSigRnx("ES1C"), rSigRnx("ES7Q")]
-
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
-else:
-    atxfile = '../data/igs14.atx'
+gnss = "GE"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC7Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL7Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES7Q")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
 
 nav = Nav()
-orb = peph()
 
 # Positioning mode
 # 0:static, 1:kinematic
@@ -81,6 +79,7 @@ gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 
 # Load ANTEX data for satellites and stations
 #
+atxfile = '../data/igs14.atx'
 atx = atxdec()
 atx.readpcv(atxfile)
 
@@ -89,7 +88,6 @@ atx.readpcv(atxfile)
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
-dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
@@ -108,7 +106,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
-
+    nav.elmin = np.deg2rad(5.0)
+    
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
@@ -137,7 +136,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),' '.join([sig.str() for sig in sigs.values()]))
+        txt = "{:7s} {}\n".format(sys2str(sys),
+                                  ' '.join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
@@ -248,16 +248,24 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                              smode[ne]))
+
         # Get new epoch, exit after last epoch
         #
         obs = rnx.decode_obs()
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
+    stdout.write('\n')
+
+    # Close RINEX observation file
+    #
     rnx.fobs.close()
 
 fig_type = 1

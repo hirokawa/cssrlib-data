@@ -59,7 +59,6 @@ atx.readpcv(atxfile)
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
-dop = np.zeros((nep, 4))
 smode = np.zeros(nep, dtype=int)
 
 if rnx.decode_obsh(obsfile) >= 0:

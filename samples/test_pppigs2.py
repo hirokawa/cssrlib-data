@@ -99,6 +99,8 @@ bsx.parse(bsxfile)
 #
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
+    atxfile = '../data/M20.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
 else:
     atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
 

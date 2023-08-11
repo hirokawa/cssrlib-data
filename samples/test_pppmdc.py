@@ -45,7 +45,7 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 
-gnss = "GEJ"
+gnss = "GE"  # "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -74,7 +74,6 @@ nav = Nav()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
-nav.armode = 3  # 0:float-ppp,1:continuous,2:instantaneous,3:fix-and-hold
 
 # Decode RINEX NAV data
 #
@@ -94,7 +93,6 @@ atx.readpcv(atxfile)
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
-dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
@@ -112,9 +110,8 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rr = rnx.pos
-    pos = ecef2pos(rr)
     rtkinit(nav, rnx.pos, 'test_pppmdc.log')
+    nav.elmin = np.deg2rad(5.0)
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -209,9 +206,10 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                              smode[ne]))
 
         # Get new epoch, exit after last epoch
@@ -285,5 +283,4 @@ plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppmdc', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-
 # plt.show()
