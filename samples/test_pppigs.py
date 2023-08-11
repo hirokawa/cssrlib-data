@@ -14,7 +14,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import rtkinit, ppppos, IT
+from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -37,7 +37,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900
+nep = 900*2
 
 pos_ref = ecef2pos(xyz_ref)
 
@@ -89,6 +89,7 @@ orb = peph()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
+nav.armode = 3  # 0:float-ppp,1:continuous,2:instantaneous,3:fix-and-hold
 
 # Decode RINEX NAV data
 #
@@ -139,6 +140,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
     nav.elmin = np.deg2rad(5.0)
+    nav.ephopt = 4
+    nav.armode = 3
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -242,7 +245,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim = 0.4
+ylim = 1.0
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -265,7 +268,7 @@ if fig_type == 1:
         # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
-        #plt.axis([0, ne, -ylim, ylim])
+        plt.ylim([-ylim, ylim])
 
     plt.subplot(4, 1, 4)
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')

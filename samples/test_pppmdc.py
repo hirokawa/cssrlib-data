@@ -28,10 +28,8 @@ doy = int(time2doy(time))
 
 nep = 900*2
 
-#navfile = '../data/SEPT1890.23P'
-navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
+navfile = '../data/SEPT1890.23P'
 obsfile = '../data/SEPT1890.23O'
-
 
 file_l6 = '../data/qzsl6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
@@ -47,7 +45,7 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 
-gnss = "GE"
+gnss = "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -76,12 +74,13 @@ nav = Nav()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
+nav.armode = 3  # 0:float-ppp,1:continuous,2:instantaneous,3:fix-and-hold
 
 # Decode RINEX NAV data
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr()
+cs = cssr('../data/madoca_cssr.log')
 cssrmode = sc.QZS_MADOCA
 cs.monlevel = 0
 

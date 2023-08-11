@@ -4,7 +4,7 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
-
+from sys import stdout
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
@@ -73,7 +73,7 @@ nav.pmode = 0
 nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_bds()
-cs.monlevel = 2
+cs.monlevel = 0
 
 # Load ANTEX data for satellites and stations
 #
@@ -194,6 +194,13 @@ if rnx.decode_obsh(obsfile) >= 0:
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
+
+        # Log to standard output
+        #
+        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             smode[ne]))
 
         # Get new epoch, exit after last epoch
         #

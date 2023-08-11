@@ -4,7 +4,7 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
-
+from sys import stdout
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
@@ -28,8 +28,7 @@ doy = int(time2doy(time))
 
 nep = 900*2
 
-# navfile = '../data/SEPT1890.23P'
-navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
+navfile = '../data/SEPT1890.23P'
 obsfile = '../data/SEPT1890.23O'
 
 # Read Galile HAS corrections file
@@ -53,13 +52,10 @@ sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
         rSigRnx("EL1C"), rSigRnx("EL7Q"),
         rSigRnx("ES1C"), rSigRnx("ES7Q")]
 
-"""
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
     atxfile = '../data/igs14.atx'
-"""
-atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -77,7 +73,7 @@ nav.pmode = 0
 nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_has()
-cs.monlevel = 2
+cs.monlevel = 0
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
@@ -111,8 +107,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
-    #nav.sig_p0 = 0.0
-    #nav.eratio = [1000, 1000, 1000]
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -142,8 +136,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
+        txt = "{:7s} {}\n".format(sys2str(sys),' '.join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
@@ -211,8 +204,9 @@ if rnx.decode_obsh(obsfile) >= 0:
             # print(f"{mt} {mid} {ms} {pid}")
 
         if len(rec) >= ms_:
-            print("data collected mid={:2d} ms={:2d} tow={:.0f}"
-                  .format(mid_, ms_, tow))
+            if cs.monlevel >= 2:
+                print("data collected mid={:2d} ms={:2d} tow={:.0f}"
+                      .format(mid_, ms_, tow))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             rec = []
@@ -225,7 +219,8 @@ if rnx.decode_obsh(obsfile) >= 0:
             icnt += 1
             if icnt > 2*ms_ and mid_ != -1:
                 icnt = 0
-                print(f"reset mid={mid_} ms={ms_} tow={tow}")
+                if cs.monlevel >= 2:
+                    print(f"reset mid={mid_} ms={ms_} tow={tow}")
                 rec = []
                 mid_ = -1
 
@@ -250,6 +245,12 @@ if rnx.decode_obsh(obsfile) >= 0:
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
 
+        # Log to standard output
+        #
+        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             smode[ne]))
         # Get new epoch, exit after last epoch
         #
         obs = rnx.decode_obs()
