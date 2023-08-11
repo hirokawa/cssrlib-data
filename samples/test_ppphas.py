@@ -6,6 +6,7 @@ import bitstruct.c as bs
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
@@ -13,7 +14,6 @@ from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.peph import peph
 from cssrlib.cssr_has import cssr_has
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
@@ -106,6 +106,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppphas.log')
+    nav.elmin = np.deg2rad(5.0)
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -204,8 +205,10 @@ if rnx.decode_obsh(obsfile) >= 0:
             # print(f"{mt} {mid} {ms} {pid}")
 
         if len(rec) >= ms_:
+            """
             print("data collected mid={:2d} ms={:2d} tow={:.0f}"
                   .format(mid_, ms_, tow))
+            """
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             rec = []
@@ -218,7 +221,9 @@ if rnx.decode_obsh(obsfile) >= 0:
             icnt += 1
             if icnt > 2*ms_ and mid_ != -1:
                 icnt = 0
+                """
                 print(f"reset mid={mid_} ms={ms_} tow={tow}")
+                """
                 rec = []
                 mid_ = -1
 
@@ -243,12 +248,26 @@ if rnx.decode_obsh(obsfile) >= 0:
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
 
+        # Log to standard output
+        #
+        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                             smode[ne]))
+
         # Get new epoch, exit after last epoch
         #
         obs = rnx.decode_obs()
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
+    stdout.write('\n')
+
+    # Close RINEX observation file
+    #
     rnx.fobs.close()
 
 fig_type = 1

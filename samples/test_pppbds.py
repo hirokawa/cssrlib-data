@@ -1,9 +1,11 @@
 """
  static test for PPP (BeiDou PPP)
 """
+from binascii import unhexlify
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
@@ -11,11 +13,9 @@ from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.peph import peph
 from cssrlib.cssr_bds import cssr_bds
 from cssrlib.pppssr import rtkinit, ppppos, IT
 from cssrlib.rinex import rnxdec
-from binascii import unhexlify
 
 # Start epoch and number of epochs
 #
@@ -44,39 +44,42 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("CC1P"), rSigRnx("CC5P"),
-        rSigRnx("CL1P"), rSigRnx("CL5P"),
-        rSigRnx("CS1P"), rSigRnx("CS5P")]
-
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
-else:
-    atxfile = '../data/igs14.atx'
+gnss = "GC"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'C' in gnss:
+    sigs.extend([rSigRnx("CC1P"), rSigRnx("CC5P"),
+                 rSigRnx("CL1P"), rSigRnx("CL5P"),
+                 rSigRnx("CS1P"), rSigRnx("CS5P")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
 
 nav = Nav()
-orb = peph()
 
 # Positioning mode
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
-# nav.maxout = 100
 
 # Decode RINEX NAV data
 #
 nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_bds()
-cs.monlevel = 2
+cs.monlevel = 0
 
 # Load ANTEX data for satellites and stations
 #
+
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile = '../data/igs20.atx'
+else:
+    atxfile = '../data/igs14.atx'
+
 atx = atxdec()
 atx.readpcv(atxfile)
 
@@ -194,12 +197,26 @@ if rnx.decode_obsh(obsfile) >= 0:
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                smode[ne]))
 
+        # Log to standard output
+        #
+        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                             smode[ne]))
+
         # Get new epoch, exit after last epoch
         #
         obs = rnx.decode_obs()
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
+    stdout.write('\n')
+
+    # Close RINEX observation file
+    #
     rnx.fobs.close()
 
 fig_type = 1
@@ -259,5 +276,4 @@ plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppbds', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-
 # plt.show()

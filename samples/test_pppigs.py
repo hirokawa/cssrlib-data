@@ -108,6 +108,8 @@ bsx.parse(bsxfile)
 #
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
+    atxfile = '../data/M20.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
 else:
     atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
 
@@ -138,6 +140,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
     nav.elmin = np.deg2rad(5.0)
+    nav.thresar = 2.0
 
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
         rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
@@ -210,7 +213,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
@@ -218,9 +221,10 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                              smode[ne]))
 
         # Get new epoch, exit after last epoch
