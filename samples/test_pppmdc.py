@@ -20,18 +20,24 @@ from binascii import unhexlify
 
 # Start epoch and number of epochs
 #
-ep = [2023, 7, 8, 4, 0, 0]
+if False:
+    ep = [2023, 7, 8, 4, 0, 0]
+    navfile = '../data/SEPT1890.23P'
+    obsfile = '../data/SEPT1890.23O'
+    file_l6 = '../data/qzsl6_189e.txt'
+else:
+    ep = [2023, 8, 11, 21, 0, 0]
+    navfile = '../data/doy223/NAV223.23p'
+    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
+    file_l6 = '../data/doy223/223v_qzsl6.txt'
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*2
+nep = 900*4-5
 
-navfile = '../data/SEPT1890.23P'
-obsfile = '../data/SEPT1890.23O'
-
-file_l6 = '../data/qzsl6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
 v = np.genfromtxt(file_l6, dtype=dtype)
@@ -45,7 +51,7 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 
-gnss = "GE"  # "GEJ"
+gnss = "GEJ"  # "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -178,10 +184,11 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
                & (v['prn'] == prn_ref)]
-        msg = unhexlify(vi['nav'][0])
-        cs.decode_l6msg(msg, 0)
-        if cs.fcnt == 5:  # end of sub-frame
-            cs.decode_cssr(cs.buff, 0)
+        if len(vi) > 0:
+            msg = unhexlify(vi['nav'][0])
+            cs.decode_l6msg(msg, 0)
+            if cs.fcnt == 5:  # end of sub-frame
+                cs.decode_cssr(cs.buff, 0)
 
         # Call PPP module
         #

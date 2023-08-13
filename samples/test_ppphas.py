@@ -20,21 +20,23 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-ep = [2023, 7, 8, 4, 0, 0]
+
+if False:
+    ep = [2023, 7, 8, 4, 0, 0]
+    navfile = '../data/SEPT1890.23P'
+    obsfile = '../data/SEPT1890.23O'
+    file_has = '../data/gale6_189e.txt'
+else:
+    ep = [2023, 8, 11, 21, 0, 0]
+    navfile = '../data/doy223/NAV223.23p'
+    obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
+    file_has = '../data/doy223/223v_gale6.txt'
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*2
-
-# navfile = '../data/SEPT1890.23P'
-navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
-obsfile = '../data/SEPT1890.23O'
-
-# Read Galileo HAS corrections file
-#
-file_has = '../data/gale6_189e.txt'
+nep = 900*4
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)

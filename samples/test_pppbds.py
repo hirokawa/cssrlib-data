@@ -19,7 +19,9 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-ep = [2023, 7, 8, 4, 0, 0]
+# ep = [2023, 7, 8, 4, 0, 0]
+ep = [2023, 8, 11, 21, 0, 0]
+
 
 time = epoch2time(ep)
 year = ep[0]
@@ -27,11 +29,17 @@ doy = int(time2doy(time))
 
 nep = 900*2
 
-# navfile = '../data/SEPT1890.23P'
-navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
-obsfile = '../data/SEPT1890.23O'
 
-file_bds = '../data/bdsb2b_189e.txt'
+# navfile = '../data/doy223/SEPT223.23p'
+navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
+obsfile = '../data/doy223/SEPT223Y.23O'
+file_bds = '../data/doy223/223v_bdsb2b.txt'
+
+# navfile = '../data/SEPT1890.23P'
+# navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
+# obsfile = '../data/SEPT1890.23O'
+# file_bds = '../data/bdsb2b_189e.txt'
+
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_bds, dtype=dtype)
