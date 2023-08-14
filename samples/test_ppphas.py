@@ -29,7 +29,8 @@ if False:
 else:
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/NAV223.23p'
-    obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
+    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_has = '../data/doy223/223v_gale6.txt'
 
 time = epoch2time(ep)
@@ -73,7 +74,7 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr_has()
+cs = cssr_has('has.log')
 cs.monlevel = 0
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
@@ -283,7 +284,6 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    # x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -291,18 +291,16 @@ if fig_type == 1:
         plt.plot(t[idx5], enu[idx5, k], 'y.')
         plt.plot(t[idx4], enu[idx4, k], 'g.')
 
-        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
-        # plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
+    plt.ylim([-50, 50])
 
-    # plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.xlabel('Time [min]')
@@ -312,7 +310,7 @@ elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    # plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='none')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
@@ -321,7 +319,7 @@ elif fig_type == 2:
     plt.grid()
     plt.axis('equal')
     plt.legend()
-    # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_ppphas', plotFileFormat))

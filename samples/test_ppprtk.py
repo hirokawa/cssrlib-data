@@ -14,17 +14,24 @@ from cssrlib.peph import atxdec, searchpcv
 from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.rinex import rnxdec
 
-ep = [2021, 3, 19, 12, 0, 0]
+if True:
+    ep = [2021, 3, 19, 12, 0, 0]
+    xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+    navfile = '../data/SEPT078M.21P'
+    obsfile = '../data/SEPT078M.21O'
+    l6file = '../data/2021078M.l6'
+else:
+    ep = [2023, 8, 11, 21, 0, 0]
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    navfile = '../data/doy223/NAV223.23p'
+    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
+    file_l6 = '../data/doy223/223v_qzsl6.txt'
+    
 time = epoch2time(ep)
 
 atxfile = '../data/igs14.atx'
-l6file = '../data/2021078M.l6'
 griddef = '../data/clas_grid.def'
-navfile = '../data/SEPT078M.21P'
-obsfile = '../data/SEPT078M.21O'
 
-# based on GSI F5 solution
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
 
 cs = cssr()
@@ -188,7 +195,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim = 0.4
+ylim = 1.0
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -211,7 +218,7 @@ if fig_type == 1:
             plt.xlabel('Time [min]')
         plt.ylabel(lbl_t[k])
         plt.grid()
-        #plt.axis([0, ne, -ylim, ylim])
+        plt.ylim([-ylim, ylim])
 
 elif fig_type == 2:
 
