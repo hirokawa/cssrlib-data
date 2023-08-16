@@ -56,10 +56,11 @@ clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
 bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
-if not exists(orbfile):
+if not exists(clkfile):
     orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+if not exists(orbfile):    
     orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
@@ -141,9 +142,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
     nav.elmin = np.deg2rad(5.0)
     nav.thresar = 2.0
-
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
-        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #

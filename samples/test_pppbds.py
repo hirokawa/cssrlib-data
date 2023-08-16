@@ -112,9 +112,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rtkinit(nav, rnx.pos, 'test_pppbds.log')
 
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
-        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
-
     # Get equipment information
     #
     nav.fout.write("FileName: {}\n".format(obsfile))
