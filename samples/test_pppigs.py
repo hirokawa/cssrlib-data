@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O
+dataset = 2  # 0: SEPT078M.21O, 1: SEPT1890.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -28,7 +28,7 @@ if dataset == 0:  # SETP078M.21O
 elif dataset == 1:  # SETP1890.23O
     ep = [2023, 7, 8, 4, 0, 0]
     let = '0'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
 else:
     print("ERROR: no RINEX data set selected!")
     exit(1)
@@ -60,7 +60,7 @@ if not exists(clkfile):
     orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-if not exists(orbfile):    
+if not exists(orbfile):
     orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
