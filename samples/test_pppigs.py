@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 2  # 0: SEPT078M.21O, 1: SEPT1890.23O
+dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -28,6 +28,10 @@ if dataset == 0:  # SETP078M.21O
 elif dataset == 1:  # SETP1890.23O
     ep = [2023, 7, 8, 4, 0, 0]
     let = '0'
+    xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
+elif dataset == 2:  # SETP223Z.23O
+    ep = [2023, 8, 11, 21, 0, 0]
+    let = 'Y'
     xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
 else:
     print("ERROR: no RINEX data set selected!")
@@ -41,8 +45,14 @@ nep = 900*2
 
 pos_ref = ecef2pos(xyz_ref)
 
-navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
-obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+if dataset == 2:
+    navfile = '../data/doy{:03d}/BRD400DLR_S_{:04d}{:03d}0000_01D_MN.rnx'\
+        .format(doy, year, doy)
+    obsfile = '../data/doy{:03d}/SEPT{:03d}{}.{:02d}O'\
+        .format(doy, doy, let, year % 2000)
+else:
+    navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
+    obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
 #ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
