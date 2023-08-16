@@ -46,15 +46,20 @@ atx.readpcv(atxfile)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("JC1C"), rSigRnx("JC2L"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("JL1C"), rSigRnx("JL2L"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q"),
-        rSigRnx("JS1C"), rSigRnx("JS2L")]
+gnss = "GEJ"  # "GEJ"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
+                 rSigRnx("JL1C"), rSigRnx("JL2L"),
+                 rSigRnx("JS1C"), rSigRnx("JS2L")])
 
 # rover
 rnx = rn.rnxdec()
