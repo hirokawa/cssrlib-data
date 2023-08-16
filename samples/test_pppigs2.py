@@ -35,8 +35,8 @@ pos_ref = ecef2pos(xyz_ref)
 navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
 obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
-#ac = 'COD0OPSFIN'
-ac = 'COD0MGXFIN'
+ac = 'COD0OPSFIN'
+#ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
