@@ -2,7 +2,7 @@
  static test for PPP (Galileo HAS)
 """
 from binascii import unhexlify
-import bitstruct.c as bs
+import bitstruct as bs
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
