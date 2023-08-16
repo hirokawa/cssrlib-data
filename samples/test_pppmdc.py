@@ -50,7 +50,6 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-
 gnss = "GEJ"  # "GEJ"
 sigs = []
 if 'G' in gnss:
@@ -119,9 +118,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     rtkinit(nav, rnx.pos, 'test_pppmdc.log')
     nav.elmin = np.deg2rad(5.0)
 
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
-        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
-
     # Get equipment information
     #
     nav.fout.write("FileName: {}\n".format(obsfile))
@@ -188,7 +184,7 @@ if rnx.decode_obsh(obsfile) >= 0:
             msg = unhexlify(vi['nav'][0])
             cs.decode_l6msg(msg, 0)
             if cs.fcnt == 5:  # end of sub-frame
-                cs.decode_cssr(cs.buff, 0)
+                cs.decode_cssr(bytes(cs.buff), 0)
 
         # Call PPP module
         #

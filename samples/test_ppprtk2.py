@@ -46,15 +46,20 @@ atx.readpcv(atxfile)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("JC1C"), rSigRnx("JC2L"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("JL1C"), rSigRnx("JL2L"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q"),
-        rSigRnx("JS1C"), rSigRnx("JS2L")]
+gnss = "GEJ"  # "GEJ"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
+                 rSigRnx("JL1C"), rSigRnx("JL2L"),
+                 rSigRnx("JS1C"), rSigRnx("JS2L")])
 
 # rover
 rnx = rn.rnxdec()
@@ -74,9 +79,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     rtkinit(nav, rnx.pos, 'test_ppprtk2.log')
     nav.armode = 3
     nav.excl_sat = [5, 58]  # [5, 58, 65]
-
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
-        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
@@ -130,7 +132,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         for k in range(30):  # read 30 sec
             cs.decode_l6msg(fc.read(250), 0)
             if cs.fcnt == 5:  # end of sub-frame
-                cs.decode_cssr(cs.buff, 0)
+                cs.decode_cssr(bytes(cs.buff), 0)
 
     # Skip epoch until start time
     #
@@ -145,7 +147,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         cs.decode_l6msg(fc.read(250), 0)
         if cs.fcnt == 5:  # end of sub-frame
             cs.week = week
-            cs.decode_cssr(cs.buff, 0)
+            cs.decode_cssr(bytes(cs.buff), 0)
 
         if ne == 0:
             t0 = nav.t = obs.t

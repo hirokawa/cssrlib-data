@@ -15,7 +15,7 @@ from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
-l6_mode = 0  # 0: from receiver log, 1: from archive on QSS
+l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
 
 if l6_mode == 1:
     ep = [2021, 3, 19, 12, 0, 0]
@@ -47,15 +47,20 @@ cs.read_griddef(griddef)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("JC1C"), rSigRnx("JC2L"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("JL1C"), rSigRnx("JL2L"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q"),
-        rSigRnx("JS1C"), rSigRnx("JS2L")]
+gnss = "GEJ"  # "GEJ"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
+                 rSigRnx("JL1C"), rSigRnx("JL2L"),
+                 rSigRnx("JS1C"), rSigRnx("JS2L")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -83,9 +88,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_ppprtk.log')
-
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
-        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #
@@ -161,7 +163,7 @@ if rnx.decode_obsh(obsfile) >= 0:
             if len(vi) > 0:
                 cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
                 if cs.fcnt == 5:  # end of sub-frame
-                    cs.decode_cssr(cs.buff, 0)
+                    cs.decode_cssr(bytes(cs.buff), 0)
 
         if ne == 0:
             nav.t = deepcopy(obs.t)

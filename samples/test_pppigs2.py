@@ -35,8 +35,8 @@ pos_ref = ecef2pos(xyz_ref)
 navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
 obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
-#ac = 'COD0OPSFIN'
-ac = 'COD0MGXFIN'
+ac = 'COD0OPSFIN'
+#ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -47,10 +47,11 @@ clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
 bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
-if not exists(orbfile):
+if not exists(clkfile):
     orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+if not exists(orbfile):
     orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
@@ -131,9 +132,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppigs2.log')
-
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
-        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #

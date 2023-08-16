@@ -40,7 +40,7 @@ if flg_plot:
     plt.figure(figsize=(6, 6))
     ax = plt.axes(projection=ccrs.Orthographic(central_longitude=lon0,
                                                central_latitude=0))
-    ax.coastlines(resolution='50m')
+    # ax.coastlines(resolution='50m')
     ax.stock_img()
     ax.gridlines()
 

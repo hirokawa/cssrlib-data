@@ -19,7 +19,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O
+dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -28,7 +28,11 @@ if dataset == 0:  # SETP078M.21O
 elif dataset == 1:  # SETP1890.23O
     ep = [2023, 7, 8, 4, 0, 0]
     let = '0'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
+elif dataset == 2:  # SETP223Z.23O
+    ep = [2023, 8, 11, 21, 0, 0]
+    let = 'Y'
+    xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
 else:
     print("ERROR: no RINEX data set selected!")
     exit(1)
@@ -41,8 +45,14 @@ nep = 900*2
 
 pos_ref = ecef2pos(xyz_ref)
 
-navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
-obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+if dataset == 2:
+    navfile = '../data/doy{:03d}/BRD400DLR_S_{:04d}{:03d}0000_01D_MN.rnx'\
+        .format(doy, year, doy)
+    obsfile = '../data/doy{:03d}/SEPT{:03d}{}.{:02d}O'\
+        .format(doy, doy, let, year % 2000)
+else:
+    navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
+    obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
 #ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
@@ -56,10 +66,11 @@ clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
 bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
-if not exists(orbfile):
+if not exists(clkfile):
     orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+if not exists(orbfile):
     orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
@@ -141,9 +152,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     rtkinit(nav, rnx.pos, 'test_pppigs.log')
     nav.elmin = np.deg2rad(5.0)
     nav.thresar = 2.0
-
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == '':
-        rnx.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
 
     # Get equipment information
     #

@@ -69,11 +69,6 @@ pos_ref = gn.ecef2pos(xyz_ref)
 rtkinit(nav, rr0)
 rr = rr0
 
-if 'UNKNOWN' in dec.ant or dec.ant.strip() == "":
-    dec.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
-if 'UNKNOWN' in decb.ant or decb.ant.strip() == "":
-    decb.ant = "{:16s}{:4s}".format("TRM59800.80", "NONE")
-
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()

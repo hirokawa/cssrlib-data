@@ -69,11 +69,6 @@ smode = np.zeros(nep, dtype=int)
 rtkinit(nav, dec.pos)
 rr = dec.pos
 
-if 'UNKNOWN' in dec.ant or dec.ant.strip() == "":
-    dec.ant = "{:16s}{:4s}".format("JAVRINGANT_DM", "SCIS")
-if 'UNKNOWN' in decb.ant or decb.ant.strip() == "":
-    decb.ant = "{:16s}{:4s}".format("TRM59800.80", "NONE")
-
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()
