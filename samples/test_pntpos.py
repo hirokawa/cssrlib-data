@@ -8,11 +8,19 @@ from cssrlib.gnss import ecef2pos, timediff, dops, ecef2enu
 from cssrlib.gnss import rSigRnx
 from cssrlib.pntpos import stdinit, pntpos
 
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
-pos_ref = ecef2pos(xyz_ref)
+if False:
+    xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+    navfile = '../data/SEPT078M.21P'
+    obsfile = '../data/SEPT078M.21O'
+else:
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    ep = [2023, 8, 11, 21, 0, 0]
+    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    # navfile = '../data/doy223/NAV223.23p'
+    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
 
-navfile = '../data/SEPT078M.21P'
-obsfile = '../data/SEPT078M.21O'
+pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
@@ -49,7 +57,7 @@ if dec.decode_obsh(obsfile) >= 0:
 
 
 if True:
-    dmax = 3
+    dmax = 10
     plt.figure()
     plt.plot(t, enu)
     plt.ylabel('pos err[m]')

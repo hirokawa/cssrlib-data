@@ -1,6 +1,6 @@
      3.04           OBSERVATION DATA    M: Mixed            RINEX VERSION / TYPE
                     TRIMBLE NetR9       5.37,21/SEP/2018    REC # / TYPE / VERS 
-                                                            ANT # / TYPE        
+                    TRM159900.00    SCIS                    ANT # / TYPE        
  -3959403.8133  3385705.8562  3667525.8580                  APPROX POSITION XYZ 
         0.0000        0.0000        0.0000                  ANTENNA: DELTA H/E/N
 G   16 C1C L1C D1C S1C C2W L2W D2W S2W C2X L2X D2X S2X C5X  SYS / # / OBS TYPES 

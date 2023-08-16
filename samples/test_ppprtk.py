@@ -8,28 +8,41 @@ from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
-from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str, epoch2time
-from cssrlib.gnss import rSigRnx, sys2str
+from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str
+from cssrlib.gnss import rSigRnx, sys2str, epoch2time
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.rinex import rnxdec
+from binascii import unhexlify
 
-ep = [2021, 3, 19, 12, 0, 0]
+l6_mode = 0  # 0: from receiver log, 1: from archive on QSS
+
+if l6_mode == 1:
+    ep = [2021, 3, 19, 12, 0, 0]
+    xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+    navfile = '../data/SEPT078M.21P'
+    obsfile = '../data/SEPT078M.21O'
+    l6file = '../data/2021078M.l6'
+else:
+    ep = [2023, 8, 11, 21, 0, 0]
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    navfile = '../data/doy223/NAV223.23p'
+    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
+    file_l6 = '../data/doy223/223v_qzsl6.txt'
+
+    prn_ref = 199  # QZSS PRN
+    l6_ch = 0  # 0:L6D, 1:L6E
+
 time = epoch2time(ep)
 
 atxfile = '../data/igs14.atx'
-l6file = '../data/2021078M.l6'
 griddef = '../data/clas_grid.def'
-navfile = '../data/SEPT078M.21P'
-obsfile = '../data/SEPT078M.21O'
 
-# based on GSI F5 solution
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
 pos_ref = ecef2pos(xyz_ref)
 
 cs = cssr()
 cs.monlevel = 1
-cs.week = 2149
+cs.week = time2gpst(time)[0]
 cs.read_griddef(griddef)
 
 # Define signals to be processed
@@ -49,7 +62,7 @@ rnx.setSignals(sigs)
 
 nav = Nav()
 nav = rnx.decode_nav(navfile, nav)
-nep = 600
+nep = 900*4-10
 
 # Load ANTEX data for satellites and stations
 #
@@ -98,8 +111,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
+        txt = "{:7s} {}\n".format(sys2str(sys), ' '.
+                                  join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
@@ -116,11 +129,16 @@ if rnx.decode_obsh(obsfile) >= 0:
     pos = ecef2pos(rnx.pos)
     inet = cs.find_grid_index(pos)
 
-    fc = open(l6file, 'rb')
-    if not fc:
-        nav.fout.write("ERROR: cannot open L6 messsage file {}!"
-                       .format(l6file))
-        sys.exit(-1)
+    if l6_mode == 1:
+        fc = open(l6file, 'rb')
+        if not fc:
+            nav.fout.write("ERROR: cannot open L6 messsage file {}!"
+                           .format(l6file))
+            sys.exit(-1)
+    else:
+        dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+                 ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
+        v = np.genfromtxt(file_l6, dtype=dtype)
 
     # Skip epoch until start time
     #
@@ -132,10 +150,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         week, tow = time2gpst(obs.t)
 
-        cs.decode_l6msg(fc.read(250), 0)
-        if cs.fcnt == 5:  # end of sub-frame
-            cs.week = week
-            cs.decode_cssr(cs.buff, 0)
+        if l6_mode == 1:
+            cs.decode_l6msg(fc.read(250), 0)
+            if cs.fcnt == 5:  # end of sub-frame
+                cs.week = week
+                cs.decode_cssr(cs.buff, 0)
+        else:
+            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
+                   & (v['prn'] == prn_ref)]
+            if len(vi) > 0:
+                cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
+                if cs.fcnt == 5:  # end of sub-frame
+                    cs.decode_cssr(cs.buff, 0)
 
         if ne == 0:
             nav.t = deepcopy(obs.t)
@@ -179,7 +205,8 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Close RINEX observation and CLAS correction file
     #
-    fc.close()
+    if l6_mode == 1:
+        fc.close()
     rnx.fobs.close()
 
     # Close output file
@@ -188,7 +215,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim = 0.4
+ylim = 1.0
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -202,29 +229,29 @@ if fig_type == 1:
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
     for k in range(3):
         plt.subplot(3, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], 'r.')
-        plt.plot(t[idx5], enu[idx5, k], 'y.')
-        plt.plot(t[idx4], enu[idx4, k], 'g.')
+        plt.plot(t[idx0], enu[idx0, k], 'r.', label='none')
+        plt.plot(t[idx5], enu[idx5, k], 'y.', label='float')
+        plt.plot(t[idx4], enu[idx4, k], 'g.', label='fix')
 
-        #plt.xticks(np.arange(0, nep+1, step=30))
         if k == 2:
             plt.xlabel('Time [min]')
+            plt.legend()
         plt.ylabel(lbl_t[k])
         plt.grid()
-        #plt.axis([0, ne, -ylim, ylim])
+        plt.ylim([-ylim, ylim])
 
 elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='none')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
     plt.xlabel('Easting [m]')
     plt.ylabel('Northing [m]')
     plt.grid()
-    # plt.legend()
+    plt.legend()
     ylim = 0.05
     ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
     plt.axis('equal')

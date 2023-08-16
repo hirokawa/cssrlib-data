@@ -20,18 +20,24 @@ from binascii import unhexlify
 
 # Start epoch and number of epochs
 #
-ep = [2023, 7, 8, 4, 0, 0]
+if False:
+    ep = [2023, 7, 8, 4, 0, 0]
+    navfile = '../data/SEPT1890.23P'
+    obsfile = '../data/SEPT1890.23O'
+    file_l6 = '../data/qzsl6_189e.txt'
+else:
+    ep = [2023, 8, 11, 21, 0, 0]
+    navfile = '../data/doy223/NAV223.23p'
+    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
+    file_l6 = '../data/doy223/223v_qzsl6.txt'
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*2
+nep = 900*4-5
 
-navfile = '../data/SEPT1890.23P'
-obsfile = '../data/SEPT1890.23O'
-
-file_l6 = '../data/qzsl6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
 v = np.genfromtxt(file_l6, dtype=dtype)
@@ -45,7 +51,7 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 
-gnss = "GE"  # "GEJ"
+gnss = "GEJ"  # "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -80,7 +86,7 @@ nav.pmode = 0
 nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr('../data/madoca_cssr.log')
-cssrmode = sc.QZS_MADOCA
+cs.cssrmode = sc.QZS_MADOCA
 cs.monlevel = 0
 
 # Load ANTEX data for satellites and stations
@@ -141,8 +147,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
+        txt = "{:7s} {}\n".format(sys2str(sys), ' '.
+                                  join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
@@ -178,10 +184,11 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
                & (v['prn'] == prn_ref)]
-        msg = unhexlify(vi['nav'][0])
-        cs.decode_l6msg(msg, 0)
-        if cs.fcnt == 5:  # end of sub-frame
-            cs.decode_cssr(cs.buff, 0)
+        if len(vi) > 0:
+            msg = unhexlify(vi['nav'][0])
+            cs.decode_l6msg(msg, 0)
+            if cs.fcnt == 5:  # end of sub-frame
+                cs.decode_cssr(cs.buff, 0)
 
         # Call PPP module
         #
@@ -239,7 +246,6 @@ fig.set_rasterized(True)
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    #x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
@@ -251,12 +257,12 @@ if fig_type == 1:
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
-        #plt.axis([0, ne, -ylim, ylim])
 
     plt.subplot(4, 1, 4)
     plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
     plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
     plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
+    plt.ylim([-50, 50])
 
     # plt.xticks(x_ticks)
     plt.ylabel('ZTD [cm]')
@@ -268,7 +274,7 @@ elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='none')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
@@ -277,7 +283,7 @@ elif fig_type == 2:
     plt.grid()
     plt.axis('equal')
     plt.legend()
-    #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppmdc', plotFileFormat))
