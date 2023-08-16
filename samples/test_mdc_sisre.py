@@ -1,6 +1,7 @@
 """
 Signal-In-Space Range Error for QZSS MADOCA
 """
+from binascii import unhexlify
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,7 +19,6 @@ from cssrlib.cssrlib import cssr
 from cssrlib.cssrlib import sCType, sSigGPS
 from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.rinex import rnxdec
-from binascii import unhexlify
 
 
 # Start epoch and number of epochs
@@ -123,7 +123,7 @@ for ne in range(nep):
     msg = unhexlify(vi['nav'][0])
     cs.decode_l6msg(msg, 0)
     if cs.fcnt == 5:  # end of sub-frame
-        cs.decode_cssr(cs.buff, 0)
+        cs.decode_cssr(bytes(cs.buff), 0)
 
     # Extract SSR corrections
     #
