@@ -5,7 +5,7 @@ Galileo HAS decoding using the live data set
 """
 
 import numpy as np
-import bitstruct as bs
+import bitstruct.c as bs
 from binascii import unhexlify
 
 from cssrlib.cssr_has import cssr_has

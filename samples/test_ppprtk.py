@@ -15,7 +15,7 @@ from cssrlib.ppprtk import rtkinit, ppprtkpos
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
-l6_mode = 0  # 0: from receiver log, 1: from archive on QSS
+l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
 
 if l6_mode == 1:
     ep = [2021, 3, 19, 12, 0, 0]
@@ -161,7 +161,7 @@ if rnx.decode_obsh(obsfile) >= 0:
             if len(vi) > 0:
                 cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
                 if cs.fcnt == 5:  # end of sub-frame
-                    cs.decode_cssr(cs.buff, 0)
+                    cs.decode_cssr(bytes(cs.buff), 0)
 
         if ne == 0:
             nav.t = deepcopy(obs.t)

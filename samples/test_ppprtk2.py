@@ -130,7 +130,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         for k in range(30):  # read 30 sec
             cs.decode_l6msg(fc.read(250), 0)
             if cs.fcnt == 5:  # end of sub-frame
-                cs.decode_cssr(cs.buff, 0)
+                cs.decode_cssr(bytes(cs.buff), 0)
 
     # Skip epoch until start time
     #
@@ -145,7 +145,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         cs.decode_l6msg(fc.read(250), 0)
         if cs.fcnt == 5:  # end of sub-frame
             cs.week = week
-            cs.decode_cssr(cs.buff, 0)
+            cs.decode_cssr(bytes(cs.buff), 0)
 
         if ne == 0:
             t0 = nav.t = obs.t
