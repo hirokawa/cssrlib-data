@@ -20,7 +20,7 @@ from cssrlib.cssrlib import sCType, sSigGPS
 from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
-import bitstruct.c as bs
+import bitstruct as bs
 
 # Start epoch and number of epochs
 #
