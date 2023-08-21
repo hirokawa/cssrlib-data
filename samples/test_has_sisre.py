@@ -36,7 +36,6 @@ step = 1
 navfile = '../data/BRDC00IGS_R_20231890000_01D_MN.rnx'
 
 #ac = 'COD0OPSFIN'
-#ac = 'COD0OPSRAP'
 ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
@@ -49,13 +48,12 @@ bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
 if not exists(orbfile):
-    orbfile = orbfile.replace('_05M_', '_15M_')
-
-if not exists(orbfile):
     orbfile = orbfile.replace('COD0OPSRAP', 'COD0OPSFIN')
     clkfile = clkfile.replace('COD0OPSRAP', 'COD0OPSFIN')
     bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0OPSFIN')
 
+if not exists(orbfile):
+    orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Read Galile HAS corrections file
 #
@@ -215,6 +213,9 @@ for ne in range(nep):
             # Precise reference orbit and clock
             #
             rs_, dts_, _ = orb.peph2pos(time, sat, nav)
+            if rs_ is None or dts is None:
+                continue
+
             rs0[j, :] = rs_[0:3]
             vs0[j, :] = rs_[3:6]
             dts0[j] = dts_[0]
@@ -330,6 +331,7 @@ for ne in range(nep):
 
             dcb = cbias[0]-cbias[1]
             dcb_ = cbias_[0]-cbias_[1]
+
             osbIF = facs[0]*cbias[0]+facs[1]*cbias[1]
             osbIF_ = facs[0]*cbias_[0]+facs[1]*cbias_[1]
 
@@ -396,27 +398,30 @@ fig.set_rasterized(True)
 
 lbl_t = ['Radial [m]', 'Along [m]', 'Cross [m]', 'Clock [m]']
 
+idx_G = np.arange(ug.GPSMIN, ug.GPSMIN+ug.GPSMAX)
+idx_E = np.arange(ug.GALMIN, ug.GALMIN+ug.GALMAX)
+
 plt.subplot(4, 1, 1)
-plt.plot(t, orb_r[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, orb_r[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, orb_r[:, idx_G], 'k.', label='GPS')
+plt.plot(t, orb_r[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[0])
 plt.grid()
 
 plt.subplot(4, 1, 2)
-plt.plot(t, orb_a[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, orb_a[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, orb_a[:, idx_G], 'k.', label='GPS')
+plt.plot(t, orb_a[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[1])
 plt.grid()
 
 plt.subplot(4, 1, 3)
-plt.plot(t, orb_c[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, orb_c[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, orb_c[:, idx_G], 'k.', label='GPS')
+plt.plot(t, orb_c[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[2])
 plt.grid()
 
 plt.subplot(4, 1, 4)
-plt.plot(t, clk[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, clk[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, clk[:, idx_G], 'k.', label='GPS')
+plt.plot(t, clk[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[3])
 plt.grid()
 
