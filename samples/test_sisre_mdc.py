@@ -45,7 +45,9 @@ clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
 bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
-file_l6 = '../data/qzsl6_189e.txt'
+# SSR data
+#
+file_l6 = '../data/doy223/223v_qzsl6.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
 v = np.genfromtxt(file_l6, dtype=dtype)
@@ -53,6 +55,8 @@ v = np.genfromtxt(file_l6, dtype=dtype)
 prn_ref = 199  # QZSS PRN
 l6_ch = 1  # 0:L6D, 1:L6E
 
+# ANTEX file
+#
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
     atxfile = '../data/igs20.atx'
 else:
@@ -149,6 +153,7 @@ for ne in range(nep):
             rs_, dts_, _ = orb.peph2pos(time, sat, nav)
             if rs_ is None or dts is None:
                 continue
+
             rs0[j, :] = rs_[0:3]
             vs0[j, :] = rs_[3:6]
             dts0[j] = dts_[0]
@@ -165,12 +170,6 @@ for ne in range(nep):
             iode = cs.lc[0].iode[idx]
             dorb = cs.lc[0].dorb[idx, :]  # radial,along-track,cross-track
 
-            if cs.cssrmode == sc.GAL_HAS_SIS:  # HAS only
-                if cs.mask_id != cs.mask_id_clk:  # mask has changed
-                    if sat not in cs.sat_n_p:
-                        continue
-                    idx = cs.sat_n_p.index(sat)
-
             dclk = cs.lc[0].dclk[idx]
 
             if sys not in cs.nav_mode.keys():
@@ -179,20 +178,17 @@ for ne in range(nep):
 
             # Get position, velocity and clock offset from broadcast ephemerides
             #
-            eph = findeph(nav.eph, time, sat, iode, mode=mode)
+            eph = findeph(nav.eph, time, sat, iode=iode, mode=mode)
             if eph is None:
-                print("ERROR: cannot find BRDC for {}".format(sat2id(sat)))
+                """
+                print("ERROR: cannot find BRDC for {} mode {} iode {} at {}"
+                      .format(sat2id(sat), mode, iode, time2str(time)))
+                """
                 continue
 
             rs[j, :], vs[j, :], dts[j] = eph2pos(time, eph, True)
-
             """
-            dt_rel = -2*(rs[j, :]@vs[j, :])/rCST.CLIGHT**2
-            dts[j] += dt_rel
-            """
-
-            """
-            print("{} {} brdc xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
+            print("{} {} brdc xyz [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
                           rs[j,0], rs[j,1], rs[j,2], dts[j]*1e6))
             """
@@ -266,6 +262,7 @@ for ne in range(nep):
 
             dcb = cbias[0]-cbias[1]
             dcb_ = cbias_[0]-cbias_[1]
+
             osbIF = facs[0]*cbias[0]+facs[1]*cbias[1]
             osbIF_ = facs[0]*cbias_[0]+facs[1]*cbias_[1]
 
@@ -282,6 +279,12 @@ for ne in range(nep):
             er = np.cross(ea, ec)
             A = np.array([er, ea, ec])
 
+            """
+            print("{} {} dorb rac [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
+                  .format(time2str(time), sat2id(sat),
+                          dorb[0], dorb[1], dorb[2], dclk*1e6))
+            """
+
             # Convert orbit corrections from orbital frame to ECEF
             #
             dorb_e = dorb@A
@@ -292,12 +295,12 @@ for ne in range(nep):
             dts[j] += dclk/rCST.CLIGHT  # [m] -> [s]
 
             """
-            print("{} {} ssrc xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
+            print("{} {} ssrc xyz [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
                           rs[j, 0], rs[j, 1], rs[j, 2], dclk))
             """
 
-            # HAS vs. precise
+            # SSR vs. precise
             #
             d_rs[j, :] = (rs[j, :] - rs0[j, :])@A.T
             d_dts[j, 0] = dts[j, 0] - dts0[j, 0]
@@ -309,8 +312,8 @@ for ne in range(nep):
                   .format(time2str(time), sat2id(sat),
                           d_rs[j, 0], d_rs[j, 1], d_rs[j, 2],
                           d_dts[j, 0]*rCST.CLIGHT,
-                          sigs[0], cbias[0], sigs[1], cbias[1], osbIF,
-                          sigs[0], cbias_[0], sigs[1], cbias_[1], osbIF_))
+                          sigs[0], cbias[0], sigs[1], cbias[1], dcb,
+                          sigs[0], cbias_[0], sigs[1], cbias_[1], dcb_))
 
             orb_r[ne, sat-1] = d_rs[j, 0]
             orb_a[ne, sat-1] = d_rs[j, 1]
@@ -332,32 +335,35 @@ fig.set_rasterized(True)
 
 lbl_t = ['Radial [m]', 'Along [m]', 'Cross [m]', 'Clock [m]']
 
+idx_G = np.arange(ug.GPSMIN, ug.GPSMIN+ug.GPSMAX)
+idx_E = np.arange(ug.GALMIN, ug.GALMIN+ug.GALMAX)
+
 plt.subplot(4, 1, 1)
-plt.plot(t, orb_r[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, orb_r[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, orb_r[:, idx_G], 'k.', label='GPS')
+plt.plot(t, orb_r[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[0])
 plt.grid()
 
 plt.subplot(4, 1, 2)
-plt.plot(t, orb_a[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, orb_a[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, orb_a[:, idx_G], 'k.', label='GPS')
+plt.plot(t, orb_a[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[1])
 plt.grid()
 
 plt.subplot(4, 1, 3)
-plt.plot(t, orb_c[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, orb_c[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, orb_c[:, idx_G], 'k.', label='GPS')
+plt.plot(t, orb_c[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[2])
 plt.grid()
 
 plt.subplot(4, 1, 4)
-plt.plot(t, clk[:, ug.GPSMIN:ug.GPSMIN+ug.GPSMAX], 'k.', label='GPS')
-plt.plot(t, clk[:, ug.GALMIN:ug.GALMIN+ug.GALMAX], 'b.', label='GAL')
+plt.plot(t, clk[:, idx_G], 'k.', label='GPS')
+plt.plot(t, clk[:, idx_E], 'b.', label='GAL')
 plt.ylabel(lbl_t[3])
 plt.grid()
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_mdc_sisre', plotFileFormat))
+plotFileName = '.'.join(('test_sisre_mdc', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 # plt.show()

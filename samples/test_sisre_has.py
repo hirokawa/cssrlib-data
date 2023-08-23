@@ -1,6 +1,8 @@
 """
  Signal-In-Space Range Error for Galileo HAS
 """
+from binascii import unhexlify
+import bitstruct as bs
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,8 +21,6 @@ from cssrlib.cssr_has import cssr_has
 from cssrlib.cssrlib import sCType, sSigGPS
 from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.rinex import rnxdec
-from binascii import unhexlify
-import bitstruct as bs
 
 # Start epoch and number of epochs
 #
@@ -33,7 +33,7 @@ doy = int(time2doy(time))
 nep = 900*4
 step = 1
 
-navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
+navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
 
 ac = 'COD0MGXFIN'
 
@@ -167,8 +167,7 @@ for ne in range(nep):
         #print(f"{mt} {mid} {ms} {pid}")
 
     if len(rec) >= ms_:
-        print("data collected mid={:2d} ms={:2d} hass={:2d}"
-              .format(mid_, ms_, hass))
+        print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
         HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
         cs.decode_cssr(HASmsg)
         rec = []
@@ -244,18 +243,15 @@ for ne in range(nep):
             #
             eph = findeph(nav.eph, time, sat, iode, mode=mode)
             if eph is None:
-                print("ERROR: cannot find BRDC for {}".format(sat2id(sat)))
+                """
+                print("ERROR: cannot find BRDC for {} mode {} iode {} at {}"
+                      .format(sat2id(sat), mode, iode, time2str(time)))
+                """
                 continue
 
             rs[j, :], vs[j, :], dts[j] = eph2pos(time, eph, True)
-
             """
-            dt_rel = -2*(rs[j, :]@vs[j, :])/rCST.CLIGHT**2
-            dts[j] += dt_rel
-            """
-
-            """
-            print("{} {} brdc xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
+            print("{} {} brdc xyz [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
                           rs[j,0], rs[j,1], rs[j,2], dts[j]*1e6))
             """
@@ -344,6 +340,12 @@ for ne in range(nep):
             er = np.cross(ea, ec)
             A = np.array([er, ea, ec])
 
+            """
+            print("{} {} dorb rac [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
+                  .format(time2str(time), sat2id(sat),
+                          dorb[0], dorb[1], dorb[2], dclk*1e6))
+            """
+
             # Convert orbit corrections from orbital frame to ECEF
             #
             dorb_e = dorb@A
@@ -366,8 +368,8 @@ for ne in range(nep):
 
             print("{} {} diff rac [m] {:8.3f} {:8.3f} {:8.3f} "
                   "clk [m] {:12.6f} "
-                  "bias HAS [m] {} {:7.3f} {} {:7.3f} dcb {:7.3f} "
-                  "bias COD [m] {} {:7.3f} {} {:7.3f} dcb {:7.3f} "
+                  "bias SSR [m] {} {:7.3f} {} {:7.3f} DCB {:7.3f} "
+                  "bias COD [m] {} {:7.3f} {} {:7.3f} DCB {:7.3f} "
                   .format(time2str(time), sat2id(sat),
                           d_rs[j, 0], d_rs[j, 1], d_rs[j, 2],
                           d_dts[j, 0]*rCST.CLIGHT,
@@ -422,7 +424,7 @@ plt.ylabel(lbl_t[3])
 plt.grid()
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_has_sisre', plotFileFormat))
+plotFileName = '.'.join(('test_sisre_has', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 # plt.show()

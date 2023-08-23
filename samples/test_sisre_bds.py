@@ -1,6 +1,7 @@
 """
  Signal-In-Space Range Error for BeiDou PPP
 """
+from binascii import unhexlify
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,7 +19,6 @@ from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssrlib import sCType, sSigGPS
 from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.rinex import rnxdec
-from binascii import unhexlify
 
 
 # Start epoch and number of epochs
@@ -81,7 +81,7 @@ bsx.parse(bsxfile)
 
 # Setup SSR decoder
 #
-cs = cssr_bds("test_bds_sisre_ssr.log")
+cs = cssr_bds()
 cs.monlevel = 2
 
 # Load ANTEX data for satellites and stations
@@ -362,7 +362,7 @@ plt.ylabel(lbl_t[3])
 plt.grid()
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_bds_sisre', plotFileFormat))
+plotFileName = '.'.join(('test_sisre_bds', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 # plt.show()
