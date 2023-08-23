@@ -20,7 +20,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
+dataset = 2  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -55,8 +55,8 @@ else:
     navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
     obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
-#ac = 'COD0OPSFIN'
-ac = 'COD0MGXFIN'
+ac = 'COD0OPSFIN'
+#ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -192,7 +192,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    # Skip epoch until start time
+    # Skip epochs until start time
     #
     obs = rnx.decode_obs()
     while time > obs.t and obs.t.time != 0:
@@ -242,9 +242,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
     stdout.write('\n')
 
-    # Close RINEX OBS file
+    # Close RINEX observation file
     #
     rnx.fobs.close()
 
