@@ -14,17 +14,19 @@ from cssrlib.gnss import Nav, sat2prn, sat2id, vnorm
 from cssrlib.gnss import time2gpst, time2doy, epoch2time, time2str
 from cssrlib.gnss import timeadd, timediff
 from cssrlib.gnss import uGNSS as ug
-from cssrlib.gnss import rSigRnx, uTYP, rCST, sys2str
+from cssrlib.gnss import rSigRnx, rCST, sys2str
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, biasdec, apc2com
 from cssrlib.cssr_has import cssr_has
-from cssrlib.cssrlib import sCType, sSigGPS
+from cssrlib.cssrlib import sCType
 from cssrlib.cssrlib import sCSSRTYPE as sc
+from cssrlib.pppssr import find_corr_idx
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
 ep = [2023, 8, 11, 21, 0, 0]
+#ep = [2023, 7, 8, 4, 0, 0]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -33,7 +35,8 @@ doy = int(time2doy(time))
 nep = 900*4
 step = 1
 
-navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
+navfile = '../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+    .format('/doy223' if doy == 223 else '', year, doy)
 
 ac = 'COD0MGXFIN'
 
@@ -55,14 +58,13 @@ if not exists(orbfile):
 
 # Read Galile HAS corrections file
 #
-file_has = '../data/doy223/223v_gale6.txt'
+if doy == 223:
+    file_has = '../data/doy223/223v_gale6.txt'
+else:
+    file_has = '../data/gale6_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)
-
-# Eliminate whitespace
-for i, nav in enumerate(v['nav']):
-    v[i]['nav'] = (b''.join(nav.split()))
 
 # NOTE: igs14 values seem to be yield better consistency with
 #       CODE reference orbits
@@ -88,8 +90,8 @@ bsx.parse(bsxfile)
 
 # Setup SSR decoder
 #
-cs = cssr_has()
-cs.monlevel = 0
+cs = cssr_has("test_sisre_has_ssr.log")
+cs.monlevel = 2
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
@@ -223,25 +225,63 @@ for ne in range(nep):
 
             # Broadcast ephemeris IODE, orbit and clock corrections
             #
-            idx = cs.sat_n.index(sat)
-            iode = cs.lc[0].iode[idx]
-            dorb = cs.lc[0].dorb[idx, :]  # radial,along-track,cross-track
-
-            if cs.cssrmode == sc.GAL_HAS_SIS:  # HAS only
-                if cs.mask_id != cs.mask_id_clk:  # mask has changed
+            if cs.iodssr_c[sCType.ORBIT] == cs.iodssr:
+                if sat not in cs.sat_n:
+                    continue
+                idx = cs.sat_n.index(sat)
+            else:
+                if cs.iodssr_c[sCType.ORBIT] == cs.iodssr_p:
                     if sat not in cs.sat_n_p:
                         continue
                     idx = cs.sat_n_p.index(sat)
+                else:
+                    continue
 
-            dclk = cs.lc[0].dclk[idx]
+            iode = cs.lc[0].iode[idx]
+            dorb = cs.lc[0].dorb[idx, :]  # radial,along-track,cross-track
 
-            if sys not in cs.nav_mode.keys():
+            if cs.cssrmode == sc.BDS_PPP:  # consitency check for IOD corr
+                if cs.lc[0].iodc[idx] == cs.lc[0].iodc_c[idx]:
+                    dclk = cs.lc[0].dclk[idx]
+                else:
+                    if cs.lc[0].iodc[idx] == cs.lc[0].iodc_c_p[idx]:
+                        dclk = cs.lc[0].dclk_p[idx]
+                    else:
+                        continue
+
+            else:
+
+                if cs.cssrmode == sc.GAL_HAS_SIS:  # HAS only
+
+                    if cs.mask_id != cs.mask_id_clk:  # mask has changed
+                        if sat not in cs.sat_n_p:
+                            continue
+                        idx = cs.sat_n_p.index(sat)
+
+                else:
+
+                    if cs.iodssr_c[sCType.CLOCK] == cs.iodssr:
+                        if sat not in cs.sat_n:
+                            continue
+                        idx = cs.sat_n.index(sat)
+                    else:
+                        if cs.iodssr_c[sCType.CLOCK] == cs.iodssr_p:
+                            if sat not in cs.sat_n_p:
+                                continue
+                            idx = cs.sat_n_p.index(sat)
+                        else:
+                            continue
+
+                dclk = cs.lc[0].dclk[idx]
+
+            if np.isnan(dclk) or np.isnan(dorb@dorb):
                 continue
+
             mode = cs.nav_mode[sys]
 
             # Get position, velocity and clock offset from broadcast ephemerides
             #
-            eph = findeph(nav.eph, time, sat, iode, mode=mode)
+            eph = findeph(nav.eph, time, sat, iode=iode, mode=mode)
             if eph is None:
                 """
                 print("ERROR: cannot find BRDC for {} mode {} iode {} at {}"
@@ -251,9 +291,9 @@ for ne in range(nep):
 
             rs[j, :], vs[j, :], dts[j] = eph2pos(time, eph, True)
             """
-            print("{} {} brdc xyz [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
+            print("{} {} brdc xyz [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f} iode {:3d}"
                   .format(time2str(time), sat2id(sat),
-                          rs[j,0], rs[j,1], rs[j,2], dts[j]*1e6))
+                          rs[j, 0], rs[j, 1], rs[j, 2], dts[j, 0]*1e6, eph.iode))
             """
 
             # Select PCO reference signals for Galileo HAS
@@ -288,32 +328,20 @@ for ne in range(nep):
             #
             cbias = np.ones(len(sigs))*np.nan
 
-            idx_n_ = np.where(np.array(cs.sat_n) == sat)[0]
-            if len(idx_n_) == 0:
-                continue
-            idx_n = idx_n_[0]
+            if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                nsig, idx_n, kidx = find_corr_idx(cs, nav.nf, sCType.CBIAS,
+                                                  sigs, sat)
 
-            kidx = [-1]*nav.nf
-            nsig = 0
-            for k, sig in enumerate(cs.sig_n[idx_n]):
-                if sig < 0:
-                    continue
-                for f in range(len(sigs)):
-                    if cs.cssrmode == sc.GAL_HAS_SIS and sys == ug.GPS and \
-                            sig == sSigGPS.L2P:
-                        sig = sSigGPS.L2W  # work-around
-                    if cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
-                        kidx[f] = k
-                        nsig += 1
-                    elif cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f].toAtt('X'):
-                        kidx[f] = k
-                        nsig += 1
-            if nsig >= nav.nf:
-                if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                if nsig >= nav.nf:
                     cbias = cs.lc[0].cbias[idx_n][kidx]
+                elif nav.monlevel > 1:
+                    print("skip cbias for sat={:d}".format(sat))
 
-            if np.all(cs.lc[0].dorb[idx_n] == np.array([0.0, 0.0, 0.0])):
-                continue
+                # - IS-QZSS-MDC-001 sec 5.5.3.3
+                # - HAS SIS ICD sec 7.4, 7.5
+                # - HAS IDD ICD sec 3.3.4
+                if cs.cssrmode in [sc.GAL_HAS_IDD, sc.GAL_HAS_SIS, sc.QZS_MADOCA]:
+                    cbias = -cbias
 
             # Get CODE biases
             #
@@ -329,7 +357,7 @@ for ne in range(nep):
 
             # Apply ionosphere-free bias correction to clock offsets
             #
-            dts[j] -= osbIF/rCST.CLIGHT*-1.0  # switch sign of SSR biases
+            dts[j] -= osbIF/rCST.CLIGHT
             dts0[j] -= osbIF_/rCST.CLIGHT
 
             # Along-track, cross-track and radial conversion
@@ -341,9 +369,9 @@ for ne in range(nep):
             A = np.array([er, ea, ec])
 
             """
-            print("{} {} dorb rac [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
+            print("{} {} dorb rac [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f} iode {:3d}"
                   .format(time2str(time), sat2id(sat),
-                          dorb[0], dorb[1], dorb[2], dclk*1e6))
+                          dorb[0], dorb[1], dorb[2], dclk/rCST.CLIGHT*1e6, iode))
             """
 
             # Convert orbit corrections from orbital frame to ECEF
@@ -356,7 +384,7 @@ for ne in range(nep):
             dts[j] += dclk/rCST.CLIGHT  # [m] -> [s]
 
             """
-            print("{} {} hasc xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
+            print("{} {} hasc xyz [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
                           rs[j, 0], rs[j, 1], rs[j, 2], dclk))
             """
@@ -367,12 +395,12 @@ for ne in range(nep):
             d_dts[j, 0] = dts[j, 0] - dts0[j, 0]
 
             print("{} {} diff rac [m] {:8.3f} {:8.3f} {:8.3f} "
-                  "clk [m] {:12.6f} "
+                  "clk [m] {:12.6f} iode {:3d} "
                   "bias SSR [m] {} {:7.3f} {} {:7.3f} DCB {:7.3f} "
                   "bias COD [m] {} {:7.3f} {} {:7.3f} DCB {:7.3f} "
                   .format(time2str(time), sat2id(sat),
                           d_rs[j, 0], d_rs[j, 1], d_rs[j, 2],
-                          d_dts[j, 0]*rCST.CLIGHT,
+                          d_dts[j, 0]*rCST.CLIGHT, iode,
                           sigs[0], cbias[0], sigs[1], cbias[1], dcb,
                           sigs[0], cbias_[0], sigs[1], cbias_[1], dcb_))
 

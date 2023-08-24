@@ -12,12 +12,13 @@ from cssrlib.gnss import Nav, sat2prn, sat2id, vnorm
 from cssrlib.gnss import time2gpst, time2doy, epoch2time, time2str
 from cssrlib.gnss import timeadd, timediff
 from cssrlib.gnss import uGNSS as ug
-from cssrlib.gnss import rSigRnx, uTYP, rCST, sys2str
+from cssrlib.gnss import rSigRnx, rCST, sys2str
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, biasdec, apc2com
 from cssrlib.cssr_bds import cssr_bds
-from cssrlib.cssrlib import sCType, sSigGPS
+from cssrlib.cssrlib import sCType
 from cssrlib.cssrlib import sCSSRTYPE as sc
+from cssrlib.pppssr import find_corr_idx
 from cssrlib.rinex import rnxdec
 
 
@@ -32,7 +33,8 @@ doy = int(time2doy(time))
 nep = 900*4
 step = 1
 
-navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
+navfile = '../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+    .format('/doy223' if doy == 223 else '', year, doy)
 
 ac = 'COD0MGXFIN'
 
@@ -47,12 +49,15 @@ bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
 
 # SSR data
 #
-file_bds = '../data/doy223/223v_bdsb2b.txt'
+if doy == 223:
+    file_bds = '../data/doy223/223v_bdsb2b.txt'
+else:
+    file_bds = '../data/bdsb2b_189e.txt'
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_bds, dtype=dtype)
 
-prn_ref = 61  # satellite PRN to receive BDS PPP corrections
+prn_ref = 59  # satellite PRN to receive BDS PPP corrections
 
 # ANTEX file
 #
@@ -166,15 +171,62 @@ for ne in range(nep):
 
             # Broadcast ephemeris IODE, orbit and clock corrections
             #
-            idx = cs.sat_n.index(sat)
+            if cs.iodssr_c[sCType.ORBIT] == cs.iodssr:
+                if sat not in cs.sat_n:
+                    continue
+                idx = cs.sat_n.index(sat)
+            else:
+                if cs.iodssr_c[sCType.ORBIT] == cs.iodssr_p:
+                    if sat not in cs.sat_n_p:
+                        continue
+                    idx = cs.sat_n_p.index(sat)
+                else:
+                    continue
+
             iode = cs.lc[0].iode[idx]
             dorb = cs.lc[0].dorb[idx, :]  # radial,along-track,cross-track
 
-            dclk = cs.lc[0].dclk[idx]
+            if cs.cssrmode == sc.BDS_PPP:  # consitency check for IOD corr
+                if cs.lc[0].iodc[idx] == cs.lc[0].iodc_c[idx]:
+                    dclk = cs.lc[0].dclk[idx]
+                else:
+                    if cs.lc[0].iodc[idx] == cs.lc[0].iodc_c_p[idx]:
+                        dclk = cs.lc[0].dclk_p[idx]
+                    else:
+                        continue
 
-            if sys not in cs.nav_mode.keys():
+            else:
+
+                if cs.cssrmode == sc.GAL_HAS_SIS:  # HAS only
+
+                    if cs.mask_id != cs.mask_id_clk:  # mask has changed
+                        if sat not in cs.sat_n_p:
+                            continue
+                        idx = cs.sat_n_p.index(sat)
+
+                else:
+
+                    if cs.iodssr_c[sCType.CLOCK] == cs.iodssr:
+                        if sat not in cs.sat_n:
+                            continue
+                        idx = cs.sat_n.index(sat)
+                    else:
+                        if cs.iodssr_c[sCType.CLOCK] == cs.iodssr_p:
+                            if sat not in cs.sat_n_p:
+                                continue
+                            idx = cs.sat_n_p.index(sat)
+                        else:
+                            continue
+
+                dclk = cs.lc[0].dclk[idx]
+
+            if np.isnan(dclk) or np.isnan(dorb@dorb):
                 continue
-            mode = cs.nav_mode[sys]
+
+            if sys in cs.nav_mode.keys():
+                mode = cs.nav_mode[sys]
+            else:
+                continue
 
             # Get position, velocity and clock offset from broadcast ephemerides
             #
@@ -221,36 +273,24 @@ for ne in range(nep):
             facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
                     -freq[1]**2/(freq[0]**2-freq[1]**2))
 
-            # Get biases
+            # Get SSR biases
             #
             cbias = np.ones(len(sigs))*np.nan
 
-            idx_n_ = np.where(np.array(cs.sat_n) == sat)[0]
-            if len(idx_n_) == 0:
-                continue
-            idx_n = idx_n_[0]
+            if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                nsig, idx_n, kidx = find_corr_idx(cs, nav.nf, sCType.CBIAS,
+                                                  sigs, sat)
 
-            kidx = [-1]*nav.nf
-            nsig = 0
-            for k, sig in enumerate(cs.sig_n[idx_n]):
-                if sig < 0:
-                    continue
-                for f in range(len(sigs)):
-                    if cs.cssrmode == sc.GAL_HAS_SIS and sys == ug.GPS and \
-                            sig == sSigGPS.L2P:
-                        sig = sSigGPS.L2W  # work-around
-                    if cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
-                        kidx[f] = k
-                        nsig += 1
-                    elif cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f].toAtt('X'):
-                        kidx[f] = k
-                        nsig += 1
-            if nsig >= nav.nf:
-                if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                if nsig >= nav.nf:
                     cbias = cs.lc[0].cbias[idx_n][kidx]
+                elif nav.monlevel > 1:
+                    print("skip cbias for sat={:d}".format(sat))
 
-            if np.all(cs.lc[0].dorb[idx_n] == np.array([0.0, 0.0, 0.0])):
-                continue
+                # - IS-QZSS-MDC-001 sec 5.5.3.3
+                # - HAS SIS ICD sec 7.4, 7.5
+                # - HAS IDD ICD sec 3.3.4
+                if cs.cssrmode in [sc.GAL_HAS_IDD, sc.GAL_HAS_SIS, sc.QZS_MADOCA]:
+                    cbias = -cbias
 
             # Get CODE biases
             #
