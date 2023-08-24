@@ -243,7 +243,7 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
-fmt = '%M:%S'
+fmt = '%H:%M'
 
 if fig_type == 1:
 

@@ -245,10 +245,12 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:1d}\n"
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
+                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                                smode[ne]))
 
         # Log to standard output
@@ -288,7 +290,7 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
-fmt = '%M:%S'
+fmt = '%H:%M'
 
 if fig_type == 1:
 
