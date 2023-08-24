@@ -3,6 +3,7 @@
 """
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 import numpy as np
 from os.path import exists
 from sys import stdout
@@ -35,8 +36,8 @@ pos_ref = ecef2pos(xyz_ref)
 navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
 obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
-ac = 'COD0OPSFIN'
-#ac = 'COD0MGXFIN'
+#ac = 'COD0OPSFIN'
+ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -193,7 +194,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Save output
         #
-        t[ne] = timediff(nav.t, t0)/60
+        t[ne] = timediff(nav.t, t0)/86400.0
 
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
@@ -201,7 +202,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
@@ -209,9 +210,10 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:9.3f} {:9.3f} {:9.3f}, mode {:1d}'
+        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                              smode[ne]))
 
         # Get new epoch, exit after last epoch
@@ -241,30 +243,32 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
+fmt = '%H:%M'
+
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    #x_ticks = np.arange(0, nep/60+1, step=1)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], 'r.')
-        plt.plot(t[idx5], enu[idx5, k], 'y.')
-        plt.plot(t[idx4], enu[idx4, k], 'g.')
+        plt.plot_date(t[idx0], enu[idx0, k], 'r.')
+        plt.plot_date(t[idx5], enu[idx5, k], 'y.')
+        plt.plot_date(t[idx4], enu[idx4, k], 'g.')
 
-        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
-        #plt.axis([0, ne, -ylim, ylim])
+        plt.ylim([-ylim, ylim])
+        plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
-    plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    # plt.xticks(x_ticks)
+    plt.plot_date(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
+    plt.plot_date(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
+    plt.plot_date(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
     plt.ylabel('ZTD [cm]')
     plt.grid()
-    plt.xlabel('Time [min]')
+    plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+
+    plt.xlabel('Time [MM:SS]')
     plt.legend()
 
 elif fig_type == 2:

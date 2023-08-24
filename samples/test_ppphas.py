@@ -5,6 +5,7 @@ from binascii import unhexlify
 import bitstruct as bs
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 import numpy as np
 from sys import stdout
 
@@ -74,8 +75,12 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr_has('has.log')
+cs = cssr_has()
 cs.monlevel = 0
+"""
+cs = cssr_has('has.log')
+cs.monlevel = 2
+"""
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
@@ -232,7 +237,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Save output
         #
-        t[ne] = timediff(nav.t, t0)/60
+        t[ne] = timediff(nav.t, t0)/86400.0
 
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
@@ -240,10 +245,12 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
+                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                                smode[ne]))
 
         # Log to standard output
@@ -268,6 +275,11 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rnx.fobs.close()
 
+    # Close output file
+    #
+    if nav.fout is not None:
+        nav.fout.close()
+
 fig_type = 1
 ylim = 1.0
 
@@ -278,29 +290,32 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
+fmt = '%H:%M'
+
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], 'r.')
-        plt.plot(t[idx5], enu[idx5, k], 'y.')
-        plt.plot(t[idx4], enu[idx4, k], 'g.')
+        plt.plot_date(t[idx0], enu[idx0, k], 'r.')
+        plt.plot_date(t[idx5], enu[idx5, k], 'y.')
+        plt.plot_date(t[idx4], enu[idx4, k], 'g.')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
+        plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
-    plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.ylim([-50, 50])
-
+    plt.plot_date(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
+    plt.plot_date(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
+    plt.plot_date(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
     plt.ylabel('ZTD [cm]')
     plt.grid()
-    plt.xlabel('Time [min]')
+    plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+
+    plt.xlabel('Time [MM:SS]')
     plt.legend()
 
 elif fig_type == 2:
@@ -316,7 +331,7 @@ elif fig_type == 2:
     plt.grid()
     plt.axis('equal')
     plt.legend()
-    ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_ppphas', plotFileFormat))

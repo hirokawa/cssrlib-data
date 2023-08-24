@@ -3,6 +3,7 @@
 """
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 import numpy as np
 from os.path import exists
 from sys import stdout, exit
@@ -19,7 +20,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 1  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
+dataset = 2  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -191,7 +192,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    # Skip epoch until start time
+    # Skip epochs until start time
     #
     obs = rnx.decode_obs()
     while time > obs.t and obs.t.time != 0:
@@ -213,7 +214,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Save output
         #
-        t[ne] = timediff(nav.t, t0)/60
+        t[ne] = timediff(nav.t, t0)/86400.0
 
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
@@ -221,10 +222,12 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
         smode[ne] = nav.smode
 
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:1d}\n"
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
+                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                                smode[ne]))
 
         # Log to standard output
@@ -241,9 +244,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
     stdout.write('\n')
 
-    # Close RINEX OBS file
+    # Close RINEX observation file
     #
     rnx.fobs.close()
 
@@ -262,30 +267,32 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
+fmt = '%H:%M'
+
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-    #x_ticks = np.arange(0, nep/60+1, step=1 if nep < 900 else 15)
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], 'r.')
-        plt.plot(t[idx5], enu[idx5, k], 'y.')
-        plt.plot(t[idx4], enu[idx4, k], 'g.')
+        plt.plot_date(t[idx0], enu[idx0, k], 'r.')
+        plt.plot_date(t[idx5], enu[idx5, k], 'y.')
+        plt.plot_date(t[idx4], enu[idx4, k], 'g.')
 
-        # plt.xticks(x_ticks)
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
+        plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
-    plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    # plt.xticks(x_ticks)
+    plt.plot_date(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
+    plt.plot_date(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
+    plt.plot_date(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
     plt.ylabel('ZTD [cm]')
     plt.grid()
-    plt.xlabel('Time [min]')
+    plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+
+    plt.xlabel('Time [MM:SS]')
     plt.legend()
 
 elif fig_type == 2:
