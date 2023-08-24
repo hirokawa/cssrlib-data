@@ -39,6 +39,7 @@ year = ep[0]
 doy = int(time2doy(time))
 
 nep = 900*4
+
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_has, dtype=dtype)
@@ -315,7 +316,7 @@ if fig_type == 1:
     plt.grid()
     plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
-    plt.xlabel('Time [MM:SS]')
+    plt.xlabel('Time [HH:MM]')
     plt.legend()
 
 elif fig_type == 2:

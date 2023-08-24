@@ -243,7 +243,7 @@ idx0 = np.where(smode == 0)[0]
 fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
-fmt = '%M:%S'
+fmt = '%H:%M'
 
 if fig_type == 1:
 
@@ -268,7 +268,7 @@ if fig_type == 1:
     plt.grid()
     plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
-    plt.xlabel('Time [MM:SS]')
+    plt.xlabel('Time [HH:MM]')
     plt.legend()
 
 elif fig_type == 2:
