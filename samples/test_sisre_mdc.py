@@ -25,6 +25,7 @@ from cssrlib.rinex import rnxdec
 # Start epoch and number of epochs
 #
 ep = [2023, 8, 11, 21, 0, 0]
+#ep = [2023, 7, 8, 4, 0, 0]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -53,8 +54,6 @@ if doy == 223:
     file_l6 = '../data/doy223/223v_qzsl6.txt'
 else:
     file_l6 = '../data/qzsl6_189e.txt'
-
-
 
 dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
@@ -171,7 +170,7 @@ for ne in range(nep):
             """
             print("{} {} prec xyz [m] {:14.3f} {:14.3f}m {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
-                          rs0[j,0], rs0[j,1], rs0[j,2], dts0[j]*1e6))
+                          rs0[j, 0], rs0[j, 1], rs0[j, 2], dts0[j, 0]*1e6))
             """
 
             # Broadcast ephemeris IODE, orbit and clock corrections
@@ -247,7 +246,7 @@ for ne in range(nep):
             """
             print("{} {} brdc xyz [m] {:14.3f} {:14.3f} {:14.3f} clk [ms] {:12.6f}"
                   .format(time2str(time), sat2id(sat),
-                          rs[j,0], rs[j,1], rs[j,2], dts[j]*1e6))
+                          rs[j, 0], rs[j, 1], rs[j, 2], dts[j, 0]*1e6))
             """
 
             # Select PCO reference signals for QZSS MADOCA
@@ -282,36 +281,24 @@ for ne in range(nep):
             facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
                     -freq[1]**2/(freq[0]**2-freq[1]**2))
 
-            # SSR code biases
+            # Get SSR biases
             #
             cbias = np.ones(len(sigs))*np.nan
 
-            idx_n_ = np.where(np.array(cs.sat_n) == sat)[0]
-            if len(idx_n_) == 0:
-                continue
-            idx_n = idx_n_[0]
+            if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                nsig, idx_n, kidx = find_corr_idx(cs, nav.nf, sCType.CBIAS,
+                                                  sigs, sat)
 
-            kidx = [-1]*nav.nf
-            nsig = 0
-            for k, sig in enumerate(cs.sig_n[idx_n]):
-                if sig < 0:
-                    continue
-                for f in range(len(sigs)):
-                    if cs.cssrmode == sc.GAL_HAS_SIS and sys == ug.GPS and \
-                            sig == sSigGPS.L2P:
-                        sig = sSigGPS.L2W  # work-around
-                    if cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f]:
-                        kidx[f] = k
-                        nsig += 1
-                    elif cs.ssig2rsig(sys, uTYP.C, sig) == sigs[f].toAtt('X'):
-                        kidx[f] = k
-                        nsig += 1
-            if nsig >= nav.nf:
-                if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
+                if nsig >= nav.nf:
                     cbias = cs.lc[0].cbias[idx_n][kidx]
+                elif nav.monlevel > 1:
+                    print("skip cbias for sat={:d}".format(sat))
 
-            if np.all(cs.lc[0].dorb[idx_n] == np.array([0.0, 0.0, 0.0])):
-                continue
+                # - IS-QZSS-MDC-001 sec 5.5.3.3
+                # - HAS SIS ICD sec 7.4, 7.5
+                # - HAS IDD ICD sec 3.3.4
+                if cs.cssrmode in [sc.GAL_HAS_IDD, sc.GAL_HAS_SIS, sc.QZS_MADOCA]:
+                    cbias = -cbias
 
             # Get CODE biases
             #

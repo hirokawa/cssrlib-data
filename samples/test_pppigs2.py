@@ -114,7 +114,6 @@ atx.readpcv(atxfile)
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
-dop = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
 
@@ -268,7 +267,7 @@ if fig_type == 1:
     plt.grid()
     plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
-    plt.xlabel('Time [MM:SS]')
+    plt.xlabel('Time [HH:MM]')
     plt.legend()
 
 elif fig_type == 2:
