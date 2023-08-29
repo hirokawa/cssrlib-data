@@ -9,7 +9,7 @@ import sys
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
 
-from cssrlib.gnss import rSigRnx
+from cssrlib.gnss import rSigRnx, time2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkinit, relpos
 
@@ -24,39 +24,37 @@ pos_ref = gn.ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-        rSigRnx("EC1C"), rSigRnx("EC5Q"),
-        rSigRnx("JC1C"), rSigRnx("JC2L"),
-        rSigRnx("GL1C"), rSigRnx("GL2W"),
-        rSigRnx("EL1C"), rSigRnx("EL5Q"),
-        rSigRnx("JL1C"), rSigRnx("JL2L"),
-        rSigRnx("GS1C"), rSigRnx("GS2W"),
-        rSigRnx("ES1C"), rSigRnx("ES5Q"),
-        rSigRnx("JS1C"), rSigRnx("JS2L")]
-
-# Define signals to be processed
-#
-sigsb = [rSigRnx("GC1C"), rSigRnx("GC2W"),
-         rSigRnx("EC1X"), rSigRnx("EC5X"),
-         rSigRnx("JC1X"), rSigRnx("JC2X"),
-         rSigRnx("GL1C"), rSigRnx("GL2W"),
-         rSigRnx("EL1X"), rSigRnx("EL5X"),
-         rSigRnx("JL1X"), rSigRnx("JL2X"),
-         rSigRnx("GS1C"), rSigRnx("GS2W"),
-         rSigRnx("ES1X"), rSigRnx("ES5X"),
-         rSigRnx("JS1X"), rSigRnx("JS2X")]
+gnss = "GEJ"  # "GEJ"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                 rSigRnx("GL1C"), rSigRnx("GL2W"),
+                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
+                 rSigRnx("JL1C"), rSigRnx("JL2L"),
+                 rSigRnx("JS1C"), rSigRnx("JS2L")])
 
 # rover
 dec = rn.rnxdec()
 dec.setSignals(sigs)
+
 nav = gn.Nav()
 dec.decode_nav(navfile, nav)
 
 # base
 decb = rn.rnxdec()
-decb.setSignals(sigsb)
+decb.setSignals(sigs)
+
 decb.decode_obsh(basefile)
 dec.decode_obsh(obsfile)
+
+decb.autoSubstituteSignals()
+dec.autoSubstituteSignals()
 
 nep = 180
 
@@ -66,7 +64,7 @@ t = np.zeros(nep)
 enu = np.zeros((nep, 3))
 smode = np.zeros(nep, dtype=int)
 
-rtkinit(nav, dec.pos)
+rtkinit(nav, dec.pos, 'test_rtk.log')
 rr = dec.pos
 
 # Load ANTEX data for satellites and stations
@@ -80,6 +78,7 @@ nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
 if nav.rcv_ant is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
     sys.exit(-1)
+
 nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
 if nav.rcv_ant_b is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
@@ -105,6 +104,26 @@ for ne in range(nep):
     sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
     enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
     smode[ne] = nav.smode
+
+    nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
+                   "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
+                   .format(time2str(obs.t),
+                           sol[0], sol[1], sol[2],
+                           enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                           np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                           smode[ne]))
+
+    # Log to standard output
+    #
+    sys.stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                             smode[ne]))
+
+# Send line-break to stdout
+#
+sys.stdout.write('\n')
 
 dec.fobs.close()
 decb.fobs.close()
