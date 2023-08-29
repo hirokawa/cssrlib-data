@@ -17,6 +17,8 @@ bdir = '../data/'
 atxfile = bdir+'igs14.atx'
 ngsantfile = bdir+'GSI_PCV.TXT'
 
+nav = gn.Nav()
+
 if False:
     navfile = bdir+'SEPT078M.21P'
     obsfile = bdir+'SEPT078M.21O'
@@ -59,7 +61,7 @@ sigsb = [rSigRnx("GC1C"), rSigRnx("GC2W"),
 # rover
 dec = rn.rnxdec()
 dec.setSignals(sigs)
-nav = gn.Nav()
+
 dec.decode_nav(navfile, nav)
 
 # base
