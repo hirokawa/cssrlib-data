@@ -45,7 +45,7 @@ v = np.genfromtxt(file_bds, dtype=dtype)
 
 prn_ref = 59  # satellite PRN to receive BDS PPP collection
 
-xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
@@ -103,7 +103,7 @@ smode = np.zeros(nep, dtype=int)
 
 # Logging level
 #
-nav.monlevel = 0  # TODO: enabled for testing!
+nav.monlevel = 1  # TODO: enabled for testing!
 
 # Load RINEX OBS file header
 #

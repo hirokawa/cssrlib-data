@@ -46,7 +46,7 @@ v = np.genfromtxt(file_has, dtype=dtype)
 
 # Set user reference position
 #
-xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed

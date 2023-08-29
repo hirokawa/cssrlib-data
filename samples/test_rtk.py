@@ -15,11 +15,21 @@ from cssrlib.rtk import rtkinit, relpos
 
 bdir = '../data/'
 atxfile = bdir+'igs14.atx'
-navfile = bdir+'SEPT078M.21P'
-obsfile = bdir+'SEPT078M.21O'
-basefile = bdir+'3034078M.21O'
+ngsantfile = bdir+'GSI_PCV.TXT'
 
-xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+if False:
+    navfile = bdir+'SEPT078M.21P'
+    obsfile = bdir+'SEPT078M.21O'
+    basefile = bdir+'3034078M.21O'
+    xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
+    nav.rb = [-3959400.631, 3385704.533, 3667523.111]  # GSI 3034 fujisawa
+else:
+    navfile = bdir+'SEPT238A.23P'
+    obsfile = bdir+'SEPT238A.23O'
+    basefile = bdir+'3034238A.23O'
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+    nav.rb = [-3959400.6443, 3385704.4948, 3667523.1275]  # GSI 3034 fujisawa
+
 pos_ref = gn.ecef2pos(xyz_ref)
 
 # Define signals to be processed
@@ -42,7 +52,6 @@ if 'J' in gnss:
 # rover
 dec = rn.rnxdec()
 dec.setSignals(sigs)
-
 nav = gn.Nav()
 dec.decode_nav(navfile, nav)
 
@@ -56,13 +65,12 @@ dec.decode_obsh(obsfile)
 decb.autoSubstituteSignals()
 dec.autoSubstituteSignals()
 
-nep = 180
+nep = 300
 
-# GSI 3034 fujisawa
-nav.rb = [-3959400.631, 3385704.533, 3667523.111]
 t = np.zeros(nep)
 enu = np.zeros((nep, 3))
 smode = np.zeros(nep, dtype=int)
+# ecef_ = np.zeros((nep, 3))
 
 rtkinit(nav, dec.pos, 'test_rtk.log')
 rr = dec.pos
@@ -71,6 +79,7 @@ rr = dec.pos
 #
 atx = atxdec()
 atx.readpcv(atxfile)
+atx.readngspcv(ngsantfile)
 
 # Set PCO/PCV information
 #
@@ -78,7 +87,6 @@ nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
 if nav.rcv_ant is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
     sys.exit(-1)
-
 nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
 if nav.rcv_ant_b is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
@@ -103,6 +111,7 @@ for ne in range(nep):
     t[ne] = gn.timediff(nav.t, t0)
     sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
     enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
+    # ecef_[ne, :] = sol
     smode[ne] = nav.smode
 
     nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
@@ -127,6 +136,8 @@ sys.stdout.write('\n')
 
 dec.fobs.close()
 decb.fobs.close()
+
+# xyz_ref = np.mean(ecef_, axis=0)
 
 fig_type = 1
 ylim = 0.2

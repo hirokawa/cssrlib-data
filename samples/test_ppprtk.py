@@ -19,13 +19,13 @@ l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
 
 if l6_mode == 1:
     ep = [2021, 3, 19, 12, 0, 0]
-    xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
+    xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
     navfile = '../data/SEPT078M.21P'
     obsfile = '../data/SEPT078M.21O'
     l6file = '../data/2021078M.l6'
 else:
     ep = [2023, 8, 11, 21, 0, 0]
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     navfile = '../data/doy223/NAV223.23p'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_l6 = '../data/doy223/223v_qzsl6.txt'
