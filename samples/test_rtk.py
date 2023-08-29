@@ -144,6 +144,9 @@ decb.fobs.close()
 fig_type = 1
 ylim = 0.2
 
+fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
+
 if fig_type == 1:
     plt.plot(t, enu)
     plt.xticks(np.arange(0, nep+1, step=30))
@@ -152,11 +155,15 @@ if fig_type == 1:
     plt.legend(['east', 'north', 'up'])
     plt.grid()
     plt.axis([0, ne, -ylim, ylim])
-    plt.show()
 else:
     plt.plot(enu[:, 0], enu[:, 1])
     plt.xlabel('easting [m]')
     plt.ylabel('northing [m]')
     plt.grid()
     plt.axis([-ylim, ylim, -ylim, ylim])
-    plt.show()
+
+plotFileFormat = 'eps'
+plotFileName = '.'.join(('test_rtk', plotFileFormat))
+
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
+# plt.show()
