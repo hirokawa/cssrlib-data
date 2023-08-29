@@ -103,7 +103,7 @@ smode = np.zeros(nep, dtype=int)
 
 # Logging level
 #
-nav.monlevel = 1  # TODO: enabled for testing!
+nav.monlevel = 0  # TODO: enabled for testing!
 
 # Load RINEX OBS file header
 #
@@ -116,6 +116,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppbds.log')
+    nav.elmin = np.deg2rad(5.0)
 
     # Get equipment information
     #
