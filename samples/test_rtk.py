@@ -117,7 +117,7 @@ for ne in range(nep):
     smode[ne] = nav.smode
 
     nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
-                   "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
+                   "ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}\n"
                    .format(time2str(obs.t),
                            sol[0], sol[1], sol[2],
                            enu[ne, 0], enu[ne, 1], enu[ne, 2],
@@ -126,7 +126,7 @@ for ne in range(nep):
 
     # Log to standard output
     #
-    sys.stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+    sys.stdout.write('\r {} ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
                              np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
