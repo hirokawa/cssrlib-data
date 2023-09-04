@@ -7,9 +7,11 @@ Septentrio Receiver SBF messages decoder
 @author Rui Hirokawa
 """
 
-import os
+from glob import glob
 import numpy as np
+import os
 import struct as st
+
 from cssrlib.gnss import uGNSS, uTYP, prn2sat, Eph, Obs, rSigRnx, gpst2time
 from cssrlib.gnss import rCST, gst2time
 from cssrlib.rawnav import RawNav, rcvDec, rcvOpt
@@ -22,7 +24,7 @@ class sbf(rcvDec):
     tow = -1
     week = -1
 
-    def __init__(self, opt=None):
+    def __init__(self, opt=None, prefix=''):
         super().__init__()
 
         self.sig_t = {
@@ -150,8 +152,7 @@ class sbf(rcvDec):
             #    uTYP.D: [rSigRnx('ID5A')], uTYP.S: [rSigRnx('IS5A')],
             # },
         }
-
-        self.init_param(opt)
+        self.init_param(opt=opt, prefix=prefix)
 
     def sync(self, buff, k):
         return buff[k] == 0x24 and buff[k+1] == 0x40
@@ -320,7 +321,8 @@ class sbf(rcvDec):
                 k += sb2len
                 sig = typ & 0x1f
 
-                dofst1, cofst1 = bs.unpack_from('s5s3', ofst1.to_bytes(), 0)
+                dofst1, cofst1 = bs.unpack_from(
+                    's5s3', ofst1.to_bytes(1, byteorder='big'), 0)
 
                 if sig == 31:
                     sig = (info >> 3)+32
@@ -587,7 +589,7 @@ class sbf(rcvDec):
                 msg_[0:15] = msg[0:15]
                 k = 114
                 for i in range(15):
-                    d = bs.unpack_from('u8', msg, k)[0]
+                    d = bs.unpack_from('u8', bytes(msg), k)[0]
                     bs.pack_into('u8', msg_, 120+i*8, d)
                     k += 8
 
@@ -661,6 +663,7 @@ class sbf(rcvDec):
                     # self.fh_bdsb1c.write("{:08x}".format(d))
                 # self.fh_bdsb1c.write("\n")
 
+                v = bytes(v)
                 prn_ = bs.unpack_from('u6', v, 0)[0]
                 if prn != prn_:
                     return
@@ -671,6 +674,7 @@ class sbf(rcvDec):
                 msg[75] = crcsf2 << 1 | crcsf3
                 msg[76:109] = v[159:225]
                 msg[109] = bs.unpack_from('u8', v, 21)[0]
+                msg = bytes(msg)
 
                 eph = self.rn.decode_bds_b1c(self.week, self.tow, prn, msg)
                 if eph is not None:
@@ -712,9 +716,11 @@ class sbf(rcvDec):
 
 if __name__ == "__main__":
 
-    fname = '../data/doy244/sep3244d.sbf'
+    #bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
+    #fnames = 'sep3238*.sbf'
 
-    blen = os.path.getsize(fname)
+    bdir = '../data/doy244/'
+    fnames = 'sep3244*.sbf'
 
     opt = rcvOpt()
     opt.flg_qzsl6 = False
@@ -728,32 +734,40 @@ if __name__ == "__main__":
     opt.flg_rnxnav = True
     opt.flg_rnxobs = True
 
-    sbf = sbf(opt)
-    sbf.monlevel = 1
-    nep = 0
-    nep_max = 0
+    for f in glob(bdir+fnames):
 
-    with open(fname, 'rb') as f:
-        msg = f.read(blen)
-        maxlen = len(msg)-5
-        # maxlen = 400000
-        k = 0
-        while k < maxlen:
-            stat = sbf.sync(msg, k)
-            if not stat:
-                k += 1
-                continue
-            if not sbf.check_crc(msg, k):
-                continue
-            len_ = sbf.msg_len(msg, k)
-            if k+len_ >= maxlen:
-                break
+        print("Decoding {}".format(f))
 
-            sbf.decode(msg[k:k+len_], len_)
-            k += len_
+        bdir, fname = os.path.split(f)
+        bdir += '/'
 
-            nep += 1
-            if nep_max > 0 and nep >= nep_max:
-                break
+        sbfdec = sbf(opt, prefix=bdir+fname[4:].removesuffix('.sbf')+'_')
+        sbfdec.monlevel = 1
+        nep = 0
+        nep_max = 0
 
-    sbf.file_close()
+        blen = os.path.getsize(bdir+fname)
+        with open(bdir+fname, 'rb') as f:
+            msg = f.read(blen)
+            maxlen = len(msg)-5
+            # maxlen = 400000
+            k = 0
+            while k < maxlen:
+                stat = sbfdec.sync(msg, k)
+                if not stat:
+                    k += 1
+                    continue
+                if not sbfdec.check_crc(msg, k):
+                    continue
+                len_ = sbfdec.msg_len(msg, k)
+                if k+len_ >= maxlen:
+                    break
+
+                sbfdec.decode(msg[k:k+len_], len_)
+                k += len_
+
+                nep += 1
+                if nep_max > 0 and nep >= nep_max:
+                    break
+
+        sbfdec.file_close()

@@ -116,6 +116,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     rtkinit(nav, rnx.pos, 'test_pppbds.log')
+    nav.elmin = np.deg2rad(5.0)
 
     # Get equipment information
     #
