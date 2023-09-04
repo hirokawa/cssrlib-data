@@ -716,8 +716,11 @@ class sbf(rcvDec):
 
 if __name__ == "__main__":
 
-    bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
-    fnames = 'sep3238*.sbf'
+    #bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
+    #fnames = 'sep3238*.sbf'
+
+    bdir = '../data/doy244/'
+    fnames = 'sep3244*.sbf'
 
     opt = rcvOpt()
     opt.flg_qzsl6 = False
