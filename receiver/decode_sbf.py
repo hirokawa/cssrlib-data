@@ -546,17 +546,15 @@ class sbf(rcvDec):
 
                 eph = self.rn.decode_gps_lnav(self.week, self.time, sat, msg)
 
-        elif blk_num == 4020:  # GEORawL1
-            None
-
-        elif blk_num == 4021:  # GEORawL5
+        elif blk_num in (4020, 4021):  # GEORawL1/GEORawL5
             sys, prn = self.decode_head(buff, k)
             k += 7
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_sbas:
                 self.fh_sbas.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
-                                   format(self.week, self.tow, prn, src, 32))
+                                   format(self.week, self.tow, prn, src-24,
+                                          32))
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
                     self.fh_sbas.write("{:08x}".format(d))
@@ -716,8 +714,8 @@ class sbf(rcvDec):
 
 if __name__ == "__main__":
 
-    #bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
-    #fnames = 'sep3238*.sbf'
+    # bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
+    # fnames = 'sep3238*.sbf'
 
     bdir = '../data/doy244/'
     fnames = 'sep3244*.sbf'
@@ -730,7 +728,7 @@ if __name__ == "__main__":
     opt.flg_galinav = True
     opt.flg_bdsb1c = True
     opt.flg_bdsb2b = True
-    opt.flg_sbas = False
+    opt.flg_sbas = True
     opt.flg_rnxnav = True
     opt.flg_rnxobs = True
 
