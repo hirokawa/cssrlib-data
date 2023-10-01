@@ -29,6 +29,7 @@ if False:
 else:
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/NAV223.23p'
+    # navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_l6 = '../data/doy223/223v_qzsl6.txt'
@@ -51,7 +52,7 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-gnss = "GEJ"  # "GEJ"
+gnss = "GEJR"  # "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -65,6 +66,11 @@ if 'J' in gnss:
     sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
                  rSigRnx("JL1C"), rSigRnx("JL2L"),
                  rSigRnx("JS1C"), rSigRnx("JS2L")])
+
+if 'R' in gnss:
+    sigs.extend([rSigRnx("RC1C"), rSigRnx("RC2C"),
+                 rSigRnx("RL1C"), rSigRnx("RL2C"),
+                 rSigRnx("RS1C"), rSigRnx("RS2C")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
