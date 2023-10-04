@@ -129,7 +129,6 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rtkinit(nav, rnx.pos, 'test_pppmdc.log')
     nav.elmin = np.deg2rad(5.0)
-    nav.glo_ch = rnx.glo_ch
 
     # Get equipment information
     #
