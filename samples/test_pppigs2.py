@@ -211,7 +211,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:7.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
                              np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
@@ -237,7 +237,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim = 0.4
+# ylim = 0.4
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -260,7 +260,7 @@ if fig_type == 1:
 
         plt.ylabel(lbl_t[k])
         plt.grid()
-        plt.ylim([-ylim, ylim])
+        # plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
