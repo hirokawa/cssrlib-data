@@ -15,7 +15,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import pppos
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -132,6 +132,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_pppigs2.log')
+    nav.ephopt = 4  # IGS
 
     # Get equipment information
     #
@@ -171,7 +172,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    # Skip epoch until start time
+    # Skip epochs until start time
     #
     obs = rnx.decode_obs()
     while time > obs.t and obs.t.time != 0:
@@ -222,9 +223,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
     stdout.write('\n')
 
-    # Close RINEX OBS file
+    # Close RINEX observation file
     #
     rnx.fobs.close()
 
