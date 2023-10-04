@@ -16,7 +16,7 @@ from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.cssrlib import cssr
 from cssrlib.cssrlib import sCSSRTYPE as sc
-from cssrlib.pppssr import rtkinit, ppppos, IT
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -127,7 +127,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rtkinit(nav, rnx.pos, 'test_pppmdc.log')
+    ppp = pppos(nav, rnx.pos, 'test_pppmdc.log')
     nav.elmin = np.deg2rad(5.0)
 
     # Get equipment information
@@ -201,7 +201,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         # Call PPP module
         #
         if (cs.lc[0].cstat & 0xf) == 0xf:
-            ppppos(nav, obs, cs=cs)
+            ppp.process(obs, cs=cs)
 
         # Save output
         #
@@ -210,7 +210,8 @@ if rnx.decode_obsh(obsfile) >= 0:
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
 
-        ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
+        ztd[ne] = nav.xa[ppp.IT(nav.na)] \
+            if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
