@@ -15,7 +15,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import pppos
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -151,6 +151,9 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_pppigs.log')
+    nav.ephopt = 4  # IGS
+    nav.armode = 3
+
     nav.elmin = np.deg2rad(5.0)
     nav.thresar = 2.0
 

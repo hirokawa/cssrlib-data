@@ -15,7 +15,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import pppos
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -132,6 +132,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_pppigs2.log')
+    nav.ephopt = 4  # IGS
 
     # Get equipment information
     #
@@ -171,7 +172,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    # Skip epoch until start time
+    # Skip epochs until start time
     #
     obs = rnx.decode_obs()
     while time > obs.t and obs.t.time != 0:
@@ -202,15 +203,17 @@ if rnx.decode_obsh(obsfile) >= 0:
             if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
 
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:1d}\n"
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
+                       "ENU {:8.3f} {:8.3f} {:8.3f}, 2D {:7.3f}, mode {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                                smode[ne]))
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+        stdout.write('\r {} ENU {:8.3f} {:8.3f} {:8.3f}, 2D {:7.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
                              np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
@@ -222,9 +225,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
     stdout.write('\n')
 
-    # Close RINEX OBS file
+    # Close RINEX observation file
     #
     rnx.fobs.close()
 
@@ -234,7 +239,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim = 0.4
+# ylim = 0.4
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -257,7 +262,7 @@ if fig_type == 1:
 
         plt.ylabel(lbl_t[k])
         plt.grid()
-        plt.ylim([-ylim, ylim])
+        # plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
