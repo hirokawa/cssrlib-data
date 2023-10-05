@@ -292,8 +292,7 @@ for ne in range(nep):
                 # - IS-QZSS-MDC-001 sec 5.5.3.3
                 # - HAS SIS ICD sec 7.4, 7.5
                 # - HAS IDD ICD sec 3.3.4
-                if cs.cssrmode in [sc.GAL_HAS_IDD, sc.GAL_HAS_SIS,
-                                   sc.QZS_MADOCA]:
+                if cs.cssrmode in [sc.GAL_HAS_IDD, sc.GAL_HAS_SIS, sc.QZS_MADOCA]:
                     cbias = -cbias
 
             # Get CODE biases
