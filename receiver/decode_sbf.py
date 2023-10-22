@@ -689,12 +689,18 @@ class sbf(rcvDec):
             if self.flg_bdsb2b and (prn >= 59):
                 self.fh_bdsb2b.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
                                      format(self.week, int(self.tow), prn,
-                                            src, 124))
+                                            src, 64))
                 # 984 symbols of a BeiDou B2b navigation frame
                 # 8 unused bits in NAVBits[30]
-                for i in range(31):
+                for i in range(16):
                     d = st.unpack_from('<L', buff, k)[0]
-                    self.fh_bdsb2b.write("{:08x}".format(d))
+                    if i == 0:
+                        self.fh_bdsb2b.write("{:05x}".format(d & 0xfffff))
+                    elif i == 15:
+                        self.fh_bdsb2b.write(
+                            "{:05x}{:06x}".format((d >> 12) & 0xffffc, 0))
+                    else:
+                        self.fh_bdsb2b.write("{:08x}".format(d))
                     k += 4
                 self.fh_bdsb2b.write("\n")
 
@@ -720,13 +726,16 @@ if __name__ == "__main__":
     bdir = '../data/doy244/'
     fnames = 'sep3244*.sbf'
 
+    bdir = 'd:/work/log/'
+    fnames = 'sept295a.sbf'
+
     opt = rcvOpt()
     opt.flg_qzsl6 = False
     opt.flg_qzslnav = False
     opt.flg_gpslnav = False
     opt.flg_gale6 = True
     opt.flg_galinav = True
-    opt.flg_bdsb1c = True
+    opt.flg_bdsb1c = False
     opt.flg_bdsb2b = True
     opt.flg_sbas = True
     opt.flg_rnxnav = True
