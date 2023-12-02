@@ -11,7 +11,7 @@ from cssrlib.cssrlib import cssr
 from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str
 from cssrlib.gnss import rSigRnx, sys2str, epoch2time
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.ppprtk import rtkinit, ppprtkpos
+from cssrlib.ppprtk import ppprtkpos
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
@@ -87,7 +87,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rtkinit(nav, rnx.pos, 'test_ppprtk.log')
+    ppprtk = ppprtkpos(nav, rnx.pos, 'test_ppprtk.log')
 
     # Get equipment information
     #
@@ -174,7 +174,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         cstat = cs.chk_stat()
         if cstat:
-            ppprtkpos(nav, obs, cs)
+            ppprtk.process(obs, cs=cs)
 
         t[ne] = timediff(nav.t, t0)/60
 
