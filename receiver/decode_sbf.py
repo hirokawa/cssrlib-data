@@ -299,7 +299,7 @@ class sbf(rcvDec):
                     S1 = cn0*0.25 + 10.0
 
             if code not in self.sig_tab[sys][code.typ]:
-                if self.monlevel > 0:
+                if self.monlevel > 1:
                     print("skip code={:}".format(code))
                 k += nb2*sb2len
                 continue
@@ -328,7 +328,7 @@ class sbf(rcvDec):
                     sig = (info >> 3)+32
 
                 if sig not in self.sig_t:
-                    if self.monlevel > 0:
+                    if self.monlevel > 1:
                         print("skip sig={:}".format(sig))
                     continue
 
@@ -358,7 +358,7 @@ class sbf(rcvDec):
                         S2 = cn0*0.25 + 10.0
 
                 if code not in self.sig_tab[sys][code.typ]:
-                    if self.monlevel > 0:
+                    if self.monlevel > 1:
                         print("skip code={:}".format(code))
                     continue
                 idx = self.sig_tab[sys][code.typ].index(code)
@@ -501,7 +501,7 @@ class sbf(rcvDec):
         k += 6
         blk_num = id_ & 0x1fff
         blk_rev = (id_ >> 13) & 0x7
-        if self.monlevel > 0 and blk_num not in \
+        if self.monlevel > 1 and blk_num not in \
            (4002, 4004, 4006, 4007, 4017, 4018, 4019, 4020, 4021, 4022, 4023,
             4024, 4026, 4027, 4036, 4047, 4066, 4067, 4068, 4081, 4093, 4095,
                 4218, 4219, 4242, 5891, 5894, 5896):
@@ -538,6 +538,12 @@ class sbf(rcvDec):
             crcpass, _, src, _, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_gpslnav:
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in GPSRawCA/QZSRawCA " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, src))
+                    return -1
                 msg = bytearray(40)
                 for i in range(10):
                     d = st.unpack_from('<L', buff, k)[0]
@@ -552,6 +558,12 @@ class sbf(rcvDec):
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_sbas:
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in GEORawL1/5 " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, cnt, src))
+                    return -1
                 self.fh_sbas.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
                                    format(self.week, self.tow, prn, src-24,
                                           32))
@@ -571,6 +583,13 @@ class sbf(rcvDec):
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_galinav:
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in GALRawINAV " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, cnt, src & 0x1f))
+                    return -1
+
                 self.fh_galinav.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
                                       format(self.week, self.tow, prn,
                                              src, 32))
@@ -602,6 +621,13 @@ class sbf(rcvDec):
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_gale6:
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in GALRawCNAV " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, cnt, src))
+                    return -1
+
                 blen = (492+7)//8
                 self.fh_gale6.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
                                     format(self.week, int(self.tow), prn,
@@ -628,8 +654,11 @@ class sbf(rcvDec):
             k += 5
             if parity == 0:
                 if self.monlevel > 0:
-                    print("parity error.")
-                return False
+                    print("crc error in QZSRawL6 " +
+                          "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                          format(int(self.tow), prn, parity, rscnt, src))
+                return -1
+
             if self.flg_qzsl6:
                 self.fh_qzsl6.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
                                     format(self.week, self.tow, prn, src, 252))
@@ -687,6 +716,13 @@ class sbf(rcvDec):
             crcpass, _, src, _, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_bdsb2b and (prn >= 59):
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in BDSRawB2b " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, src))
+                    return -1
+
                 self.fh_bdsb2b.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
                                      format(self.week, int(self.tow), prn,
                                             src, 64))
@@ -720,14 +756,17 @@ class sbf(rcvDec):
 
 if __name__ == "__main__":
 
-    # bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
-    # fnames = 'sep3238*.sbf'
+    bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
+    fnames = 'sep3238*.sbf'
 
-    bdir = '../data/doy244/'
-    fnames = 'sep3244*.sbf'
+    # bdir = '../data/doy244/'
+    # fnames = 'sep3244*.sbf'
 
-    bdir = 'd:/work/log/'
-    fnames = 'sept295a.sbf'
+    # bdir = '../data/doy223/'
+    # fnames = 'sept223v.sbf'
+
+    # bdir = '../data/doy308/'
+    # fnames = 'sept308b.sbf'
 
     opt = rcvOpt()
     opt.flg_qzsl6 = False
