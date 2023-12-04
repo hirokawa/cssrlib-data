@@ -9,7 +9,7 @@ from cssrlib.cssrlib import cssr
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
 from cssrlib.gnss import rSigRnx, time2str, sys2str
-from cssrlib.ppprtk import rtkinit, ppprtkpos
+from cssrlib.ppprtk import ppprtkpos
 from cssrlib.peph import atxdec, searchpcv
 
 ep = [2021, 9, 22, 6, 30, 0]
@@ -76,8 +76,11 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rtkinit(nav, rnx.pos, 'test_ppprtk2.log')
+    ppprtk = ppprtkpos(nav, rnx.pos, 'test_ppprtk2.log')
     nav.armode = 3
+
+    # Satellite exclusion
+    #
     nav.excl_sat = [5, 58]  # [5, 58, 65]
 
     # Get equipment information
@@ -155,9 +158,9 @@ if rnx.decode_obsh(obsfile) >= 0:
             nav.time_p = t0
 
         cstat = cs.chk_stat()
-
         if cstat:
-            ppprtkpos(nav, obs, cs)
+            ppprtk.process(obs, cs=cs)
+
         t[ne] = gn.timediff(nav.t, t0)
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
