@@ -33,7 +33,7 @@ doy = int(time2doy(time))
 
 nep = 900*4
 
-dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 v = np.genfromtxt(file_pvs, dtype=dtype)
 
