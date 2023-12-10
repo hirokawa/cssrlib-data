@@ -173,6 +173,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         if len(vi) > 0:
             buff = unhexlify(vi['nav'][0])
             cs.decode_cssr(buff, 0)
+            cs.check_validity(obs.t)
 
         # Call PPP module with PVS corrections
         #
