@@ -135,6 +135,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.elmin = np.deg2rad(5.0)
 
     nav.glo_ch = rnx.glo_ch
+    # nav.armode = 1
 
     # Get equipment information
     #

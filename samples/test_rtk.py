@@ -11,7 +11,7 @@ import cssrlib.gnss as gn
 
 from cssrlib.gnss import rSigRnx, time2str
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.rtk import rtkinit, relpos
+from cssrlib.rtk import rtkpos
 
 bdir = '../data/'
 ngsantfile = bdir+'GSI_PCV.TXT'
@@ -73,9 +73,8 @@ nep = 300
 t = np.zeros(nep)
 enu = np.zeros((nep, 3))
 smode = np.zeros(nep, dtype=int)
-# ecef_ = np.zeros((nep, 3))
 
-rtkinit(nav, dec.pos, 'test_rtk.log')
+rtk = rtkpos(nav, dec.pos, 'test_rtk.log')
 rr = dec.pos
 
 # Load ANTEX data for satellites and stations
@@ -110,11 +109,11 @@ for ne in range(nep):
     obs, obsb = rn.sync_obs(dec, decb)
     if ne == 0:
         t0 = nav.t = obs.t
-    relpos(nav, obs, obsb)
+
+    rtk.process(obs, obsb=obsb)
     t[ne] = gn.timediff(nav.t, t0)
     sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
     enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
-    # ecef_[ne, :] = sol
     smode[ne] = nav.smode
 
     nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
@@ -139,8 +138,6 @@ sys.stdout.write('\n')
 
 dec.fobs.close()
 decb.fobs.close()
-
-# xyz_ref = np.mean(ecef_, axis=0)
 
 fig_type = 1
 ylim = 0.2
