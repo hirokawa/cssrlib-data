@@ -52,7 +52,7 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-gnss = "GEJR"  # "GEJ"
+gnss = "GE"  # "GEJR"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -130,7 +130,10 @@ if rnx.decode_obsh(obsfile) >= 0:
     ppp = pppos(nav, rnx.pos, 'test_pppmdc.log')
     nav.elmin = np.deg2rad(5.0)
     nav.glo_ch = rnx.glo_ch
-    # nav.armode = 1
+
+    nav.thresar = 2.0  # AR acceptance threshold
+    nav.armode = 3     # AR is enabled
+    # nav.sig_qion = 0.1/np.sqrt(1)        # [m/s/sqrt(s)]
 
     # Get equipment information
     #

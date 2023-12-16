@@ -17,15 +17,26 @@ from cssrlib.peph import atxdec, searchpcv
 from cssrlib.cssr_pvs import cssr_pvs
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
+from cssrlib.cssr_pvs import decode_sinca_line
+
+icase = 2  # 1: SIS, 2: DAS
 
 # Start epoch and number of epochs
 #
-if True:
+if icase == 1:
     ep = [2023, 11, 4, 2, 0, 0]
     # navfile = '../data/doy308/308c_rnx.nav'
     navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
     obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
     file_pvs = '../data/doy308/308c_sbas.txt'
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+elif icase == 2:
+    ep = [2023, 12, 13, 12, 0, 0]
+    # navfile = '../data/doy308/308c_rnx.nav'
+    navfile = '../data/doy347/STR1347m.nav'
+    obsfile = '../data/doy347/STR1347m.obs'  # STR100, Septentrio PolaRX5
+    file_pvs = '../data/doy347/DAS2023347m.txt'
+    xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
 
 time = epoch2time(ep)
 year = ep[0]
@@ -33,14 +44,9 @@ doy = int(time2doy(time))
 
 nep = 900*4
 
-dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
-v = np.genfromtxt(file_pvs, dtype=dtype)
-
 prn_ref = 122  # satellite PRN for PRN122
 sbas_type = 1  # L1: 0, L5: 1
 
-xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
@@ -151,6 +157,13 @@ if rnx.decode_obsh(obsfile) >= 0:
     while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
 
+    if icase == 1:  # SIS
+        dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
+                 ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+        v = np.genfromtxt(file_pvs, dtype=dtype)
+    else:  # DAS
+        fc = open(file_pvs, 'rt')
+
     # Loop over number of epoch from file start
     #
     for ne in range(nep):
@@ -168,12 +181,19 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
-               & (v['type'] == sbas_type)]
-        if len(vi) > 0:
-            buff = unhexlify(vi['nav'][0])
-            cs.decode_cssr(buff, 0)
-            cs.check_validity(obs.t)
+        if icase == 1:  # SIS
+            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
+                   & (v['type'] == sbas_type)]
+            if len(vi) > 0:
+                buff = unhexlify(vi['nav'][0])
+        else:  # DAS
+            for line in fc:
+                tc, buff = decode_sinca_line(line)
+                cs.decode_cssr(buff, 0)
+                if timediff(obs.t, tc) >= 0.0:
+                    break
+
+        cs.check_validity(obs.t)
 
         # Call PPP module with PVS corrections
         #
