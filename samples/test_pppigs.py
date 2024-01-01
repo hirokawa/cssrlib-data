@@ -15,7 +15,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import rtkinit, ppppos, IT
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -55,7 +55,7 @@ else:
     navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
     obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
-#ac = 'COD0OPSFIN'
+# ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
@@ -150,7 +150,10 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rtkinit(nav, rnx.pos, 'test_pppigs.log')
+    ppp = pppos(nav, rnx.pos, 'test_pppigs.log')
+    nav.ephopt = 4  # IGS
+    nav.armode = 3
+
     nav.elmin = np.deg2rad(5.0)
     nav.thresar = 2.0
 
@@ -210,7 +213,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with IGS products
         #
-        ppppos(nav, obs, orb=orb, bsx=bsx)
+        ppp.process(obs, orb=orb, bsx=bsx)
 
         # Save output
         #
@@ -219,7 +222,8 @@ if rnx.decode_obsh(obsfile) >= 0:
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
 
-        ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
+        ztd[ne] = nav.xa[ppp.IT(nav.na)] \
+            if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
@@ -299,7 +303,7 @@ elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    # plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
@@ -308,7 +312,7 @@ elif fig_type == 2:
     plt.grid()
     plt.axis('equal')
     plt.legend()
-    #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppigs', plotFileFormat))

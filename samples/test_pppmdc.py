@@ -16,7 +16,7 @@ from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.cssrlib import cssr
 from cssrlib.cssrlib import sCSSRTYPE as sc
-from cssrlib.pppssr import rtkinit, ppppos, IT
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -52,7 +52,7 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-gnss = "GEJR"  # "GEJ"
+gnss = "GE"  # "GEJR"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -127,8 +127,13 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rtkinit(nav, rnx.pos, 'test_pppmdc.log')
+    ppp = pppos(nav, rnx.pos, 'test_pppmdc.log')
     nav.elmin = np.deg2rad(5.0)
+    nav.glo_ch = rnx.glo_ch
+
+    nav.thresar = 2.0  # AR acceptance threshold
+    nav.armode = 3     # AR is enabled
+    # nav.sig_qion = 0.1/np.sqrt(1)        # [m/s/sqrt(s)]
 
     # Get equipment information
     #
@@ -201,7 +206,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         # Call PPP module
         #
         if (cs.lc[0].cstat & 0xf) == 0xf:
-            ppppos(nav, obs, cs=cs)
+            ppp.process(obs, cs=cs)
 
         # Save output
         #
@@ -210,7 +215,8 @@ if rnx.decode_obsh(obsfile) >= 0:
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
 
-        ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
+        ztd[ne] = nav.xa[ppp.IT(nav.na)] \
+            if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "

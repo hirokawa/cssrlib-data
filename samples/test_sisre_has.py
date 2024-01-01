@@ -20,13 +20,13 @@ from cssrlib.peph import peph, biasdec, apc2com
 from cssrlib.cssr_has import cssr_has
 from cssrlib.cssrlib import sCType
 from cssrlib.cssrlib import sCSSRTYPE as sc
-from cssrlib.pppssr import find_corr_idx
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
 ep = [2023, 8, 11, 21, 0, 0]
-#ep = [2023, 7, 8, 4, 0, 0]
+# ep = [2023, 7, 8, 4, 0, 0]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -104,6 +104,7 @@ atx.readpcv(atxfile)
 # Set PCO/PCV information
 #
 nav.sat_ant = atx.pcvs
+ppp = pppos(nav)
 
 # Intialize data structures for results
 #
@@ -166,7 +167,7 @@ for ne in range(nep):
             rec += [pid-1]
             has_pages[pid-1, :] = page
 
-        #print(f"{mt} {mid} {ms} {pid}")
+        # print(f"{mt} {mid} {ms} {pid}")
 
     if len(rec) >= ms_:
         print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
@@ -329,8 +330,8 @@ for ne in range(nep):
             cbias = np.ones(len(sigs))*np.nan
 
             if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
-                nsig, idx_n, kidx = find_corr_idx(cs, nav.nf, sCType.CBIAS,
-                                                  sigs, sat)
+                nsig, idx_n, kidx = ppp.find_corr_idx(cs, nav.nf, sCType.CBIAS,
+                                                      sigs, sat)
 
                 if nsig >= nav.nf:
                     cbias = cs.lc[0].cbias[idx_n][kidx]

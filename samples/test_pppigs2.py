@@ -15,7 +15,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.peph import peph, biasdec
-from cssrlib.pppigs import rtkinit, ppppos, IT
+from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
@@ -36,7 +36,7 @@ pos_ref = ecef2pos(xyz_ref)
 navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
 obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
-#ac = 'COD0OPSFIN'
+# ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
 
 orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
@@ -131,7 +131,8 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    rtkinit(nav, rnx.pos, 'test_pppigs2.log')
+    ppp = pppos(nav, rnx.pos, 'test_pppigs2.log')
+    nav.ephopt = 4  # IGS
 
     # Get equipment information
     #
@@ -171,7 +172,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    # Skip epoch until start time
+    # Skip epochs until start time
     #
     obs = rnx.decode_obs()
     while time > obs.t and obs.t.time != 0:
@@ -189,7 +190,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with IGS products
         #
-        ppppos(nav, obs, orb=orb, bsx=bsx)
+        ppp.process(obs, orb=orb, bsx=bsx)
 
         # Save output
         #
@@ -198,18 +199,21 @@ if rnx.decode_obsh(obsfile) >= 0:
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
 
-        ztd[ne] = nav.xa[IT(nav.na)] if nav.smode == 4 else nav.x[IT(nav.na)]
+        ztd[ne] = nav.xa[ppp.IT(nav.na)] \
+            if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
 
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:1d}\n"
+        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
+                       "ENU {:8.3f} {:8.3f} {:8.3f}, 2D {:7.3f}, mode {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
                                smode[ne]))
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+        stdout.write('\r {} ENU {:8.3f} {:8.3f} {:8.3f}, 2D {:7.3f}, mode {:1d}'
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
                              np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
@@ -221,9 +225,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
     stdout.write('\n')
 
-    # Close RINEX OBS file
+    # Close RINEX observation file
     #
     rnx.fobs.close()
 
@@ -233,7 +239,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim = 0.4
+# ylim = 0.4
 
 idx4 = np.where(smode == 4)[0]
 idx5 = np.where(smode == 5)[0]
@@ -256,7 +262,7 @@ if fig_type == 1:
 
         plt.ylabel(lbl_t[k])
         plt.grid()
-        plt.ylim([-ylim, ylim])
+        # plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
@@ -274,7 +280,7 @@ elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    #plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
+    # plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='stdpos')
     plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
     plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
 
@@ -283,7 +289,7 @@ elif fig_type == 2:
     plt.grid()
     plt.axis('equal')
     plt.legend()
-    #ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+    # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppigs2', plotFileFormat))
