@@ -93,6 +93,9 @@ if nav.rcv_ant_b is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
     sys.exit(-1)
 
+# nav.excl_sat = [20]
+# nav.cnr_min_gpy = 20
+
 # Get equipment information
 #
 print("Rover:")
