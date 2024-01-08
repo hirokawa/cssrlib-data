@@ -2,11 +2,15 @@
  static test for standalone positioning
 """
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 import numpy as np
+from sys import stdout
+
 from cssrlib.rinex import rnxdec
-from cssrlib.gnss import ecef2pos, timediff, dops, ecef2enu
-from cssrlib.gnss import rSigRnx
-from cssrlib.pntpos import stdinit, pntpos
+from cssrlib.gnss import ecef2pos, timediff, ecef2enu
+from cssrlib.gnss import rSigRnx, epoch2time, Nav, time2str
+from cssrlib.pntpos import stdpos
+from cssrlib.sbas import sbasDec
 
 if False:
     xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
@@ -15,92 +19,151 @@ if False:
 else:
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    # navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
     # navfile = '../data/doy223/NAV223.23p'
     # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
 
 pos_ref = ecef2pos(xyz_ref)
+nep = 360
+
+time = epoch2time(ep)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("JC1C")]
+sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("JC1C"),
+        rSigRnx("GL1C"), rSigRnx("EL1C"), rSigRnx("JL1C"),
+        rSigRnx("GS1C"), rSigRnx("ES1C"), rSigRnx("JS1C")]
 
-dec = rnxdec()
-dec.setSignals(sigs)
+sigs = [rSigRnx("GC1C"), rSigRnx("GL1C"), rSigRnx("GS1C")]
+
+rnx = rnxdec()
+rnx.setSignals(sigs)
 
 
-nav = stdinit()
-nav = dec.decode_nav(navfile, nav)
-nep = 360
+# nav = stdinit()
+nav = Nav()
+nav.pmode = 0
+nav = rnx.decode_nav(navfile, nav)
+
+cs = sbasDec('test_stdpos.log')
+cs.monlevel = 0
+
 t = np.zeros(nep)
 enu = np.zeros((nep, 3))
-sol = np.zeros((nep, nav.nx))
 dop = np.zeros((nep, 4))
 nsat = np.zeros(nep, dtype=int)
+smode = np.zeros(nep, dtype=int)
 
-if dec.decode_obsh(obsfile) >= 0:
+if rnx.decode_obsh(obsfile) >= 0:
 
-    nav.x[0:3] = dec.pos
+    # Auto-substitute signals
+    #
+    rnx.autoSubstituteSignals()
+
+    # nav.x[0:3] = rnx.pos
+
+    # Initialize position
+    #
+    std = stdpos(nav, rnx.pos, 'test_stdpos.log')
+    nav.elmin = np.deg2rad(5.0)
+
+    sol = np.zeros((nep, nav.nx))
+    # Skip epochs until start time
+    #
+    obs = rnx.decode_obs()
+    while time > obs.t and obs.t.time != 0:
+        obs = rnx.decode_obs()
 
     for ne in range(nep):
-        obs = dec.decode_obs()
+
         if ne == 0:
             t0 = nav.t = obs.t
         t[ne] = timediff(obs.t, t0)
-        nav, az, el = pntpos(obs, nav)
+        # nav, az, el = pntpos(obs, nav)
+
+        std.process(obs, cs=None)
+
         sol[ne, :] = nav.x
-        dop[ne, :] = dops(az, el)
         enu[ne, :] = ecef2enu(pos_ref, sol[ne, 0:3]-xyz_ref)
-        nsat[ne] = len(el)
-    dec.fobs.close()
+        # nsat[ne] = len(el)
+        dop[ne, :] = std.dop
+
+        smode[ne] = nav.smode
+
+        nav.fout.write("{:s} {:14.4f} {:14.4f} {:14.4f} "
+                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
+                       .format(time2str(obs.t),
+                               sol[ne, 0], sol[ne, 1], sol[ne, 2],
+                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                               smode[ne]))
+
+        # Log to standard output
+        #
+        stdout.write('\r {:s} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, '
+                     'mode {:1d}'
+                     .format(time2str(obs.t),
+                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                             smode[ne]))
+
+        obs = rnx.decode_obs()
+        if obs.t.time == 0:
+            break
+
+    rnx.fobs.close()
 
 
-if True:
-    dmax = 10
-    plt.figure()
-    plt.plot(t, enu)
-    plt.ylabel('pos err[m]')
-    plt.xlabel('time[s]')
-    plt.legend(['east', 'north', 'up'])
-    plt.grid()
-    plt.axis([0, nep, -dmax, dmax])
-    plt.show()
+fig_type = 1
+ylim_h = 2.0
+ylim_v = 6.0
 
-    plt.figure()
-    plt.plot(t, sol[:, 3:6])
-    plt.ylabel('vel err[m/s]')
-    plt.xlabel('time[s]')
-    plt.legend(['x', 'y', 'z'])
-    plt.grid()
-    plt.axis([0, nep, -0.5, 0.5])
-    plt.show()
+idx2 = np.where(smode == 2)[0]
+idx1 = np.where(smode == 1)[0]
+idx0 = np.where(smode == 0)[0]
 
-    sol[0, 7] = np.nan
-    plt.figure()
-    plt.subplot(211)
-    plt.plot(t, sol[:, 6]-sol[0, 6])
-    plt.ylabel('clock bias [m]')
-    plt.grid()
-    plt.subplot(212)
-    plt.plot(t, sol[:, 7])
-    plt.ylabel('clock drift [m/s]')
-    plt.xlabel('time[s]')
-    plt.grid()
-    plt.show()
+fig = plt.figure(figsize=[7, 9])
+fig.set_rasterized(True)
 
-    plt.figure()
-    plt.plot(enu[:, 0], enu[:, 1])
-    plt.xlabel('easting[m]')
-    plt.ylabel('northing[m]')
-    plt.grid()
-    plt.axis([-dmax, dmax, -dmax, dmax])
-    plt.show()
+fmt = '%H:%M'
 
-    plt.figure()
-    plt.plot(t, dop[:, 1:])
-    plt.legend(['pdop', 'hdop', 'vdop'])
+if fig_type == 1:
+
+    lbl_t = ['East [m]', 'North [m]', 'Up [m]']
+
+    for k in range(3):
+        ylim = ylim_h if k < 2 else ylim_v
+        plt.subplot(3, 1, k+1)
+        plt.plot_date(t[idx0], enu[idx0, k], 'r.', label='none')
+        plt.plot_date(t[idx2], enu[idx2, k], 'y.', label='SBAS/DGPS')
+        plt.plot_date(t[idx1], enu[idx1, k], 'g.', label='standalone')
+
+        plt.ylabel(lbl_t[k])
+        plt.grid()
+        plt.ylim([-ylim, ylim])
+        plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+
+    plt.xlabel('Time [HH:MM]')
+    plt.legend()
+
+elif fig_type == 2:
+
+    ax = fig.add_subplot(111)
+
+    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='none')
+    plt.plot(enu[idx2, 0], enu[idx2, 1], 'y.', label='SBAS/DGPS')
+    plt.plot(enu[idx1, 0], enu[idx1, 1], 'g.', label='standalone')
+
+    plt.xlabel('Easting [m]')
+    plt.ylabel('Northing [m]')
     plt.grid()
-    plt.axis([0, nep, 0, 2])
-    plt.xlabel('time[s]')
-    plt.show()
+    plt.axis('equal')
+    plt.legend()
+    # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
+
+plotFileFormat = 'eps'
+plotFileName = '.'.join(('test_stdpos', plotFileFormat))
+
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)

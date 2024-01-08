@@ -19,7 +19,7 @@ from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 from cssrlib.cssr_pvs import decode_sinca_line
 
-icase = 2  # 1: SIS, 2: DAS
+icase = 1  # 1: SIS, 2: DAS
 
 # Start epoch and number of epochs
 #
@@ -186,6 +186,7 @@ if rnx.decode_obsh(obsfile) >= 0:
                    & (v['type'] == sbas_type)]
             if len(vi) > 0:
                 buff = unhexlify(vi['nav'][0])
+                cs.decode_cssr(buff, 0)
         else:  # DAS
             for line in fc:
                 tc, buff = decode_sinca_line(line)
