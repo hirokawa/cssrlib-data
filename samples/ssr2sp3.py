@@ -9,10 +9,10 @@ import numpy as np
 import sys
 
 from cssrlib.ephemeris import satpos
-from cssrlib.gnss import Nav, sat2prn
+from cssrlib.gnss import Nav, sat2prn, sys2str
 from cssrlib.gnss import time2gpst, time2doy, epoch2time, time2str
 from cssrlib.gnss import timeadd
-from cssrlib.gnss import uGNSS as ug
+from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, peph_t, apc2com
@@ -180,7 +180,6 @@ for ne in range(nep):
 
             rs, vs, dts, svh = satpos(sat, time, nav, cs)
 
-            """
             # Select PCO reference signals for Galileo HAS
             #
             if sys == ug.GPS:
@@ -193,8 +192,7 @@ for ne in range(nep):
 
             # Convert to CoM using ANTEX PCO corrections
             #
-            rs[j, :] += apc2com(nav, sat, time, rs[j, :], sig0)
-            """
+            rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0)
 
             for i in range(3):
                 peph.pos[sat-1, i] = rs[0, i]
