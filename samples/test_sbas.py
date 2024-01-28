@@ -18,28 +18,27 @@ from cssrlib.sbas import sbasDec
 from cssrlib.rinex import rnxdec
 # from cssrlib.cssr_pvs import decode_sinca_line
 
-icase = 1  # 1: MSAS L1, 2: SouthPAN L5
+icase = 1  # 1: MSAS L1, 2: QZSS DFMC L5
 
 # Start epoch and number of epochs
 #
 if icase == 1:  # MSAS, L1 SBAS
     ep = [2023, 8, 11, 21, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
     navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_sbas = '../data/doy223/223v_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
-    prn_ref = 137  # satellite PRN for PRN122
+    prn_ref = 137  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
 
-elif icase == 2:  # SouthPAN, L5 DFMC
-    ep = [2023, 11, 4, 2, 0, 0]
-    navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
-    obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
-    file_sbas = '../data/doy308/308c_sbas.txt'
-    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-    prn_ref = 122  # satellite PRN for PRN122
+elif icase == 2:  # QZSS, L5 DFMC
+    ep = [2023, 8, 11, 21, 0, 0]
+    navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
+    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
+    file_sbas = '../data/doy223/223v_sbas.txt'
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    prn_ref = 189  # satellite PRN for SBAS correction
     sbas_type = 1  # L1: 0, L5: 1
     nf = 2
 
@@ -48,7 +47,7 @@ year = ep[0]
 doy = int(time2doy(time))
 
 nep = 900*4
-nep = 360
+# nep = 360
 
 
 pos_ref = ecef2pos(xyz_ref)
@@ -65,7 +64,7 @@ if sbas_type == 0:  # single frequency L1 SBAS
 
 else:  # dual frequency
     nf = 2
-    gnss = "GE"
+    gnss = "E"
     if 'G' in gnss:
         sigs.extend([rSigRnx("GC1C"), rSigRnx("GC5Q"),
                      rSigRnx("GL1C"), rSigRnx("GL5Q"),
@@ -75,15 +74,20 @@ else:  # dual frequency
                      rSigRnx("EL1C"), rSigRnx("EL5Q"),
                      rSigRnx("ES1C"), rSigRnx("ES5Q")])
 
+    if 'J' in gnss:
+        sigs.extend([rSigRnx("JC1C"), rSigRnx("JC5Q"),
+                     rSigRnx("JL1C"), rSigRnx("JL5Q"),
+                     rSigRnx("JS1C"), rSigRnx("JS5Q")])
+
 rnx = rnxdec()
 rnx.setSignals(sigs)
 
-nav = Nav()
+nav = Nav(nf=nf)
 
 # Positioning mode
 # 0:static, 1:kinematic
 #
-nav.pmode = 0
+nav.pmode = 1
 
 # Decode RINEX NAV data
 #
@@ -120,11 +124,14 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     std = stdpos(nav, rnx.pos, 'test_sbas.log')
+    std.monlevel = 1
     nav.elmin = np.deg2rad(5.0)
 
     std.ionoModel = uIonoModel.SBAS
 
     nav.nf = nf
+    nav.rmode = 2 if nav.nf == 2 else 0  # L1/L5 iono-free combination
+    nav.csmooth = True
 
     # Get equipment information
     #
