@@ -16,6 +16,7 @@ if False:
     xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
     navfile = '../data/SEPT078M.21P'
     obsfile = '../data/SEPT078M.21O'
+    ep = [2021, 3, 19, 12, 0, 0]
 else:
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     ep = [2023, 8, 11, 21, 0, 0]
@@ -36,19 +37,19 @@ sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("JC1C"),
         rSigRnx("GL1C"), rSigRnx("EL1C"), rSigRnx("JL1C"),
         rSigRnx("GS1C"), rSigRnx("ES1C"), rSigRnx("JS1C")]
 
-sigs = [rSigRnx("GC1C"), rSigRnx("GL1C"), rSigRnx("GS1C")]
+# sigs = [rSigRnx("GC1C"), rSigRnx("GL1C"), rSigRnx("GS1C")]
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
 
 
 # nav = stdinit()
-nav = Nav()
-nav.pmode = 0
+nav = Nav(nf=1)
+nav.pmode = 1  # 0: static, 1: kinematic
 nav = rnx.decode_nav(navfile, nav)
 
-cs = sbasDec('test_stdpos.log')
-cs.monlevel = 0
+# cs = sbasDec('test_stdpos.log')
+# cs.monlevel = 0
 
 t = np.zeros(nep)
 enu = np.zeros((nep, 3))
@@ -80,7 +81,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         if ne == 0:
             t0 = nav.t = obs.t
-        t[ne] = timediff(obs.t, t0)
+        t[ne] = timediff(obs.t, t0)/86400.0
         # nav, az, el = pntpos(obs, nav)
 
         std.process(obs, cs=None)
