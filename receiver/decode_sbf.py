@@ -24,8 +24,8 @@ class sbf(rcvDec):
     tow = -1
     week = -1
 
-    def __init__(self, opt=None, prefix=''):
-        super().__init__()
+    def __init__(self, opt=None, prefix='', gnss_t='GECJ'):
+        super().__init__(opt, prefix, gnss_t)
 
         self.sig_t = {
             0: {uTYP.C: rSigRnx('GC1C'), uTYP.L: rSigRnx('GL1C'),
@@ -93,66 +93,6 @@ class sbf(rcvDec):
             39: {uTYP.C: rSigRnx('JC5P'), uTYP.L: rSigRnx('JL5P'),
                  uTYP.D: rSigRnx('JD5P'), uTYP.S: rSigRnx('JS5P')},
         }
-
-        self.sig_tab = {
-            uGNSS.GPS: {
-                uTYP.C: [rSigRnx('GC1C'), rSigRnx('GC2W'), rSigRnx('GC2L'),
-                         rSigRnx('GC5Q')],
-                uTYP.L: [rSigRnx('GL1C'), rSigRnx('GL2W'), rSigRnx('GL2L'),
-                         rSigRnx('GL5Q')],
-                uTYP.D: [rSigRnx('GD1C'), rSigRnx('GD2W'), rSigRnx('GD2L'),
-                         rSigRnx('GD5Q')],
-                uTYP.S: [rSigRnx('GS1C'), rSigRnx('GS2W'), rSigRnx('GS2L'),
-                         rSigRnx('GS5Q')],
-            },
-            uGNSS.GLO: {
-                uTYP.C: [rSigRnx('RC1C'), rSigRnx('RC2C'), rSigRnx('RC2P'),
-                         rSigRnx('RC3Q')],
-                uTYP.L: [rSigRnx('RL1C'), rSigRnx('RL2C'), rSigRnx('RL2P'),
-                         rSigRnx('RL3Q')],
-                uTYP.D: [rSigRnx('RD1C'), rSigRnx('RD2C'), rSigRnx('RD2P'),
-                         rSigRnx('RD3Q')],
-                uTYP.S: [rSigRnx('RS1C'), rSigRnx('RS2C'), rSigRnx('RS2P'),
-                         rSigRnx('RS3Q')],
-            },
-            uGNSS.GAL: {
-                uTYP.C: [rSigRnx('EC1C'), rSigRnx('EC5Q'), rSigRnx('EC7Q'),
-                         rSigRnx('EC8Q'), rSigRnx('EC6C')],
-                uTYP.L: [rSigRnx('EL1C'), rSigRnx('EL5Q'), rSigRnx('EL7Q'),
-                         rSigRnx('EL8Q'), rSigRnx('EL6C')],
-                uTYP.D: [rSigRnx('ED1C'), rSigRnx('ED5Q'), rSigRnx('ED7Q'),
-                         rSigRnx('ED8Q'), rSigRnx('ED6C')],
-                uTYP.S: [rSigRnx('ES1C'), rSigRnx('ES5Q'), rSigRnx('GS7Q'),
-                         rSigRnx('ES8Q'), rSigRnx('ES6C')],
-            },
-            uGNSS.BDS: {
-                uTYP.C: [rSigRnx('CC1P'), rSigRnx('CC2I'), rSigRnx('CC5P'),
-                         rSigRnx('CC6I'), rSigRnx('CC7D'), rSigRnx('CC7I')],
-                uTYP.L: [rSigRnx('CL1P'), rSigRnx('CL2I'), rSigRnx('CL5P'),
-                         rSigRnx('CL6I'), rSigRnx('CL7D'), rSigRnx('CL7I')],
-                uTYP.D: [rSigRnx('CD1P'), rSigRnx('CD2I'), rSigRnx('CD5P'),
-                         rSigRnx('CD6I'), rSigRnx('CD7D'), rSigRnx('CD7I')],
-                uTYP.S: [rSigRnx('CS1P'), rSigRnx('CS2I'), rSigRnx('CS5P'),
-                         rSigRnx('CS6I'), rSigRnx('CS7D'), rSigRnx('CS7I')],
-            },
-            uGNSS.QZS: {
-                uTYP.C: [rSigRnx('JC1C'), rSigRnx('JC2L'), rSigRnx('JC5Q')],
-                uTYP.L: [rSigRnx('JL1C'), rSigRnx('JL2L'), rSigRnx('JL5Q')],
-                uTYP.D: [rSigRnx('JD1C'), rSigRnx('JD2L'), rSigRnx('JD5Q')],
-                uTYP.S: [rSigRnx('JS1C'), rSigRnx('JS2L'), rSigRnx('JS5Q')],
-            },
-            # uGNSS.SBS: {
-            #    uTYP.C: [rSigRnx('SC1C'), rSigRnx('SC5I')],
-            #    uTYP.L: [rSigRnx('SL1C'), rSigRnx('SL5I')],
-            #    uTYP.D: [rSigRnx('SD1C'), rSigRnx('SD5I')],
-            #    uTYP.S: [rSigRnx('SS1C'), rSigRnx('SS5I')],
-            # },
-            # uGNSS.IRN: {
-            #    uTYP.C: [rSigRnx('IC5A')], uTYP.L: [rSigRnx('IL5A')],
-            #    uTYP.D: [rSigRnx('ID5A')], uTYP.S: [rSigRnx('IS5A')],
-            # },
-        }
-        self.init_param(opt=opt, prefix=prefix)
 
     def sync(self, buff, k):
         return buff[k] == 0x24 and buff[k+1] == 0x40
@@ -856,6 +796,8 @@ if __name__ == "__main__":
     bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
     fnames = 'sep3238*.sbf'
 
+    gnss_t = 'GERCJ'
+
     # bdir = '../data/doy244/'
     # fnames = 'sep3244*.sbf'
 
@@ -889,7 +831,8 @@ if __name__ == "__main__":
         bdir, fname = os.path.split(f)
         bdir += '/'
 
-        sbfdec = sbf(opt, prefix=bdir+fname[4:].removesuffix('.sbf')+'_')
+        prefix = bdir+fname[4:].removesuffix('.sbf')+'_'
+        sbfdec = sbf(opt, prefix=prefix, gnss_t=gnss_t)
         sbfdec.monlevel = 1
         nep = 0
         nep_max = 0
