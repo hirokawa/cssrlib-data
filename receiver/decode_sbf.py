@@ -13,7 +13,7 @@ import os
 import struct as st
 
 from cssrlib.gnss import uGNSS, uTYP, prn2sat, Eph, Obs, rSigRnx, gpst2time
-from cssrlib.gnss import rCST, gst2time
+from cssrlib.gnss import rCST, gst2time, pos2ecef
 from cssrlib.rawnav import RawNav, rcvDec, rcvOpt
 from crccheck.crc import Crc16Xmodem
 import bitstruct.c as bs
@@ -530,6 +530,8 @@ class sbf(rcvDec):
             k += 9
             if blk_num == 4006:
                 self.re.pos = np.array([x, y, z])
+            else:
+                self.re.pos = pos2ecef([x, y, z])
 
         elif blk_num in (4017, 4066):  # GPSRawCA, QZSRawCA
             sys, prn = self.decode_head(buff, k)
