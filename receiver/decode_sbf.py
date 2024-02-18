@@ -639,6 +639,31 @@ class sbf(rcvDec):
                     k += 4
                 self.fh_gale6.write("\n")
 
+        elif blk_num == 4026:  # GLORawCA
+            sys, prn = self.decode_head(buff, k)
+            k += 7
+            crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
+            k += 5
+            if self.flg_gloca:
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in GLORawCA " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, cnt, src))
+                    return -1
+
+                msg = bytearray(12)
+                for i in range(3):
+                    d = st.unpack_from('<L', buff, k)[0]
+                    st.pack_into('>L', msg, i*4, d)
+                    k += 4
+
+                sat = prn2sat(sys, prn)
+                geph = self.rn.decode_glo_fdma(
+                    self.week, self.tow, sat, msg, freq)
+                if geph is not None:
+                    self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+
         elif blk_num == 4027:  # MeasEpoch
             obs = self.decode_obs(buff, k)
             if obs is not None:
@@ -646,7 +671,29 @@ class sbf(rcvDec):
                 self.re.rnx_obs_body(obs, self.fh_rnxobs)
 
         elif blk_num == 4047:  # BDSRaw
-            None
+            sys, prn = self.decode_head(buff, k)
+            k += 7
+            # src 28: B1I (2I), 29: B2I (7I), 30: B3I (6I)
+            crcpass, cnt, src, _, ch = st.unpack_from('<BBBBB', buff, k)
+            k += 5
+            if self.flg_bdsd12 and src == 28:  # only D1 is supported
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in BDSRaw " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, cnt, src))
+                    return -1
+
+                msg = bytearray(40)
+                for i in range(10):
+                    d = st.unpack_from('<L', buff, k)[0]
+                    st.pack_into('>L', msg, i*4, d)
+                    k += 4
+
+                sat = prn2sat(sys, prn)
+                eph = self.rn.decode_bds_d1(self.week, self.tow, sat, msg)
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num == 4069:  # QZSRawL6
             sys, prn = self.decode_head(buff, k)
@@ -670,7 +717,28 @@ class sbf(rcvDec):
                 self.fh_qzsl6.write("\n")
 
         elif blk_num == 4093:  # NAVICRaw
-            None
+            sys, prn = self.decode_head(buff, k)
+            k += 7
+            crcpass, cnt, src, _, ch = st.unpack_from('<BBBBB', buff, k)
+            k += 5
+            if self.flg_irnnav:
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in NAVICRaw " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, cnt, src))
+                    return -1
+
+                msg = bytearray(40)
+                for i in range(10):
+                    d = st.unpack_from('<L', buff, k)[0]
+                    st.pack_into('>L', msg, i*4, d)
+                    k += 4
+
+                sat = prn2sat(sys, prn)
+                eph = self.rn.decode_irn_lnav(self.week, self.tow, sat, msg)
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num == 4218:  # BDSRawB1C
             sys, prn = self.decode_head(buff, k)
@@ -712,7 +780,28 @@ class sbf(rcvDec):
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num == 4219:  # BDSRawB2a
-            None
+            sys, prn = self.decode_head(buff, k)
+            k += 7
+            crcpass, cnt, src, _, ch = st.unpack_from('<BBBBB', buff, k)
+            k += 5
+            if self.flg_bdsb2a:
+                if crcpass != 1:
+                    if self.monlevel > 0:
+                        print("crc error in BDSRawB2a " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crcpass, cnt, src))
+                    return -1
+
+                msg = bytearray(40)
+                for i in range(10):
+                    d = st.unpack_from('<L', buff, k)[0]
+                    st.pack_into('>L', msg, i*4, d)
+                    k += 4
+
+                sat = prn2sat(sys, prn)
+                eph = self.rn.decode_bds_b2a(self.week, self.tow, sat, msg)
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num in (4221, 4227):  # GPSRawL1C, QZSRawL1C
             sys, prn = self.decode_head(buff, k)
@@ -752,7 +841,10 @@ class sbf(rcvDec):
             k += 7
             crcpass, _, src, _, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
-            if self.flg_bdsb2b and (prn >= 59):
+
+            if self.flg_bdsb2b:
+                flg_bdsppp = True if prn >= 59 else False
+
                 if crcpass != 1:
                     if self.monlevel > 0:
                         print("crc error in BDSRawB2b " +
@@ -760,22 +852,36 @@ class sbf(rcvDec):
                               format(int(self.tow), prn, crcpass, src))
                     return -1
 
-                self.fh_bdsb2b.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
-                                     format(self.week, int(self.tow), prn,
-                                            src, 64))
+                if flg_bdsppp:
+                    self.fh_bdsb2b.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                                         format(self.week, int(self.tow), prn,
+                                                src, 64))
                 # 984 symbols of a BeiDou B2b navigation frame
                 # 8 unused bits in NAVBits[30]
+                msg = bytearray(64)
+
                 for i in range(16):
                     d = st.unpack_from('<L', buff, k)[0]
-                    if i == 0:
-                        self.fh_bdsb2b.write("{:05x}".format(d & 0xfffff))
-                    elif i == 15:
-                        self.fh_bdsb2b.write(
-                            "{:05x}{:06x}".format((d >> 12) & 0xffffc, 0))
-                    else:
-                        self.fh_bdsb2b.write("{:08x}".format(d))
+                    st.pack_into('>L', msg, i*4, d)
                     k += 4
-                self.fh_bdsb2b.write("\n")
+
+                    if flg_bdsppp:
+                        if i == 0:
+                            self.fh_bdsb2b.write("{:05x}".format(d & 0xfffff))
+                        elif i == 15:
+                            self.fh_bdsb2b.write(
+                                "{:05x}{:06x}".format((d >> 12) & 0xffffc, 0))
+                        else:
+                            self.fh_bdsb2b.write("{:08x}".format(d))
+
+                if flg_bdsppp:
+                    self.fh_bdsb2b.write("\n")
+                else:  # B2b-CNAV3
+                    sat = prn2sat(sys, prn)
+                    eph = self.rn.decode_bds_b2b(
+                        self.week, self.tow, sat, msg)
+                    if eph is not None:
+                        self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num in (4095, 5891):  # GPS/QZS Decoded Message
             eph = self.decode_gpsnav(buff, k)
@@ -819,7 +925,11 @@ if __name__ == "__main__":
     opt.flg_galinav = True
     opt.flg_galfnav = True
     opt.flg_bdsb1c = False
+    opt.flg_bdsb2a = False
     opt.flg_bdsb2b = True
+    opt.flg_bdsd12 = False
+    opt.flg_gloca = True
+    opt.flg_irnnav = False
     opt.flg_sbas = True
     opt.flg_rnxnav = True
     opt.flg_rnxobs = True
