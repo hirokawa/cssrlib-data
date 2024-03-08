@@ -91,7 +91,7 @@ bsx.parse(bsxfile)
 # Setup SSR decoder
 #
 cs = cssr_has("test_sisre_has_ssr.log")
-cs.monlevel = 2
+cs.monlevel = 0
 
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
@@ -226,54 +226,63 @@ for ne in range(nep):
 
             # Broadcast ephemeris IODE, orbit and clock corrections
             #
-            if cs.iodssr_c[sCType.ORBIT] == cs.iodssr:
+            if cs.iodssr >= 0 and cs.iodssr_c[sCType.ORBIT] == cs.iodssr:
                 if sat not in cs.sat_n:
                     continue
-                idx = cs.sat_n.index(sat)
-            else:
-                if cs.iodssr_c[sCType.ORBIT] == cs.iodssr_p:
-                    if sat not in cs.sat_n_p:
-                        continue
-                    idx = cs.sat_n_p.index(sat)
-                else:
+            elif cs.iodssr_p >= 0 and \
+                    cs.iodssr_c[sCType.ORBIT] == cs.iodssr_p:
+                if sat not in cs.sat_n_p:
                     continue
+            else:
+                continue
 
-            iode = cs.lc[0].iode[idx]
-            dorb = cs.lc[0].dorb[idx, :]  # radial,along-track,cross-track
+            if sat not in cs.lc[0].iode.keys():
+                continue
 
-            if cs.cssrmode == sc.BDS_PPP:  # consitency check for IOD corr
-                if cs.lc[0].iodc[idx] == cs.lc[0].iodc_c[idx]:
-                    dclk = cs.lc[0].dclk[idx]
+            iode = cs.lc[0].iode[sat]
+            dorb = cs.lc[0].dorb[sat]  # radial,along-track,cross-track
+
+            if cs.cssrmode in (sc.PVS_PPP, sc.SBAS_L1, sc.SBAS_L5):
+                dorb += cs.lc[0].dvel[sat] * \
+                    (timediff(time, cs.lc[0].t0[sat][sCType.ORBIT]))
+
+            if cs.cssrmode == sc.BDS_PPP:  # consistency check for IOD corr
+
+                if cs.lc[0].iodc[sat] == cs.lc[0].iodc_c[sat]:
+                    dclk = cs.lc[0].dclk[sat]
                 else:
-                    if cs.lc[0].iodc[idx] == cs.lc[0].iodc_c_p[idx]:
-                        dclk = cs.lc[0].dclk_p[idx]
+                    if cs.lc[0].iodc[sat] == cs.lc[0].iodc_c_p[sat]:
+                        dclk = cs.lc[0].dclk_p[sat]
                     else:
                         continue
 
             else:
 
                 if cs.cssrmode == sc.GAL_HAS_SIS:  # HAS only
-
                     if cs.mask_id != cs.mask_id_clk:  # mask has changed
                         if sat not in cs.sat_n_p:
                             continue
-                        idx = cs.sat_n_p.index(sat)
-
                 else:
-
                     if cs.iodssr_c[sCType.CLOCK] == cs.iodssr:
                         if sat not in cs.sat_n:
                             continue
-                        idx = cs.sat_n.index(sat)
                     else:
                         if cs.iodssr_c[sCType.CLOCK] == cs.iodssr_p:
                             if sat not in cs.sat_n_p:
                                 continue
-                            idx = cs.sat_n_p.index(sat)
                         else:
                             continue
 
-                dclk = cs.lc[0].dclk[idx]
+                dclk = cs.lc[0].dclk[sat]
+
+                if cs.lc[0].cstat & (1 << sCType.HCLOCK) and \
+                        sat in cs.lc[0].hclk.keys() and \
+                        not np.isnan(cs.lc[0].hclk[sat]):
+                    dclk += cs.lc[0].hclk[sat]
+
+                if cs.cssrmode in (sc.PVS_PPP, sc.SBAS_L1, sc.SBAS_L5):
+                    dclk += cs.lc[0].ddft[sat] * \
+                        (timediff(time, cs.lc[0].t0[sat][sCType.CLOCK]))
 
             if np.isnan(dclk) or np.isnan(dorb@dorb):
                 continue
@@ -330,19 +339,7 @@ for ne in range(nep):
             cbias = np.ones(len(sigs))*np.nan
 
             if cs.lc[0].cstat & (1 << sCType.CBIAS) == (1 << sCType.CBIAS):
-                nsig, idx_n, kidx = ppp.find_corr_idx(cs, nav.nf, sCType.CBIAS,
-                                                      sigs, sat)
-
-                if nsig >= nav.nf:
-                    cbias = cs.lc[0].cbias[idx_n][kidx]
-                elif nav.monlevel > 1:
-                    print("skip cbias for sat={:d}".format(sat))
-
-                # - IS-QZSS-MDC-001 sec 5.5.3.3
-                # - HAS SIS ICD sec 7.4, 7.5
-                # - HAS IDD ICD sec 3.3.4
-                if cs.cssrmode in [sc.GAL_HAS_IDD, sc.GAL_HAS_SIS, sc.QZS_MADOCA]:
-                    cbias = -cbias
+                cbias = ppp.find_bias(cs, sigs, sat)
 
             # Get CODE biases
             #
