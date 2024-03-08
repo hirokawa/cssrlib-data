@@ -24,7 +24,7 @@ icase = 1  # 1: MSAS L1, 2: QZSS DFMC L5
 #
 if icase == 1:  # MSAS, L1 SBAS
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
+    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_sbas = '../data/doy223/223v_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
@@ -34,7 +34,7 @@ if icase == 1:  # MSAS, L1 SBAS
 
 elif icase == 2:  # QZSS, L5 DFMC
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
+    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_sbas = '../data/doy223/223v_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
