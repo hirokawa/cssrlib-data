@@ -23,7 +23,7 @@ from cssrlib.rinex import rnxdec
 # Start epoch and number of epochs
 #
 ep = [2023, 8, 11, 21, 0, 0]
-# ep = [2023, 7, 8, 4, 0, 0]
+#ep = [2023, 7, 8, 4, 0, 0]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -36,7 +36,7 @@ navfile = '../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
     .format('/doy223' if doy == 223 else '', year, doy)
 
 orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
-    .format('TEST00TST', year, doy)
+    .format('ESA0HASOPS', year, doy)
 
 # Read Galile HAS corrections file
 #
