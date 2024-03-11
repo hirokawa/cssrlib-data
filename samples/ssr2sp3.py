@@ -16,14 +16,19 @@ from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, peph_t, apc2com
-from cssrlib.cssr_has import cssr_has
+from cssrlib.cssr_has import cssr, cssr_has
 from cssrlib.rinex import rnxdec
 
+# SSR file for conversion
+#
+file_ssr = '../data/qzsl6_189e.txt'
 
 # Start epoch and number of epochs
 #
-ep = [2023, 8, 11, 21, 0, 0]
-#ep = [2023, 7, 8, 4, 0, 0]
+if "_189e" in file_ssr:
+    ep = [2023, 7, 8, 4, 0, 0]
+else:
+    ep = [2023, 8, 11, 21, 0, 0]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -38,20 +43,21 @@ navfile = '../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
 orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format('ESA0HASOPS', year, doy)
 
-# Read Galile HAS corrections file
-#
-if doy == 223:
-    file_has = '../data/doy{:3d}/{:3d}v_gale6.txt'.format(doy, doy)
+if "qzsl6_" in file_ssr:
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
+    prn_ref = 199  # QZSS PRN
+    l6_ch = 1  # 0:L6D, 1:L6E
+    atxfile = '../data/igs20.atx'
 else:
-    file_has = '../data/gale6_{:3d}e.txt'.format(doy)
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+    # NOTE: igs14 values seem to be yield better consistency with
+    #       CODE reference orbits
+    atxfile = '../data/igs14.atx'
 
-dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
-v = np.genfromtxt(file_has, dtype=dtype)
+v = np.genfromtxt(file_ssr, dtype=dtype)
 
-# NOTE: igs14 values seem to be yield better consistency with
-#       CODE reference orbits
-atxfile = '../data/igs14.atx'
 
 rnx = rnxdec()
 nav = Nav()
@@ -63,11 +69,15 @@ nav = rnx.decode_nav(navfile, nav)
 
 # Setup SSR decoder
 #
-cs = cssr_has()
+if 'gale6_' in file_ssr:
+    cs = cssr_has()
+    file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
+    gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
+elif 'qzsl6_' in file_ssr:
+    cs = cssr()
+else:
+    print("ERROR: unkown SSR format!")
 cs.monlevel = 0
-
-file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
-gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 
 # Load ANTEX data for satellites and stations
 #
@@ -115,52 +125,64 @@ for ne in range(nep):
         t0.time = t0.time//30*30
         nav.time_p = t0
 
-    vi = v[v['tow'] == tow]
-    for vn in vi:
+    if 'gale6_' in file_ssr:
 
-        buff = unhexlify(vn['nav'])
-        i = 14
-        if bs.unpack_from('u24', buff, i)[0] == 0xaf3bc3:
-            continue
-        hass, res = bs.unpack_from('u2u2', buff, i)
-        i += 4
-        if hass >= 2:  # 0:test,1:operational,2:res,3:dnu
-            continue
-        mt, mid, ms, pid = bs.unpack_from('u2u5u5u8', buff, i)
+        vi = v[v['tow'] == tow]
+        for vn in vi:
 
-        cs.msgtype = mt
-        ms += 1
-        i += 20
+            buff = unhexlify(vn['nav'])
+            i = 14
+            if bs.unpack_from('u24', buff, i)[0] == 0xaf3bc3:
+                continue
+            hass, res = bs.unpack_from('u2u2', buff, i)
+            i += 4
+            if hass >= 2:  # 0:test,1:operational,2:res,3:dnu
+                continue
+            mt, mid, ms, pid = bs.unpack_from('u2u5u5u8', buff, i)
 
-        if mid_ == -1 and mid not in mid_decoded:
-            mid_ = mid
-            ms_ = ms
-        if mid == mid_ and pid-1 not in rec:
-            page = bs.unpack_from('u8'*53, buff, i)
-            rec += [pid-1]
-            has_pages[pid-1, :] = page
+            cs.msgtype = mt
+            ms += 1
+            i += 20
 
-        # print(f"{mt} {mid} {ms} {pid}")
+            if mid_ == -1 and mid not in mid_decoded:
+                mid_ = mid
+                ms_ = ms
+            if mid == mid_ and pid-1 not in rec:
+                page = bs.unpack_from('u8'*53, buff, i)
+                rec += [pid-1]
+                has_pages[pid-1, :] = page
 
-    if len(rec) >= ms_:
-        print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
-        HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
-        cs.decode_cssr(HASmsg)
-        rec = []
+            # print(f"{mt} {mid} {ms} {pid}")
 
-        mid_decoded += [mid_]
-        mid_ = -1
-        if len(mid_decoded) > 10:
-            mid_decoded = mid_decoded[1:]
-    else:
-        icnt += 1
-        if icnt > 10 and mid_ != -1:
-            icnt = 0
-            print(f"reset mid={mid_} ms={ms_}")
+        if len(rec) >= ms_:
+            print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
+            HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
+            cs.decode_cssr(HASmsg)
             rec = []
-            mid_ = -1
 
-    # Convert HAS corrections
+            mid_decoded += [mid_]
+            mid_ = -1
+            if len(mid_decoded) > 10:
+                mid_decoded = mid_decoded[1:]
+        else:
+            icnt += 1
+            if icnt > 10 and mid_ != -1:
+                icnt = 0
+                print(f"reset mid={mid_} ms={ms_}")
+                rec = []
+                mid_ = -1
+
+    elif 'qzsl6' in file_ssr:
+
+        vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
+               & (v['prn'] == prn_ref)]
+        if len(vi) > 0:
+            msg = unhexlify(vi['nav'][0])
+            cs.decode_l6msg(msg, 0)
+            if cs.fcnt == 5:  # end of sub-frame
+                cs.decode_cssr(bytes(cs.buff), 0)
+
+    # Convert SSR corrections
     #
     if (cs.lc[0].cstat & 0xf) == 0xf:
 
@@ -180,19 +202,23 @@ for ne in range(nep):
 
             rs, vs, dts, svh = satpos(sat, time, nav, cs)
 
-            # Select PCO reference signals for Galileo HAS
+            # Select PCO reference signals
             #
             if sys == ug.GPS:
                 sig0 = (rSigRnx("GC1W"), rSigRnx("GC2W"))
             elif sys == ug.GAL:
                 sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+            elif sys == ug.QZS:
+                sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
+            elif sys == ug.GLO:
+                sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
             else:
                 print("ERROR: invalid sytem {}".format(sys2str(sys)))
                 continue
 
             # Convert to CoM using ANTEX PCO corrections
             #
-            rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0)
+            rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
 
             for i in range(3):
                 peph.pos[sat-1, i] = rs[0, i]
