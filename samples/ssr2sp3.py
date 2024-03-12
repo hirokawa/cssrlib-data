@@ -40,21 +40,38 @@ step = 1
 navfile = '../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
     .format('/doy223' if doy == 223 else '', year, doy)
 
-orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
-    .format('ESA0HASOPS', year, doy)
 
 if "qzsl6_" in file_ssr:
+
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
+
     prn_ref = 199  # QZSS PRN
     l6_ch = 1  # 0:L6D, 1:L6E
     atxfile = '../data/igs20.atx'
-else:
+
+    # Output SP3 file
+    #
+    orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+        .format('QZS0CLSOPS', year, doy)
+
+elif "gale6_" in file_ssr:
+
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+
     # NOTE: igs14 values seem to be yield better consistency with
     #       CODE reference orbits
     atxfile = '../data/igs14.atx'
+
+    # Output SP3 file
+    #
+    orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+        .format('ESA0HASOPS', year, doy)
+
+else:
+    print("ERROR: unkown SSR format for {}!".format(file_ssr))
+    sys.exit(1)
 
 v = np.genfromtxt(file_ssr, dtype=dtype)
 
@@ -76,7 +93,9 @@ if 'gale6_' in file_ssr:
 elif 'qzsl6_' in file_ssr:
     cs = cssr()
 else:
-    print("ERROR: unkown SSR format!")
+    print("ERROR: unkown SSR format for {}!".format(file_ssr))
+    sys.exit(1)
+
 cs.monlevel = 0
 
 # Load ANTEX data for satellites and stations
@@ -181,6 +200,10 @@ for ne in range(nep):
             cs.decode_l6msg(msg, 0)
             if cs.fcnt == 5:  # end of sub-frame
                 cs.decode_cssr(bytes(cs.buff), 0)
+
+    else:
+
+        continue
 
     # Convert SSR corrections
     #
