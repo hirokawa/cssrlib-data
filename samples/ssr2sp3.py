@@ -16,12 +16,19 @@ from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, peph_t, apc2com
-from cssrlib.cssr_has import cssr, cssr_has
+from cssrlib.cssrlib import cssr
+from cssrlib.cssr_bds import cssr_bds
+from cssrlib.cssr_has import cssr_has
 from cssrlib.rinex import rnxdec
 
 # SSR file for conversion
 #
-file_ssr = '../data/qzsl6_189e.txt'
+if len(sys.argv) > 1:
+    file_ssr = sys.argv[1]
+else:
+    #file_ssr = '../data/gale6_189e.txt'
+    file_ssr = '../data/bdsb2b_189e.txt'
+    #file_ssr = '../data/qzsl6_189e.txt'
 
 # Start epoch and number of epochs
 #
@@ -69,7 +76,24 @@ elif "gale6_" in file_ssr:
     orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
         .format('ESA0HASOPS', year, doy)
 
+elif "bdsb2b_" in file_ssr:
+
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+
+    prn_ref = 59  # satellite PRN to receive BDS PPP collection
+
+    # NOTE: igs14 values seem to be yield better consistency with
+    #       CODE reference orbits
+    atxfile = '../data/igs14.atx'
+
+    # Output SP3 file
+    #
+    orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+        .format('BDS0PPPOPS', year, doy)
+
 else:
+
     print("ERROR: unkown SSR format for {}!".format(file_ssr))
     sys.exit(1)
 
@@ -92,6 +116,8 @@ if 'gale6_' in file_ssr:
     gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 elif 'qzsl6_' in file_ssr:
     cs = cssr()
+elif "bdsb2b_" in file_ssr:
+    cs = cssr_bds()
 else:
     print("ERROR: unkown SSR format for {}!".format(file_ssr))
     sys.exit(1)
@@ -201,6 +227,14 @@ for ne in range(nep):
             if cs.fcnt == 5:  # end of sub-frame
                 cs.decode_cssr(bytes(cs.buff), 0)
 
+    elif "bdsb2b_" in file_ssr:
+
+        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+        if len(vi) > 0:
+            buff = unhexlify(vi['nav'][0])
+            # prn, rev = bs.unpack_from('u6u6', buff, 0)
+            cs.decode_cssr(buff, 0)
+
     else:
 
         continue
@@ -235,6 +269,8 @@ for ne in range(nep):
                 sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
             elif sys == ug.GLO:
                 sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
+            elif sys == ug.BDS:
+                sig0 = (rSigRnx("CC6I"),)
             else:
                 print("ERROR: invalid sytem {}".format(sys2str(sys)))
                 continue
