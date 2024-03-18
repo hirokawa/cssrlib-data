@@ -6,6 +6,7 @@ from binascii import unhexlify
 import bitstruct as bs
 from copy import deepcopy
 import numpy as np
+import os
 import sys
 
 from cssrlib.ephemeris import satpos
@@ -20,6 +21,8 @@ from cssrlib.cssrlib import cssr
 from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssr_has import cssr_has
 from cssrlib.rinex import rnxdec
+
+baseDirName = os.path.dirname(os.path.abspath(__file__))+"/"
 
 # SSR file for conversion
 #
@@ -44,39 +47,36 @@ doy = int(time2doy(time))
 nep = 900*4
 step = 1
 
-navfile = '../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+navfile = baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
     .format('/doy223' if doy == 223 else '', year, doy)
 
 
 if "qzsl6_" in file_ssr:
+
+    name = 'QZS0CLSOPS'
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
 
     prn_ref = 199  # QZSS PRN
     l6_ch = 1  # 0:L6D, 1:L6E
-    atxfile = '../data/igs20.atx'
+    atxfile = baseDirName+'../data/igs20.atx'
 
-    # Output SP3 file
-    #
-    orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
-        .format('QZS0CLSOPS', year, doy)
 
 elif "gale6_" in file_ssr:
+
+    name = 'ESA0HASOPS'
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
     # NOTE: igs14 values seem to be yield better consistency with
     #       CODE reference orbits
-    atxfile = '../data/igs14.atx'
-
-    # Output SP3 file
-    #
-    orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
-        .format('ESA0HASOPS', year, doy)
+    atxfile = baseDirName+'../data/igs14.atx'
 
 elif "bdsb2b_" in file_ssr:
+
+    name = 'BDS0PPPOPS'
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
@@ -85,17 +85,18 @@ elif "bdsb2b_" in file_ssr:
 
     # NOTE: igs14 values seem to be yield better consistency with
     #       CODE reference orbits
-    atxfile = '../data/igs14.atx'
-
-    # Output SP3 file
-    #
-    orbfile = '{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
-        .format('BDS0PPPOPS', year, doy)
+    atxfile = baseDirName+'../data/igs14.atx'
 
 else:
 
     print("ERROR: unkown SSR format for {}!".format(file_ssr))
     sys.exit(1)
+
+# Output SP3 file
+#
+orbfile = '{}_{:4d}{:03d}0000_01D_01S_ORB.SP3'\
+    .format(name, year, doy)
+
 
 v = np.genfromtxt(file_ssr, dtype=dtype)
 
@@ -112,7 +113,7 @@ nav = rnx.decode_nav(navfile, nav)
 #
 if 'gale6_' in file_ssr:
     cs = cssr_has()
-    file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
+    file_gm = baseDirName+'Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt'
     gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 elif 'qzsl6_' in file_ssr:
     cs = cssr()
@@ -277,7 +278,8 @@ for ne in range(nep):
 
             # Convert to CoM using ANTEX PCO corrections
             #
-            rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
+            if np.linalg.norm(rs[0, :]) > 0:
+                rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
 
             for i in range(3):
                 peph.pos[sat-1, i] = rs[0, i]
