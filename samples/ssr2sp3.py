@@ -1,5 +1,5 @@
 """
- SSR correction conversion to SP3 file format
+SSR correction conversion to SP3 file format
 """
 
 from binascii import unhexlify
@@ -10,9 +10,9 @@ import os
 import sys
 
 from cssrlib.ephemeris import satpos
-from cssrlib.gnss import Nav, sat2prn, sys2str
-from cssrlib.gnss import time2gpst, time2doy, epoch2time, time2str
-from cssrlib.gnss import timeadd
+from cssrlib.gnss import Nav, sat2prn, sys2str, sat2id
+from cssrlib.gnss import time2gpst, time2doy, epoch2time, time2epoch, time2str
+from cssrlib.gnss import timeadd, timeget
 from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
@@ -22,20 +22,89 @@ from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssr_has import cssr_has
 from cssrlib.rinex import rnxdec
 
+
+def time2bsxstr(t):
+    """
+    Time conversion to year, day-of-year and seconds-of-day
+    """
+
+    year = time2epoch(t)[0]
+    doy = time2doy(t)
+    sec = (doy-int(doy))*86400
+
+    return "{:04d}:{:03d}:{:5d}".format(year, int(doy), int(sec))
+
+
+def write_bsx(bsxfile, ac, data):
+    """
+    Write Bias-SINEX file
+    """
+
+    lines = []
+
+    lines.append("%= <to be replaced>")
+    lines.append("*"+79*'-')
+    lines.append("* Bias Solution INdependent EXchange Format (Bias-SINEX)")
+    lines.append("*"+79*'-')
+
+    lines.append("+BIAS/DESCRIPTION")
+    lines.append(
+        "*KEYWORD________________________________ VALUE (S) _____________________________")
+    lines.append(" BIAS_MODE                               ABSOLUTE")
+    lines.append("-BIAS/DESCRIPTION")
+    lines.append("*"+79*'-')
+
+    lines.append("+BIAS/SOLUTION")
+    lines.append("*BIAS SVN_ PRN STATION__ OBS1 OBS2 BIAS_START____ "
+                 "BIAS_END______ UNIT __ESTIMATED_VALUE____ _STD_DEV___")
+
+    nVal = 0
+    tNow = timeget()
+    tFirst = None
+    tLast = None
+
+    for sat in data.keys():
+        for sig in data[sat].keys():
+            for ts, te, osb in data[sat][sig]:
+                lines.append(" OSB  {:4s} {:3s} {:9s} {:3s}  {:3s}  {} {} ns   {:21.4f} {:11.4f}"
+                             .format(sat2id(sat)[0]+"999", sat2id(sat), "",
+                                     sig.str(), "",
+                                     time2bsxstr(ts), time2bsxstr(te),
+                                     osb*ns2m, 0.0))
+                nVal += 1
+                tFirst = ts if tFirst is None or ts < tFirst else tFirst
+                tLast = te if tLast is None or te < tLast else tLast
+
+    lines.append("-BIAS/SOLUTION")
+    lines.append("%=ENDBIA")
+
+    # Replacefirst line
+    #
+    lines[0] = "%=BIA 1.00 {ac} {tn}   {ac} {ts} {te} R {nVal:08d}"\
+        .format(ac=ac, tn=time2bsxstr(tNow), ts=time2bsxstr(tFirst),
+                te=time2bsxstr(tLast), nVal=nVal)
+
+    # Write to file
+    #
+    with open(bsxfile, 'w') as f:
+        for line in lines:
+            f.write(line+'\n')
+
+
 baseDirName = os.path.dirname(os.path.abspath(__file__))+"/"
 
 # SSR file for conversion
 #
 if len(sys.argv) > 1:
-    file_ssr = sys.argv[1]
+    ssrfile = sys.argv[1]
 else:
-    #file_ssr = '../data/gale6_189e.txt'
-    file_ssr = '../data/bdsb2b_189e.txt'
-    #file_ssr = '../data/qzsl6_189e.txt'
+    #ssrfile = '../data/gale6_189e.txt'
+    ssrfile = '../data/bdsb2b_189e.txt'
+    #ssrfile = '../data/qzsl6_189e.txt'
 
 # Start epoch and number of epochs
 #
-if "_189e" in file_ssr:
+if "_189e" in ssrfile:
     ep = [2023, 7, 8, 4, 0, 0]
 else:
     ep = [2023, 8, 11, 21, 0, 0]
@@ -51,7 +120,7 @@ navfile = baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
     .format('/doy223' if doy == 223 else '', year, doy)
 
 
-if "qzsl6_" in file_ssr:
+if "qzsl6_" in ssrfile:
 
     name = 'QZS0CLSOPS'
 
@@ -63,7 +132,7 @@ if "qzsl6_" in file_ssr:
     atxfile = baseDirName+'../data/igs20.atx'
 
 
-elif "gale6_" in file_ssr:
+elif "gale6_" in ssrfile:
 
     name = 'ESA0HASOPS'
 
@@ -74,7 +143,7 @@ elif "gale6_" in file_ssr:
     #       CODE reference orbits
     atxfile = baseDirName+'../data/igs14.atx'
 
-elif "bdsb2b_" in file_ssr:
+elif "bdsb2b_" in ssrfile:
 
     name = 'BDS0PPPOPS'
 
@@ -89,18 +158,22 @@ elif "bdsb2b_" in file_ssr:
 
 else:
 
-    print("ERROR: unkown SSR format for {}!".format(file_ssr))
+    print("ERROR: unkown SSR format for {}!".format(ssrfile))
     sys.exit(1)
 
-# Output SP3 file
+# Load SSR corrections
+#
+v = np.genfromtxt(ssrfile, dtype=dtype)
+
+# Output files
 #
 orbfile = '{}_{:4d}{:03d}0000_01D_01S_ORB.SP3'\
     .format(name, year, doy)
+bsxfile = '{}_{:4d}{:03d}0000_01D_00U_OSB.BIA'\
+    .format(name, year, doy)
 
-
-v = np.genfromtxt(file_ssr, dtype=dtype)
-
-
+# Initialize objects
+#
 rnx = rnxdec()
 nav = Nav()
 orb = peph()
@@ -111,16 +184,16 @@ nav = rnx.decode_nav(navfile, nav)
 
 # Setup SSR decoder
 #
-if 'gale6_' in file_ssr:
+if 'gale6_' in ssrfile:
     cs = cssr_has()
     file_gm = baseDirName+'Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt'
     gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
-elif 'qzsl6_' in file_ssr:
+elif 'qzsl6_' in ssrfile:
     cs = cssr()
-elif "bdsb2b_" in file_ssr:
+elif "bdsb2b_" in ssrfile:
     cs = cssr_bds()
 else:
-    print("ERROR: unkown SSR format for {}!".format(file_ssr))
+    print("ERROR: unkown SSR format for {}!".format(ssrfile))
     sys.exit(1)
 
 cs.monlevel = 0
@@ -142,6 +215,8 @@ orb_a = np.zeros((nep, ug.MAXSAT))*np.nan
 orb_c = np.zeros((nep, ug.MAXSAT))*np.nan
 clk = np.zeros((nep, ug.MAXSAT))*np.nan
 sats = set()
+
+biases = {}
 
 # Initialize HAS decoding
 #
@@ -171,7 +246,7 @@ for ne in range(nep):
         t0.time = t0.time//30*30
         nav.time_p = t0
 
-    if 'gale6_' in file_ssr:
+    if 'gale6_' in ssrfile:
 
         vi = v[v['tow'] == tow]
         for vn in vi:
@@ -218,7 +293,7 @@ for ne in range(nep):
                 rec = []
                 mid_ = -1
 
-    elif 'qzsl6' in file_ssr:
+    elif 'qzsl6' in ssrfile:
 
         vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
                & (v['prn'] == prn_ref)]
@@ -228,7 +303,7 @@ for ne in range(nep):
             if cs.fcnt == 5:  # end of sub-frame
                 cs.decode_cssr(bytes(cs.buff), 0)
 
-    elif "bdsb2b_" in file_ssr:
+    elif "bdsb2b_" in ssrfile:
 
         vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
         if len(vi) > 0:
@@ -294,6 +369,32 @@ for ne in range(nep):
         #
         nav.peph.append(peph)
 
+        # Get SSR biases
+        #
+        for sat_, dat_ in cs.lc[0].cbias.items():
+
+            for sig_, val_ in dat_.items():
+
+                # Replace GPS L2 P(Y) signal code for Galileo HAS
+                #
+                if 'gale6' in ssrfile and rSigRnx('GC2P') == sig_:
+                    sig_ = rSigRnx('GC2W')
+
+                if sat_ not in biases.keys():
+                    biases.update({sat_: {}})
+                if sig_ not in biases[sat_].keys():
+                    biases[sat_].update({sig_: []})
+                if len(biases[sat_][sig_]) == 0 or \
+                        biases[sat_][sig_][-1][2] != val_:
+                    biases[sat_][sig_].append([time, None, val_])
+                else:
+                    biases[sat_][sig_][-1][1] = time
+
+                """
+                print("{} {} {} {:7.3f}"
+                      .format(time2str(time), sat2id(sat_), sig_, val_))
+                """
+
     # Next time-step
     #
     time = timeadd(time, step)
@@ -301,3 +402,7 @@ for ne in range(nep):
 # Write results to output file
 #
 orb.write_sp3(orbfile, nav, sats)
+
+# Write biases ot Bias-SINEX
+#
+write_bsx(bsxfile, name[0:3], biases)
