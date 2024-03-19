@@ -375,7 +375,7 @@ for ne in range(nep):
 
             for sig_, val_ in dat_.items():
 
-                # Replace GPS L2 P(Y) signal code for Galileo HAS
+                # Fix GPS L2 P(Y) signal code for Galileo HAS
                 #
                 if 'gale6' in ssrfile and rSigRnx('GC2P') == sig_:
                     sig_ = rSigRnx('GC2W')
@@ -384,16 +384,12 @@ for ne in range(nep):
                     biases.update({sat_: {}})
                 if sig_ not in biases[sat_].keys():
                     biases[sat_].update({sig_: []})
+
                 if len(biases[sat_][sig_]) == 0 or \
                         biases[sat_][sig_][-1][2] != val_:
                     biases[sat_][sig_].append([time, None, val_])
                 else:
                     biases[sat_][sig_][-1][1] = time
-
-                """
-                print("{} {} {} {:7.3f}"
-                      .format(time2str(time), sat2id(sat_), sig_, val_))
-                """
 
     # Next time-step
     #
