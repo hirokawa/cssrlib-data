@@ -1,7 +1,7 @@
 // ********************************** HAS MESSAGE DECODING EXAMPLE 1 **********************************
 // Decoding example for a HAS message with message size MS = 15. This HAS message matches the one in Annex D.
 
-// ======================== HAS ENCODED PAGES (DECIMAL REPRESENTATION)  ========================
+// ======================== HAS ENCODED PAGES (DECIMAL REPRESENTATION) ========================
 	
 // PID
 	55 
@@ -77,8 +77,8 @@
     253
 // HAS encoded page
 	[ 215 200 167 19 210 166 18 96 224 77 5 145 106 148 222 103 157 196 233 132 109 61 229 187 163 152 17 62 27 210 42 67 181 2 23 108 68 206 189 76 58 39 164 43 254 9 87 41 18 228 135 212 165 ]
-// ======================== END HAS ENCODED PAGES  ========================
- 
+// ======================== END HAS ENCODED PAGES ========================
+
 // ======================== RS DECODING MATRIX =============================
 // G
 	[  31  50  155  253  213  220   84  174  239   85   87  105  214   81  160
@@ -96,7 +96,7 @@
       143 165   24  101  222  187  133   80  114   98  164   11   16  227   43
        15 105  201  161  101  197  235  191  127   28  238  232  231  198  234
        84 157  205  255  217  251  101  194  230  208   26  232   23  201   46 ]
-// ======================== END RS DECODING MATRIX ==============================  
+// ======================== END RS DECODING MATRIX ============================== 
 
 // ======================== DECODING OF WORD w1 =====================
 // w1
@@ -105,8 +105,8 @@
 // m1
 	[ 0 255 71 67 79 240 64 221 31 174 0 128 4 0 32  ]
 	
-// ======================== END DECODING OF WORD w1 ===================== 
- 
+// ======================== END DECODING OF WORD w1 =====================
+
 // =========================== HAS DECODED MESSAGE (DECIMAL REPRESENTATION) =============================
 
 	[ 0 12 192 11 32 255 223 255 255 0 129 0 247 255 255 125 245 95 253 254 11 238 232 167 154 65 36 16 0 166 0 10 1 160 18 128 64 2 0 32 1 19 251 192 65 254 187 240 0 128 8 0 66
@@ -125,7 +125,7 @@
 	0 32 1 0 8 0 64 2 0 16 0 128 4 0 32 1 0 8 0 64 2 0 16 0 128 4 0 32 1 0 8 0 64 2 0 16 0 128 4 0 32 1 0 8 0 64 2 0 16 0 128 4 0
 	32 1 0 8 0 64 2 0 16 0 128 4 0 32 1 0 8 0 42 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 ]
 // =========================== END HAS DECODED MESSAGE (DECIMAL REPRESENTATION) =============================
- 
+
 // =========================== DECODED HAS MESSAGE (HEX REPRESENTATION) =============================
 
 	[ 000cc00b20ffdfffff008100f7ffff7df55ffdfe0beee8a79a41241000a6000a01a01280400200200113fbc041febbf00080080042ff6822fea21807c193f7598035fd7f6a2f00080080016ff90287e7967f702580587fee217a10c9dfcc0e7f651df577d981603ffe4147f903ff9df7805c15ff9fdcff8008004004000a002407ff9d7c07df7ffe2b5fdcee305519011fd7fd24479f00500e8e7edc31401c43fdb02304007fe5030ff1ac40020020000200100100077fec06e00141feb02afcb2c400200200043ff5f6c022097f7c0e3f4412ff4fe1ff8825fe8ffcff0048081fe3fda097f4c04bf3812fe5ff27f0025fc6ff5ff40480edfa601c08ffe8023fcc0f00b00b80a825fdf00fff704bf71ffffdc097fb400c00812fe781a7f8025fe602203204801001a01607ffd006404012fec00e000825fc7fe500c04bff405605c08804004403012fe27feffbf0bb23dc94458ef0420afe1fa61544abda77c130444320a1104303d3f76f65fbbee7ccf5fe6bddf8bfcff479b7a5f1dc3bf3fce1243b44e90d1784ac350b2f29f2bd607b1a1e7bb207519201003807069f8feb7cf00c0d42d85b061f33d2fa7fa00fc3506a02015c4b09409bf07cbf950400641582a04fc8f40e88d2dd9f73efbdc40080400407c198588ad0e9f43d67aef9009c220420cdefbc9f90f920f0338660401a45a0b411a0841c8380c206c1882d0121243e87d02bf27d1fa2fc6184518a50dcb000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008004002001000800400200100080040020010008002aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ]
@@ -133,13 +133,13 @@
 // =========================== END HAS DECODED MESSAGE (HEX REPRESENTATION) =============================
 
 // =========================== HAS DECODED MESSAGE CONTENTS =============================
- 
+
 // ======================== MESSAGE HEADER ===========================
 
 // TOH
 	0
 
-// Flags:  [ MASK ORBIT CLOCK_FULL CLOCK_SUBSET CODE_BIAS PHASE_BIAS ]
+// Flags: [ MASK ORBIT CLOCK_FULL CLOCK_SUBSET CODE_BIAS PHASE_BIAS ]
 	[ 1 1 0 0 1 1 ]
 
 // Mask ID
@@ -149,10 +149,10 @@
 	11
 
 // ======================== END MESSAGE HEADER ========================
- 
+
 // HAS message body according to flags provided in header:
-// Note: For corrections and biases fields, values are provided as output from two’s complement decoding and do not consider specific values out of range associated to data not available (for example, -10.24 m for radial correction)
- 
+// Note: For corrections and biases fields, values are provided as output from twos complement decoding and do not consider specific values out of range associated to data not available (for example, -10.24m for radial correction)
+
 // ======================== MESSAGE BODY ===========================
 
 // === MASK ===
@@ -173,37 +173,37 @@
 	1
 	
 // Cell Mask 1
-    1  1    // G01 
-    1  0    // G02 
-    1  1    // G03 
-    1  1    // G04 
-    1  1    // G05 
-    1  1    // G06 
-    1  1    // G07 
-    1  1    // G08 
-    1  1    // G09 
-    1  1    // G10 
-    1  1    // G12 
-    1  0    // G13 
-    1  1    // G14 
-    1  1    // G15 
-    1  0    // G16 
-    1  1    // G17 
-    1  1    // G18 
-    1  0    // G19 
-    1  0    // G20 
-    1  0    // G21 
-    1  0    // G22 
-    1  1    // G23 
-    1  1    // G24 
-    1  1    // G25 
-    1  1    // G26 
-    1  1    // G27 
-    1  0    // G28 
-    1  1    // G29 
-    1  1    // G30 
-    1  1    // G31 
-    1  1    // G32 
+    11   // G01
+    10   // G02
+    11   // G03
+    11   // G04
+    11   // G05
+    11   // G06
+    11   // G07
+    11   // G08
+    11   // G09
+    11   // G10
+    11   // G12
+    10   // G13
+    11   // G14
+    11   // G15
+    10   // G16
+    11   // G17
+    11   // G18
+    10   // G19
+    10    // G20
+    10   // G21
+    10   // G22
+    11   // G23
+    11   // G24
+    11   // G25
+    11   // G26
+    11   // G27
+   10   // G28
+    11   // G29
+    11   // G30
+    11   // G31
+    11   // G32
 
 // Nav Message 1
 	0
@@ -410,18 +410,18 @@
   -10.24 0 -10.24 0 -10.24 0 -10.24 0   // E31
   -10.24 0 -10.24 0 -10.24 0 -10.24 0   // E33
   -10.24 0 -10.24 0 -10.24 0 -10.24 0   // E36
- 
+
 // ======================= END MESSAGE BODY ==========================
 
 // =========================== END HAS DECODED MESSAGE CONTENTS =============================
 
 // ********************************** END HAS MESSAGE DECODING EXAMPLE 1 **********************************
- 
+
 
 // ********************************** HAS MESSAGE DECODING EXAMPLE 2 **********************************
 // Decoding example for a clock correction message with message size MS = 2
 
-// ======================== HAS ENCODED PAGES (DECIMAL REPRESENTATION)  ========================
+// ======================== HAS ENCODED PAGES (DECIMAL REPRESENTATION) ========================
 // PID
 	61
 // HAS encoded page
@@ -430,15 +430,15 @@
 // PID
 	151
 // HAS encoded page
-	[ 248 240 236 254 2 104 30 0 176 113 216 24 169 17 225 52 162 248 76 86 211 245 154 138 128 37 241 236 219 188 152 135 223 13 51 243 236 57 241 116 131 222 116 229 205 191 232 165 108 240 126 124 91 ] 
-// ======================== END HAS ENCODED PAGES  ========================
- 
+	[ 248 240 236 254 2 104 30 0 176 113 216 24 169 17 225 52 162 248 76 86 211 245 154 138 128 37 241 236 219 188 152 135 223 13 51 243 236 57 241 116 131 222 116 229 205 191 232 165 108 240 126 124 91 ]
+// ======================== END HAS ENCODED PAGES ========================
+
 // ======================== RS DECODING MATRIX =============================
 // G
-	[ 145  235
-	  132  124 ]
-	 // ======================== END RS DECODING MATRIX ==============================  
- 
+	[ 145 235
+	  132 124 ]
+	 // ======================== END RS DECODING MATRIX ============================== 
+
 // ======================== DECODING OF WORD w1 =====================
 // w1
 	[ 203 248 ]
@@ -446,14 +446,14 @@
 // m1
 	[ 0 2 ]
 	
-// ======================== END DECODING OF WORD w1 ===================== 
+// ======================== END DECODING OF WORD w1 =====================
 
 // =========================== HAS DECODED MESSAGE (DECIMAL REPRESENTATION) =============================
 
 	[ 0 114 0 11 88 175 228 0 45 3 0 10 205 88 38 174 48 0 170 165 83 43 21 88 26 170 87 42 161 117 184 128 5 22 233 65 69 74 40 85 14 189 85 86 170 140 0 32 1 84 106 146 192
 	2 192 128 32 253 111 242 0 187 254 79 226 254 196 16 32 33 2 7 255 127 133 255 128 7 0 43 254 32 45 0 15 251 192 82 4 79 235 170 170 170 170 170 170 170 170 170 170 170 170 170 170 170 ]
 // =========================== END HAS DECODED MESSAGE (DECIMAL REPRESENTATION) =============================
- 
+
 // =========================== HAS DECODED MESSAGE (HEX REPRESENTATION) =============================
 
 	[ 0072000b58afe4002d03000acd5826ae3000aaa5532b15581aaa572aa175b8800516e941454a28550ebd5556aa8c002001546a92c002c08020fd6ff200bbfe4fe2fec41020210207ff7f85ff8007002bfe202d000ffbc052044febaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]
@@ -466,7 +466,7 @@
 // TOH
 	7
 
-// Flags:  [ MASK ORBIT CLOCK_FULL CLOCK_SUBSET CODE_BIAS PHASE_BIAS ]
+// Flags: [ MASK ORBIT CLOCK_FULL CLOCK_SUBSET CODE_BIAS PHASE_BIAS ]
 	[ 0 0 1 0 0 0 ]
 
 // [Mask ID IOD Set ID]
@@ -474,10 +474,10 @@
 
 // ======================== END MESSAGE HEADER ========================
 
- 
+
 // HAS message body according to flags provided in header:
-// Note: For corrections and biases fields, values are provided as output from two’s complement decoding and do not consider specific values out of range associated to data not available (for example, -10.24 m for radial correction)
- 
+// Note: For corrections and biases fields, values are provided as output from twos complement decoding and do not consider specific values out of range associated to data not available (for example, -10.24m for radial correction)
+
 // ======================== MESSAGE BODY ===========================
 
 // ============ CLOCK FULL SET CORRECTIONS ====================
@@ -549,5 +549,5 @@
 // ========================= END MESSAGE BODY =======================
 
 // ========================= END HAS DECODED MESSAGE CONTENTS =============================
- // ********************************** END HAS MESSAGE DECODING EXAMPLE 2 **********************************
+// ********************************** END HAS MESSAGE DECODING EXAMPLE 2 **********************************
 
