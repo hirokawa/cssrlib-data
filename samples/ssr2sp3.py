@@ -193,6 +193,7 @@ if 'gale6' in ssrfile:
     gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 elif 'qzsl6' in ssrfile:
     cs = cssr()
+    cs.cssrmode = sc.QZS_MADOCA
 elif "bdsb2b" in ssrfile:
     cs = cssr_bds()
 else:
