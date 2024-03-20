@@ -17,6 +17,7 @@ from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, peph_t, apc2com
+from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.cssrlib import cssr
 from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssr_has import cssr_has
@@ -106,8 +107,11 @@ else:
 #
 if "_189e" in ssrfile:
     ep = [2023, 7, 8, 4, 0, 0]
-else:
+elif 'doy223' in ssrfile:
     ep = [2023, 8, 11, 21, 0, 0]
+else:
+    print("ERROR: unknown epoch!")
+    sys.exit(1)
 
 time = epoch2time(ep)
 year = ep[0]
@@ -120,7 +124,7 @@ navfile = baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
     .format('/doy223' if doy == 223 else '', year, doy)
 
 
-if "qzsl6_" in ssrfile:
+if "qzsl6" in ssrfile:
 
     name = 'QZS0CLSOPS'
 
@@ -131,8 +135,7 @@ if "qzsl6_" in ssrfile:
     l6_ch = 1  # 0:L6D, 1:L6E
     atxfile = baseDirName+'../data/igs20.atx'
 
-
-elif "gale6_" in ssrfile:
+elif "gale6" in ssrfile:
 
     name = 'ESA0HASOPS'
 
@@ -143,7 +146,7 @@ elif "gale6_" in ssrfile:
     #       CODE reference orbits
     atxfile = baseDirName+'../data/igs14.atx'
 
-elif "bdsb2b_" in ssrfile:
+elif "bdsb2b" in ssrfile:
 
     name = 'BDS0PPPOPS'
 
@@ -184,13 +187,13 @@ nav = rnx.decode_nav(navfile, nav)
 
 # Setup SSR decoder
 #
-if 'gale6_' in ssrfile:
+if 'gale6' in ssrfile:
     cs = cssr_has()
     file_gm = baseDirName+'Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt'
     gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
-elif 'qzsl6_' in ssrfile:
+elif 'qzsl6' in ssrfile:
     cs = cssr()
-elif "bdsb2b_" in ssrfile:
+elif "bdsb2b" in ssrfile:
     cs = cssr_bds()
 else:
     print("ERROR: unkown SSR format for {}!".format(ssrfile))
@@ -246,7 +249,7 @@ for ne in range(nep):
         t0.time = t0.time//30*30
         nav.time_p = t0
 
-    if 'gale6_' in ssrfile:
+    if 'gale6' in ssrfile:
 
         vi = v[v['tow'] == tow]
         for vn in vi:
@@ -303,7 +306,7 @@ for ne in range(nep):
             if cs.fcnt == 5:  # end of sub-frame
                 cs.decode_cssr(bytes(cs.buff), 0)
 
-    elif "bdsb2b_" in ssrfile:
+    elif "bdsb2b" in ssrfile:
 
         vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
         if len(vi) > 0:
@@ -335,21 +338,39 @@ for ne in range(nep):
 
             rs, vs, dts, svh = satpos(sat, time, nav, cs)
 
-            # Select PCO reference signals
-            #
-            if sys == ug.GPS:
-                sig0 = (rSigRnx("GC1W"), rSigRnx("GC2W"))
-            elif sys == ug.GAL:
-                sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
-            elif sys == ug.QZS:
-                sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
-            elif sys == ug.GLO:
-                sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
-            elif sys == ug.BDS:
-                sig0 = (rSigRnx("CC6I"),)
-            else:
-                print("ERROR: invalid sytem {}".format(sys2str(sys)))
-                continue
+            if cs.cssrmode == sc.QZS_MADOCA:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.GLO:
+                    sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+                elif sys == ug.QZS:
+                    sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
+                else:
+                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD):
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+                else:
+                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.BDS_PPP:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+                elif sys == ug.BDS:
+                    sig0 = (rSigRnx("CC6I"),)
+                else:
+                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    continue
 
             # Convert to CoM using ANTEX PCO corrections
             #
