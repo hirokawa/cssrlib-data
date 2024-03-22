@@ -7,7 +7,7 @@ Pre-installation of CSSRlib is required.
 Additional python packages are required as prerequisites and can be installed via the following commands
 
 ```
-pip install ephem pandas crccheck
+pip install -r requirements.txt
 ```
 
 ## Ephemeris: RINEX/TLE
