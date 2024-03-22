@@ -1,3 +1,10 @@
+bitstruct
+galois
+crccheck
+pysolid
+notebook
+numpy
+matplotlib
 ephem
 pandas
 crccheck
