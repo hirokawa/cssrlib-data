@@ -37,7 +37,7 @@ jobs:
  
       - name: Execute Python scripts
         run: |
-          export PYTHONPATH="../cssrlib/src:$PATHONPATH"
+          export PYTHONPATH="../cssrlib/src:$PYTHONPATH"
           cd ./samples
           for file in $(find . -name "*.py"); do
             if [ "$file" == "./test_ppprtcm.py" ]; then continue; fi
