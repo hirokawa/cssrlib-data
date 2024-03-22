@@ -25,6 +25,13 @@ jobs:
 
       - name: Execute Python scripts
         run: |
-          for file in $(find . -name "./samples/*.py"); do
+          cd ./samples
+          for file in $(find . -name "*.py"); do
+            echo "Execute $file"
+            echo 
             python "$file"
+            echo "#"
+            echo "# ...done!"
+            echo "#"
+            echo
           done
