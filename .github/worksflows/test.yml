@@ -3,7 +3,8 @@ name: Execute Python Scripts
 on:
   push:
     branches:
-      - main  # Adjust the branch name as per your repository's default branch
+      - main
+      - devel
 
 jobs:
   execute-scripts:
