@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout main repository
+      - name: Checkout cssrlib-data repository
         uses: actions/checkout@v2
 
       - name: Set up Python
@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies from main repository
+      - name: Install dependencies from cssrlib-data repository
         run: pip install -r requirements.txt
 
       - name: Get branch name
@@ -29,15 +29,20 @@ jobs:
 
       - name: Clone cssrlib repository
         run: git clone -b ${{ steps.get_branch_name.outputs.branch_name }} https://github.com/${{ github.actor }}/cssrlib.git
-    
+        
+      - name: Install dependencies from cssrlib repository
+        run: |
+          cd cssrlib
+          pip install -r requirements.txt
+ 
       - name: Execute Python scripts
         run: |
           export PYTHONPATH="../cssrlib/src:$PATHONPATH"
           cd ./samples
           for file in $(find . -name "*.py"); do
             if [ "$file" == "./test_ppprtcm.py" ]; then continue; fi
-            echo "Execute $file"
-            echo 
+            echo "# Execute $file"
+            echo "#"
             python "$file"
             echo "#"
             echo "# ...done!"
