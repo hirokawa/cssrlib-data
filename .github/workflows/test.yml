@@ -1,0 +1,30 @@
+name: Execute Python Scripts
+
+on:
+  push:
+    branches:
+      - main
+      - devel
+
+jobs:
+  execute-scripts:
+    name: Execute Python Scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt  # If you have any dependencies, adjust as needed
+
+      - name: Execute Python scripts
+        run: |
+          for file in $(find . -name "*.py"); do
+            python "$file"
+          done
