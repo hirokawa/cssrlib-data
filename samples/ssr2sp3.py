@@ -92,6 +92,21 @@ def write_bsx(bsxfile, ac, data):
             f.write(line+'\n')
 
 
+def file2time(year, fileName):
+    """
+    Convert hourly SBF filename to epoch
+    """
+
+    doy = os.path.basename(fileName).split('_')[0]
+    hour = ord(doy[3])-ord('a')
+    doy = int(doy[0:3])
+    time = epoch2time([year, 1, 1, hour, 0, 0])
+
+    return timeadd(time, (doy-1)*86400)
+
+
+# Base directory of this script
+#
 baseDirName = os.path.dirname(os.path.abspath(__file__))+"/"
 
 # SSR file for conversion
@@ -107,14 +122,16 @@ else:
 #
 if "_189e" in ssrfile:
     ep = [2023, 7, 8, 4, 0, 0]
-elif 'doy223' in ssrfile:
-    ep = [2023, 8, 11, 21, 0, 0]
 else:
+    ep = time2epoch(file2time(2023, ssrfile))
+    """
     print("ERROR: unknown epoch!")
     sys.exit(1)
+    """
 
 time = epoch2time(ep)
 year = ep[0]
+hour = ep[3]
 doy = int(time2doy(time))
 
 nep = 900*4
@@ -170,10 +187,10 @@ v = np.genfromtxt(ssrfile, dtype=dtype)
 
 # Output files
 #
-orbfile = '{}_{:4d}{:03d}0000_01D_01S_ORB.SP3'\
-    .format(name, year, doy)
-bsxfile = '{}_{:4d}{:03d}0000_01D_00U_OSB.BIA'\
-    .format(name, year, doy)
+orbfile = '{}_{:4d}{:03d}{:02d}00_01D_01S_ORB.SP3'\
+    .format(name, year, doy, hour)
+bsxfile = '{}_{:4d}{:03d}{:02d}00_01D_00U_OSB.BIA'\
+    .format(name, year, doy, hour)
 
 # Initialize objects
 #
