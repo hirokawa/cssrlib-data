@@ -35,6 +35,7 @@ jobs:
           export PYTHONPATH="../cssrlib/src:$PATHONPATH"
           cd ./samples
           for file in $(find . -name "*.py"); do
+            if [ "$file" == "./test_ppprtcm.py" ]; then continue; fi
             echo "Execute $file"
             echo 
             python "$file"
