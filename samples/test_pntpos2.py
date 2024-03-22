@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cssrlib.rinex import rnxdec
 from cssrlib.gnss import ecef2pos, timediff, ecef2enu, pos2ecef, xyz2enu
-from cssrlib.gnss import rSigRnx, epoch2time, Nav, time2str
+from cssrlib.gnss import rSigRnx, Nav
 from cssrlib.pntpos import stdpos
 
 
@@ -53,7 +53,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         obs = rnx.decode_obs()
         if ne == 0:
-            t0 = obs.t
+            t0 = nav.t = obs.t
         t[ne] = timediff(obs.t, t0)
 
         std.process(obs, cs=None)
