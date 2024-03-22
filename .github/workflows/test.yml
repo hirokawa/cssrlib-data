@@ -32,7 +32,7 @@ jobs:
     
       - name: Execute Python scripts
         run: |
-          export PYTHONPATH="./cssrlib/src:$PATHONPATH"
+          export PYTHONPATH="../cssrlib/src:$PATHONPATH"
           cd ./samples
           for file in $(find . -name "*.py"); do
             echo "Execute $file"
