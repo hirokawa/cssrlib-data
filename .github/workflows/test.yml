@@ -12,14 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Clone cssrlib repository
+        run: git clone -b ${{ github.ref }} https://github.com/${{ github.actor }}/cssrlib.git
+    
       - name: Checkout repository
         uses: actions/checkout@v2
         
-      - name: Checkout cssrlib repository
-        uses: actions/checkout@v2
-        with:
-          repository: ${{ github.actor }}/cssrlib
-
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -30,6 +28,7 @@ jobs:
 
       - name: Execute Python scripts
         run: |
+          export PYTHONPATH="./cssrlib/src:$PATHONPATH"
           cd ./samples
           for file in $(find . -name "*.py"); do
             echo "Execute $file"
