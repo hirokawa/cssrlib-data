@@ -114,9 +114,7 @@ baseDirName = os.path.dirname(os.path.abspath(__file__))+"/"
 if len(sys.argv) > 1:
     ssrfile = sys.argv[1]
 else:
-    #ssrfile = '../data/gale6_189e.txt'
-    ssrfile = '../data/bdsb2b_189e.txt'
-    #ssrfile = '../data/qzsl6_189e.txt'
+    ssrfile = '../data/gale6_189e.txt'
 
 # Start epoch and number of epochs
 #
