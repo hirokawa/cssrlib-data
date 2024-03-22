@@ -33,7 +33,7 @@ def time2bsxstr(t):
     doy = time2doy(t)
     sec = (doy-int(doy))*86400
 
-    return "{:04d}:{:03d}:{:5d}".format(year, int(doy), int(sec))
+    return "{:04d}:{:03d}:{:05d}".format(year, int(doy), int(sec))
 
 
 def write_bsx(bsxfile, ac, data):
