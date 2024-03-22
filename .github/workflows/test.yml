@@ -25,7 +25,7 @@ jobs:
 
       - name: Get branch name
         id: get_branch_name
-        run: echo "::set-output name=branch_name::$(basename $GITHUB_REF)"
+        run: echo "branch_name=$(basename $GITHUB_REF)" >> $GITHUB_OUTPUT       
 
       - name: Clone cssrlib repository
         run: git clone -b ${{ steps.get_branch_name.outputs.branch_name }} https://github.com/${{ github.actor }}/cssrlib.git
@@ -45,7 +45,6 @@ jobs:
             echo "# Execute $file"
             echo "#"
             python "$file" > /dev/null
-            echo "#"
             echo "# ...done!"
             echo "#"
             echo
