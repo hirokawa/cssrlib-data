@@ -381,7 +381,7 @@ for ne in range(nep):
             elif cs.cssrmode == sc.BDS_PPP:
 
                 if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
                 elif sys == ug.BDS:
                     sig0 = (rSigRnx("CC6I"),)
                 else:
