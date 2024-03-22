@@ -14,6 +14,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        
+      - name: Checkout cssrlib repository
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.actor }}/cssrlib
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -21,7 +26,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt  # If you have any dependencies, adjust as needed
+        run: pip install -r requirements.txt
 
       - name: Execute Python scripts
         run: |
