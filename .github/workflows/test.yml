@@ -12,20 +12,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone cssrlib repository
-        run: git clone -b ${{ github.ref }} https://github.com/${{ github.actor }}/cssrlib.git
-    
-      - name: Checkout repository
+      - name: Checkout main repository
         uses: actions/checkout@v2
-        
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install dependencies from main repository
         run: pip install -r requirements.txt
 
+      - name: Get branch name
+        id: get_branch_name
+        run: echo "::set-output name=branch_name::$(basename $GITHUB_REF)"
+
+      - name: Clone cssrlib repository
+        run: git clone -b ${{ steps.get_branch_name.outputs.branch_name }} https://github.com/${{ github.actor }}/cssrlib.git
+    
       - name: Execute Python scripts
         run: |
           export PYTHONPATH="./cssrlib/src:$PATHONPATH"
