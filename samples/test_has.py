@@ -46,7 +46,7 @@ has_pages = np.zeros((255, 53), dtype=int)
 file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 dec = cssr_has()
-dec.mon_level = 2
+dec.monlevel = 2
 
 for i, t in enumerate(tow):
     vi = v[v['tow'] == t]
