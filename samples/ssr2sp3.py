@@ -71,7 +71,7 @@ def write_bsx(bsxfile, ac, data):
                              .format(sat2id(sat)[0]+"999", sat2id(sat), "",
                                      sig.str(), "",
                                      time2bsxstr(ts), time2bsxstr(te),
-                                     osb*ns2m, 0.0))
+                                     -osb*m2ns, 0.0))
                 nVal += 1
                 tFirst = ts if tFirst is None or ts < tFirst else tFirst
                 tLast = te if tLast is None or te < tLast else tLast
@@ -246,7 +246,9 @@ rec = []
 mid_decoded = []
 has_pages = np.zeros((255, 53), dtype=int)
 
-ns2m = rCST.CLIGHT*1e-9
+# Meter-to-nanosecond conversion
+#
+m2ns = 1e9/rCST.CLIGHT
 
 # Loop over number of epochs from start time
 #
@@ -406,7 +408,7 @@ for ne in range(nep):
         #
         nav.peph.append(peph)
 
-        # Get SSR biases
+        # Get SSR code biases
         #
         for sat_, dat_ in cs.lc[0].cbias.items():
 
@@ -414,7 +416,7 @@ for ne in range(nep):
 
                 # Fix GPS L2 P(Y) signal code for Galileo HAS
                 #
-                if 'gale6' in ssrfile and rSigRnx('GC2P') == sig_:
+                if cs.cssrmode == sc.QZS_MADOCA and rSigRnx('GC2P') == sig_:
                     sig_ = rSigRnx('GC2W')
 
                 if sat_ not in biases.keys():
@@ -424,7 +426,24 @@ for ne in range(nep):
 
                 if len(biases[sat_][sig_]) == 0 or \
                         biases[sat_][sig_][-1][2] != val_:
-                    biases[sat_][sig_].append([time, None, val_])
+                    biases[sat_][sig_].append([time, time, val_])
+                else:
+                    biases[sat_][sig_][-1][1] = time
+
+        # Get SSR phase biases
+        #
+        for sat_, dat_ in cs.lc[0].pbias.items():
+
+            for sig_, val_ in dat_.items():
+
+                if sat_ not in biases.keys():
+                    biases.update({sat_: {}})
+                if sig_ not in biases[sat_].keys():
+                    biases[sat_].update({sig_: []})
+
+                if len(biases[sat_][sig_]) == 0 or \
+                        biases[sat_][sig_][-1][2] != val_:
+                    biases[sat_][sig_].append([time, time, val_])
                 else:
                     biases[sat_][sig_][-1][1] = time
 
