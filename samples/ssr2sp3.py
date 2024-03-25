@@ -416,7 +416,8 @@ for ne in range(nep):
 
                 # Fix GPS L2 P(Y) signal code for Galileo HAS
                 #
-                if cs.cssrmode == sc.QZS_MADOCA and rSigRnx('GC2P') == sig_:
+                if cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD) and \
+                        rSigRnx('GC2P') == sig_:
                     sig_ = rSigRnx('GC2W')
 
                 if sat_ not in biases.keys():
