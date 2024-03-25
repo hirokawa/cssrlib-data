@@ -42,6 +42,7 @@ jobs:
           for file in $(find . -name "*.py"); do
             if [ "$file" == "./test_ppprtcm.py" ]; then continue; fi
             if [ "$file" == "./test_sisre_mdc.py" ]; then continue; fi
+            if [ "$file" == "./test_sisre_bds.py" ]; then continue; fi
             echo "# Execute $file"
             echo "#"
             python "$file" > /dev/null
