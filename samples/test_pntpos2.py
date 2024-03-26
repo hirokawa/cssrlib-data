@@ -4,47 +4,65 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from cssrlib.rinex import rnxdec
-from cssrlib.gnss import ecef2pos, timediff, dops, ecef2enu, pos2ecef, xyz2enu
-from cssrlib.pntpos import stdinit, pntpos
-from cssrlib.gnss import rSigRnx
+from cssrlib.gnss import ecef2pos, timediff, ecef2enu, pos2ecef, xyz2enu
+from cssrlib.gnss import rSigRnx, Nav
+from cssrlib.pntpos import stdpos
+
 
 rr0 = xyz_ref = pos2ecef([35.342058098, 139.521986657, 47.5515], True)
 pos_ref = ecef2pos(xyz_ref)
+nep = 360
+
 E = xyz2enu(pos_ref)
 
 navfile = '../data/SEPT2650.21P'
 obsfile = '../data/SEPT265G.21O'
 
-dec = rnxdec()
-
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("EC1C")]
-dec.setSignals(sigs)
+sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"),
+        rSigRnx("GL1C"), rSigRnx("EL1C"),
+        rSigRnx("GS1C"), rSigRnx("ES1C")]
 
-nav = stdinit()
-nav = dec.decode_nav(navfile, nav)
-nep = 360
+rnx = rnxdec()
+rnx.setSignals(sigs)
+
+nav = Nav(nf=1)
+nav.pmode = 1  # 0: static, 1: kinematic
+nav = rnx.decode_nav(navfile, nav)
+
 t = np.zeros(nep)
 enu = np.zeros((nep, 3))
-sol = np.zeros((nep, nav.nx))
 dop = np.zeros((nep, 4))
 nsat = np.zeros(nep, dtype=int)
 
-if dec.decode_obsh(obsfile) >= 0:
+if rnx.decode_obsh(obsfile) >= 0:
 
-    nav.x[0:3] = rr0
+    # Auto-substitute signals
+    #
+    rnx.autoSubstituteSignals()
+
+    # Initialize position
+    #
+    std = stdpos(nav, rr0, 'test_stdpos2.log')
+    nav.elmin = np.deg2rad(5.0)
+
+    sol = np.zeros((nep, nav.nx))
+
     for ne in range(nep):
-        obs = dec.decode_obs()
+
+        obs = rnx.decode_obs()
         if ne == 0:
-            t0 = obs.t
+            t0 = nav.t = obs.t
         t[ne] = timediff(obs.t, t0)
-        nav, az, el = pntpos(obs, nav)
+
+        std.process(obs, cs=None)
+
         sol[ne, :] = nav.x
-        dop[ne, :] = dops(az, el)
         enu[ne, :] = ecef2enu(pos_ref, sol[ne, 0:3]-xyz_ref)
-        nsat[ne] = len(el)
-    dec.fobs.close()
+        dop[ne, :] = std.dop
+
+    rnx.fobs.close()
 
 
 if True:

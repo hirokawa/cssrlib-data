@@ -23,7 +23,7 @@ ed = '2021-05-15T00:00:00Z'
 period = 30  # minutes
 elmask = np.deg2rad(15)
 
-dates = date_range(start=st, end=ed, freq='{}T'.format(period))
+dates = date_range(start=st, end=ed, freq='{}min'.format(period))
 t0 = dates[0]
 t = (dates-t0).total_seconds()
 obs = Observer()

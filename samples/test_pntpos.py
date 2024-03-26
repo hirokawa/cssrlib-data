@@ -10,7 +10,6 @@ from cssrlib.rinex import rnxdec
 from cssrlib.gnss import ecef2pos, timediff, ecef2enu
 from cssrlib.gnss import rSigRnx, epoch2time, Nav, time2str
 from cssrlib.pntpos import stdpos
-from cssrlib.sbas import sbasDec
 
 if False:
     xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
@@ -20,8 +19,8 @@ if False:
 else:
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     ep = [2023, 8, 11, 21, 0, 0]
-    # navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
+    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    # navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
     # navfile = '../data/doy223/NAV223.23p'
     # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
@@ -43,7 +42,6 @@ rnx = rnxdec()
 rnx.setSignals(sigs)
 
 
-# nav = stdinit()
 nav = Nav(nf=1)
 nav.pmode = 1  # 0: static, 1: kinematic
 nav = rnx.decode_nav(navfile, nav)
@@ -54,7 +52,6 @@ nav = rnx.decode_nav(navfile, nav)
 t = np.zeros(nep)
 enu = np.zeros((nep, 3))
 dop = np.zeros((nep, 4))
-nsat = np.zeros(nep, dtype=int)
 smode = np.zeros(nep, dtype=int)
 
 if rnx.decode_obsh(obsfile) >= 0:
@@ -63,14 +60,13 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     rnx.autoSubstituteSignals()
 
-    # nav.x[0:3] = rnx.pos
-
     # Initialize position
     #
     std = stdpos(nav, rnx.pos, 'test_stdpos.log')
     nav.elmin = np.deg2rad(5.0)
 
     sol = np.zeros((nep, nav.nx))
+
     # Skip epochs until start time
     #
     obs = rnx.decode_obs()
@@ -82,13 +78,11 @@ if rnx.decode_obsh(obsfile) >= 0:
         if ne == 0:
             t0 = nav.t = obs.t
         t[ne] = timediff(obs.t, t0)/86400.0
-        # nav, az, el = pntpos(obs, nav)
 
         std.process(obs, cs=None)
 
         sol[ne, :] = nav.x
         enu[ne, :] = ecef2enu(pos_ref, sol[ne, 0:3]-xyz_ref)
-        # nsat[ne] = len(el)
         dop[ne, :] = std.dop
 
         smode[ne] = nav.smode

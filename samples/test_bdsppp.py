@@ -23,7 +23,7 @@ i = 0
 tow = np.unique(v['tow'])
 
 dec = cssr_bds()
-dec.mon_level = 2
+dec.monlevel = 2
 
 prn_a = 60
 
