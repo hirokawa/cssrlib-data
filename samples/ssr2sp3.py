@@ -254,7 +254,7 @@ m2ns = 1e9/rCST.CLIGHT
 #
 for ne in range(nep):
 
-    print(time2str(time))
+    # print(time2str(time))
 
     week, tow = time2gpst(time)
     cs.week = week
@@ -294,12 +294,10 @@ for ne in range(nep):
                 rec += [pid-1]
                 has_pages[pid-1, :] = page
 
-            # print(f"{mt} {mid} {ms} {pid}")
-
         if len(rec) >= ms_:
-            print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
+            hasNew = (ms_ == 2)  # only clock messages
             rec = []
 
             mid_decoded += [mid_]
@@ -310,7 +308,6 @@ for ne in range(nep):
             icnt += 1
             if icnt > 10 and mid_ != -1:
                 icnt = 0
-                print(f"reset mid={mid_} ms={ms_}")
                 rec = []
                 mid_ = -1
 
@@ -323,6 +320,7 @@ for ne in range(nep):
             cs.decode_l6msg(msg, 0)
             if cs.fcnt == 5:  # end of sub-frame
                 cs.decode_cssr(bytes(cs.buff), 0)
+                hasNew = True
 
     elif "bdsb2b" in ssrfile:
 
@@ -331,6 +329,7 @@ for ne in range(nep):
             buff = unhexlify(vi['nav'][0])
             # prn, rev = bs.unpack_from('u6u6', buff, 0)
             cs.decode_cssr(buff, 0)
+            hasNew = True
 
     else:
 
@@ -338,7 +337,11 @@ for ne in range(nep):
 
     # Convert SSR corrections
     #
-    if (cs.lc[0].cstat & 0xf) == 0xf:
+    if (cs.lc[0].cstat & 0xf) == 0xf and hasNew:
+
+        print(time2str(time))
+
+        hasNew = False
 
         ns = len(cs.sat_n)
 
