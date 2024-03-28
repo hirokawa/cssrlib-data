@@ -403,10 +403,14 @@ for ne in range(nep):
                     print("ERROR: invalid sytem {}".format(sys2str(sys)))
                     continue
 
+            # Skip invalid positions
+            #
+            if np.isnan(rs[0, :]).any():
+                continue
+
             # Convert to CoM using ANTEX PCO corrections
             #
-            if np.linalg.norm(rs[0, :]) > 0:
-                rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
+            rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
 
             for i in range(3):
                 peph.pos[sat-1, i] = rs[0, i]
