@@ -64,7 +64,7 @@ def write_bsx(bsxfile, ac, data):
     tFirst = None
     tLast = None
 
-    for sat in data.keys():
+    for sat in sorted(data.keys()):
         for sig in data[sat].keys():
             for ts, te, osb in data[sat][sig]:
                 lines.append(" OSB  {:4s} {:3s} {:9s} {:3s}  {:3s}  {} {} ns   {:21.4f} {:11.4f}"
@@ -254,7 +254,7 @@ m2ns = 1e9/rCST.CLIGHT
 #
 for ne in range(nep):
 
-    print(time2str(time))
+    # print(time2str(time))
 
     week, tow = time2gpst(time)
     cs.week = week
@@ -295,9 +295,9 @@ for ne in range(nep):
                 has_pages[pid-1, :] = page
 
         if len(rec) >= ms_:
-            print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
+            hasNew = (ms_ == 2)  # only clock messages
             rec = []
 
             mid_decoded += [mid_]
@@ -308,7 +308,6 @@ for ne in range(nep):
             icnt += 1
             if icnt > 10 and mid_ != -1:
                 icnt = 0
-                print(f"reset mid={mid_} ms={ms_}")
                 rec = []
                 mid_ = -1
 
@@ -321,6 +320,7 @@ for ne in range(nep):
             cs.decode_l6msg(msg, 0)
             if cs.fcnt == 5:  # end of sub-frame
                 cs.decode_cssr(bytes(cs.buff), 0)
+                hasNew = True
 
     elif "bdsb2b" in ssrfile:
 
@@ -329,6 +329,7 @@ for ne in range(nep):
             buff = unhexlify(vi['nav'][0])
             # prn, rev = bs.unpack_from('u6u6', buff, 0)
             cs.decode_cssr(buff, 0)
+            hasNew = True
 
     else:
 
@@ -336,7 +337,11 @@ for ne in range(nep):
 
     # Convert SSR corrections
     #
-    if (cs.lc[0].cstat & 0xf) == 0xf:
+    if (cs.lc[0].cstat & 0xf) == 0xf and hasNew:
+
+        print(time2str(time))
+
+        hasNew = False
 
         ns = len(cs.sat_n)
 
@@ -361,19 +366,29 @@ for ne in range(nep):
                 elif sys == ug.GLO:
                     sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
                 elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
                 elif sys == ug.QZS:
                     sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
                 else:
                     print("ERROR: invalid sytem {}".format(sys2str(sys)))
                     continue
 
-            elif cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD):
+            elif cs.cssrmode == sc.GAL_HAS_SIS:
 
                 if sys == ug.GPS:
                     sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
                 elif sys == ug.GAL:
                     sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+                else:
+                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.GAL_HAS_IDD:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"),)
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"),)
                 else:
                     print("ERROR: invalid sytem {}".format(sys2str(sys)))
                     continue
@@ -388,10 +403,14 @@ for ne in range(nep):
                     print("ERROR: invalid sytem {}".format(sys2str(sys)))
                     continue
 
+            # Skip invalid positions
+            #
+            if np.isnan(rs[0, :]).any():
+                continue
+
             # Convert to CoM using ANTEX PCO corrections
             #
-            if np.linalg.norm(rs[0, :]) > 0:
-                rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
+            rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
 
             for i in range(3):
                 peph.pos[sat-1, i] = rs[0, i]
@@ -411,6 +430,11 @@ for ne in range(nep):
         for sat_, dat_ in cs.lc[0].cbias.items():
 
             for sig_, val_ in dat_.items():
+
+                # Skip invalid biases
+                #
+                if np.isnan(val_):
+                    continue
 
                 # Fix GPS L2 P(Y) signal code for Galileo HAS
                 #
@@ -434,6 +458,11 @@ for ne in range(nep):
         for sat_, dat_ in cs.lc[0].pbias.items():
 
             for sig_, val_ in dat_.items():
+
+                # Skip invalid biases
+                #
+                if np.isnan(val_):
+                    continue
 
                 if sat_ not in biases.keys():
                     biases.update({sat_: {}})
