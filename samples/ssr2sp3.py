@@ -414,6 +414,11 @@ for ne in range(nep):
 
             for sig_, val_ in dat_.items():
 
+                # Skip invalid biases
+                #
+                if np.isnan(val_):
+                    continue
+
                 # Fix GPS L2 P(Y) signal code for Galileo HAS
                 #
                 if cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD) and \
@@ -436,6 +441,11 @@ for ne in range(nep):
         for sat_, dat_ in cs.lc[0].pbias.items():
 
             for sig_, val_ in dat_.items():
+
+                # Skip invalid biases
+                #
+                if np.isnan(val_):
+                    continue
 
                 if sat_ not in biases.keys():
                     biases.update({sat_: {}})
