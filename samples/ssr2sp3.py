@@ -64,7 +64,7 @@ def write_bsx(bsxfile, ac, data):
     tFirst = None
     tLast = None
 
-    for sat in data.keys():
+    for sat in sorted(data.keys()):
         for sig in data[sat].keys():
             for ts, te, osb in data[sat][sig]:
                 lines.append(" OSB  {:4s} {:3s} {:9s} {:3s}  {:3s}  {} {} ns   {:21.4f} {:11.4f}"
