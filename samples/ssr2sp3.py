@@ -294,8 +294,6 @@ for ne in range(nep):
                 rec += [pid-1]
                 has_pages[pid-1, :] = page
 
-            # print(f"{mt} {mid} {ms} {pid}")
-
         if len(rec) >= ms_:
             print("data collected mid={:2d} ms={:2d}".format(mid_, ms_))
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
