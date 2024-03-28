@@ -366,7 +366,7 @@ for ne in range(nep):
                 elif sys == ug.GLO:
                     sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
                 elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
                 elif sys == ug.QZS:
                     sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
                 else:
