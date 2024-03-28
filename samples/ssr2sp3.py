@@ -373,12 +373,22 @@ for ne in range(nep):
                     print("ERROR: invalid sytem {}".format(sys2str(sys)))
                     continue
 
-            elif cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD):
+            elif cs.cssrmode == sc.GAL_HAS_SIS:
 
                 if sys == ug.GPS:
                     sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
                 elif sys == ug.GAL:
                     sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+                else:
+                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.GAL_HAS_IDD:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"),)
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"),)
                 else:
                     print("ERROR: invalid sytem {}".format(sys2str(sys)))
                     continue
