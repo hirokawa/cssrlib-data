@@ -11,8 +11,8 @@ import sys
 
 from cssrlib.ephemeris import satpos
 from cssrlib.gnss import Nav, sat2prn, sys2str, sat2id
-from cssrlib.gnss import time2gpst, time2doy, epoch2time, time2epoch, time2str
-from cssrlib.gnss import timeadd, timeget
+from cssrlib.gnss import time2doy, epoch2time, time2epoch, time2str
+from cssrlib.gnss import timeadd, timeget, gpst2time
 from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
@@ -111,17 +111,18 @@ baseDirName = os.path.dirname(os.path.abspath(__file__))+"/"
 
 # SSR file for conversion
 #
+ssrfiles = []
 if len(sys.argv) > 1:
-    ssrfile = sys.argv[1]
+    ssrfiles = sys.argv[1:]
 else:
-    ssrfile = '../data/gale6_189e.txt'
+    ssrfiles = ['../data/gale6_189e.txt', ]
 
 # Start epoch and number of epochs
 #
-if "_189e" in ssrfile:
+if "_189e" in ssrfiles[0]:
     ep = [2023, 7, 8, 4, 0, 0]
 else:
-    ep = time2epoch(file2time(2023, ssrfile))
+    ep = time2epoch(file2time(2023, ssrfiles[0]))
     """
     print("ERROR: unknown epoch!")
     sys.exit(1)
@@ -132,15 +133,14 @@ year = ep[0]
 hour = ep[3]
 doy = int(time2doy(time))
 
-nep = 900*4
-step = 1
 
 navfile = baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
     .format('/doy223' if doy == 223 else '', year, doy)
 
-if "qzsl6" in ssrfile:
+if "qzsl6" in ssrfiles[0]:
 
     name = 'QZS0CLSOPS'
+    step = "10S"
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
@@ -149,9 +149,10 @@ if "qzsl6" in ssrfile:
     l6_ch = 1  # 0:L6D, 1:L6E
     atxfile = baseDirName+'../data/igs20.atx'
 
-elif "gale6" in ssrfile:
+elif "gale6" in ssrfiles[0]:
 
     name = 'ESA0HASOPS'
+    step = "10S"
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
@@ -160,9 +161,10 @@ elif "gale6" in ssrfile:
     #       CODE reference orbits
     atxfile = baseDirName+'../data/igs14.atx'
 
-elif "bdsb2b" in ssrfile:
+elif "bdsb2b" in ssrfiles[0]:
 
     name = 'BDS0PPPOPS'
+    step = "01S"
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
@@ -173,19 +175,22 @@ elif "bdsb2b" in ssrfile:
     #       CODE reference orbits
     atxfile = baseDirName+'../data/igs14.atx'
 
+
 else:
 
-    print("ERROR: unkown SSR format for {}!".format(ssrfile))
+    print("ERROR: unkown SSR format for {}!".format(ssrfiles[0]))
     sys.exit(1)
 
 # Load SSR corrections
 #
-v = np.genfromtxt(ssrfile, dtype=dtype)
+v = np.array([], dtype=dtype)
+for ssrfile in ssrfiles:
+    v = np.append(v, np.genfromtxt(ssrfile, dtype=dtype))
 
 # Output files
 #
-orbfile = '{}_{:4d}{:03d}{:02d}00_01D_01S_ORB.SP3'\
-    .format(name, year, doy, hour)
+orbfile = '{}_{:4d}{:03d}{:02d}00_01D_{}_ORB.SP3'\
+    .format(name, year, doy, hour, step)
 bsxfile = '{}_{:4d}{:03d}{:02d}00_01D_00U_OSB.BIA'\
     .format(name, year, doy, hour)
 
@@ -227,14 +232,9 @@ nav.sat_ant = atx.pcvs
 
 # Intialize data structures for results
 #
-t = np.zeros(nep)
-orb_r = np.zeros((nep, ug.MAXSAT))*np.nan
-orb_a = np.zeros((nep, ug.MAXSAT))*np.nan
-orb_c = np.zeros((nep, ug.MAXSAT))*np.nan
-clk = np.zeros((nep, ug.MAXSAT))*np.nan
-sats = set()
-
+t0 = None
 biases = {}
+sats = set()
 
 # Initialize HAS decoding
 #
@@ -249,49 +249,45 @@ has_pages = np.zeros((255, 53), dtype=int)
 #
 m2ns = 1e9/rCST.CLIGHT
 
-# Loop over number of epochs from start time
+# Loop over SSR packages
 #
-for ne in range(nep):
+for vi in v:
 
-    # print(time2str(time))
-
-    week, tow = time2gpst(time)
+    week, tow = vi['wn'], vi['tow']
+    time = gpst2time(week, tow)
     cs.week = week
     cs.tow0 = tow//3600*3600
 
     # Set initial epoch
     #
-    if ne == 0:
+    if t0 is None:
         t0 = deepcopy(time)
         t0.time = t0.time//30*30
         nav.time_p = t0
 
     if 'gale6' in ssrfile:
 
-        vi = v[v['tow'] == tow]
-        for vn in vi:
+        buff = unhexlify(vi['nav'])
+        i = 14
+        if bs.unpack_from('u24', buff, i)[0] == 0xaf3bc3:
+            continue
+        hass, res = bs.unpack_from('u2u2', buff, i)
+        i += 4
+        if hass >= 2:  # 0:test,1:operational,2:res,3:dnu
+            continue
+        mt, mid, ms, pid = bs.unpack_from('u2u5u5u8', buff, i)
 
-            buff = unhexlify(vn['nav'])
-            i = 14
-            if bs.unpack_from('u24', buff, i)[0] == 0xaf3bc3:
-                continue
-            hass, res = bs.unpack_from('u2u2', buff, i)
-            i += 4
-            if hass >= 2:  # 0:test,1:operational,2:res,3:dnu
-                continue
-            mt, mid, ms, pid = bs.unpack_from('u2u5u5u8', buff, i)
+        cs.msgtype = mt
+        ms += 1
+        i += 20
 
-            cs.msgtype = mt
-            ms += 1
-            i += 20
-
-            if mid_ == -1 and mid not in mid_decoded:
-                mid_ = mid
-                ms_ = ms
-            if mid == mid_ and pid-1 not in rec:
-                page = bs.unpack_from('u8'*53, buff, i)
-                rec += [pid-1]
-                has_pages[pid-1, :] = page
+        if mid_ == -1 and mid not in mid_decoded:
+            mid_ = mid
+            ms_ = ms
+        if mid == mid_ and pid-1 not in rec:
+            page = bs.unpack_from('u8'*53, buff, i)
+            rec += [pid-1]
+            has_pages[pid-1, :] = page
 
         if len(rec) >= ms_:
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
@@ -312,23 +308,22 @@ for ne in range(nep):
 
     elif 'qzsl6' in ssrfile:
 
-        vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
-               & (v['prn'] == prn_ref)]
-        if len(vi) > 0:
-            msg = unhexlify(vi['nav'][0])
-            cs.decode_l6msg(msg, 0)
-            if cs.fcnt == 5:  # end of sub-frame
-                cs.decode_cssr(bytes(cs.buff), 0)
-                hasNew = True
+        if vi['type'] != l6_ch or vi['prn'] != prn_ref:
+            continue
+        msg = unhexlify(vi['nav'])
+        cs.decode_l6msg(msg, 0)
+        if cs.fcnt == 5:  # end of sub-frame
+            cs.decode_cssr(bytes(cs.buff), 0)
+            hasNew = True
 
     elif "bdsb2b" in ssrfile:
 
-        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
-        if len(vi) > 0:
-            buff = unhexlify(vi['nav'][0])
-            # prn, rev = bs.unpack_from('u6u6', buff, 0)
-            cs.decode_cssr(buff, 0)
-            hasNew = True
+        if vi['prn'] != prn_ref:
+            continue
+        buff = unhexlify(vi['nav'])
+        # prn, rev = bs.unpack_from('u6u6', buff, 0)
+        cs.decode_cssr(buff, 0)
+        hasNew = True
 
     else:
 
@@ -365,7 +360,7 @@ for ne in range(nep):
                 elif sys == ug.GLO:
                     sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
                 elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
                 elif sys == ug.QZS:
                     sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
                 else:
@@ -489,10 +484,6 @@ for ne in range(nep):
                 #
                 if biases[sat_][sig_][-1][2] != val_:
                     biases[sat_][sig_].append([time, time, val_])
-
-    # Next time-step
-    #
-    time = timeadd(time, step)
 
 # Write results to output file
 #
