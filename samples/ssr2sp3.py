@@ -5,6 +5,7 @@ SSR correction conversion to SP3 file format
 from binascii import unhexlify
 import bitstruct as bs
 from copy import deepcopy
+from itertools import chain
 import numpy as np
 import os
 import sys
@@ -174,7 +175,6 @@ elif "bdsb2b" in ssrfiles[0]:
     # NOTE: igs14 values seem to be yield better consistency with
     #       CODE reference orbits
     atxfile = baseDirName+'../data/igs14.atx'
-
 
 else:
 
@@ -419,9 +419,9 @@ for vi in v:
         #
         nav.peph.append(peph)
 
-        # Get SSR code biases
+        # Get SSR code and phase biases
         #
-        for sat_, dat_ in cs.lc[0].cbias.items():
+        for sat_, dat_ in chain(cs.lc[0].cbias.items(), cs.lc[0].pbias.items()):
 
             for sig_, val_ in dat_.items():
 
@@ -435,36 +435,6 @@ for vi in v:
                 if cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD) and \
                         rSigRnx('GC2P') == sig_:
                     sig_ = rSigRnx('GC2W')
-
-                if sat_ not in biases.keys():
-                    biases.update({sat_: {}})
-                if sig_ not in biases[sat_].keys():
-                    biases[sat_].update({sig_: []})
-
-                # Add first entry if empty
-                #
-                if len(biases[sat_][sig_]) == 0:
-                    biases[sat_][sig_].append([time, time, val_])
-
-                # Extend previous record with end time of current record
-                #
-                biases[sat_][sig_][-1][1] = time
-
-                # Add new value if biase has changed
-                #
-                if biases[sat_][sig_][-1][2] != val_:
-                    biases[sat_][sig_].append([time, time, val_])
-
-        # Get SSR phase biases
-        #
-        for sat_, dat_ in cs.lc[0].pbias.items():
-
-            for sig_, val_ in dat_.items():
-
-                # Skip invalid biases
-                #
-                if np.isnan(val_):
-                    continue
 
                 if sat_ not in biases.keys():
                     biases.update({sat_: {}})
