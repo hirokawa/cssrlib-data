@@ -305,8 +305,9 @@ for vi in v:
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
             hasNew = (ms_ == 2)  # only clock messages
+            time = cs.time
+            
             rec = []
-
             mid_decoded += [mid_]
             mid_ = -1
             if len(mid_decoded) > 10:
@@ -322,18 +323,21 @@ for vi in v:
 
         if vi['type'] != l6_ch or vi['prn'] != prn_ref:
             continue
+
         msg = unhexlify(vi['nav'])
         cs.decode_l6msg(msg, 0)
+
         if cs.fcnt == 5:  # end of sub-frame
             cs.decode_cssr(bytes(cs.buff), 0)
             hasNew = True
+            time = cs.time
 
     elif "bdsb2b" in ssrfile:
 
         if vi['prn'] != prn_ref:
             continue
+
         buff = unhexlify(vi['nav'])
-        # prn, rev = bs.unpack_from('u6u6', buff, 0)
         cs.decode_cssr(buff, 0)
         hasNew = (tow % 10 == 0)
 
