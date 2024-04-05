@@ -118,25 +118,21 @@ if len(sys.argv) > 1:
 else:
     ssrfiles = ['../data/gale6_189e.txt', ]
 
-# Start epoch and number of epochs
+# Start time
 #
 if "_189e" in ssrfiles[0]:
-    ep = [2023, 7, 8, 4, 0, 0]
+    time = epoch2time([2023, 7, 8, 4, 0, 0])
 else:
-    ep = time2epoch(file2time(2023, ssrfiles[0]))
+    time = file2time(2023, ssrfiles[0])
     """
     print("ERROR: unknown epoch!")
     sys.exit(1)
     """
 
-time = epoch2time(ep)
+ep = time2epoch(time)
 year = ep[0]
 hour = ep[3]
 doy = int(time2doy(time))
-
-
-navfile = baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
-    .format('/doy223' if doy == 223 else '', year, doy)
 
 if "qzsl6" in ssrfiles[0]:
 
@@ -200,9 +196,24 @@ rnx = rnxdec()
 nav = Nav()
 orb = peph()
 
+# Load RINEX navigation files
+#
+navfiles = []
+for dt in (-1, 0, +1):
+    
+    t = timeadd(time, dt*86400)
+    ep = time2epoch(t)
+    year = ep[0]
+    hour = ep[3]
+    doy = int(time2doy(t))
+
+    navfiles.append(baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+    .format('/doy223' if doy == 223 else '', year, doy))
+    
 # Decode RINEX NAV data
 #
-nav = rnx.decode_nav(navfile, nav)
+for navfile in navfiles:
+    nav = rnx.decode_nav(navfile, nav, append=True)
 
 # Setup SSR decoder
 #
