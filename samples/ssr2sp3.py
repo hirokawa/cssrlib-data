@@ -165,7 +165,7 @@ elif "gale6" in ssrfiles[0]:
 elif "bdsb2b" in ssrfiles[0]:
 
     name = 'BDS0PPPOPS'
-    step = "01S"
+    step = "10S"
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
@@ -323,7 +323,7 @@ for vi in v:
         buff = unhexlify(vi['nav'])
         # prn, rev = bs.unpack_from('u6u6', buff, 0)
         cs.decode_cssr(buff, 0)
-        hasNew = True
+        hasNew = (tow % 10 == 0)
 
     else:
 
