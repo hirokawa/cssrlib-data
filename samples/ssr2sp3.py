@@ -247,6 +247,11 @@ t0 = None
 biases = {}
 sats = set()
 
+# Set flags for adding additional biases
+#
+extClasBiases = False
+extBdsBiases = False
+
 # Initialize HAS decoding
 #
 mid_ = -1
@@ -445,7 +450,7 @@ for vi in v:
                 #
                 if cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD) and \
                         rSigRnx('GC2P') == sig_:
-                    sig_ = rSigRnx('GC2W')
+                    sig_ = sig_.toAtt('W')
 
                 if sat_ not in biases.keys():
                     biases.update({sat_: {}})
@@ -465,6 +470,62 @@ for vi in v:
                 #
                 if biases[sat_][sig_][-1][2] != val_:
                     biases[sat_][sig_].append([time, time, val_])
+
+                # Add additional Galileo biases for QZSS CLAS
+                #
+                if cs.cssrmode == sc.QZS_MADOCA and extClasBiases:
+
+                    if rSigRnx('EC1X') == sig_ or rSigRnx('EL1X') == sig_:
+                        sig_ = sig_.toAtt('C')
+                    elif rSigRnx('EC5X') == sig_ or rSigRnx('EL5X') == sig_:
+                        sig_ = sig_.toAtt('Q')
+
+                    if sig_ not in biases[sat_].keys():
+                        biases[sat_].update({sig_: []})
+
+                    # Add first entry if empty
+                    #
+                    if len(biases[sat_][sig_]) == 0:
+                        biases[sat_][sig_].append([time, time, val_])
+
+                    # Extend previous record with end time of current record
+                    #
+                    biases[sat_][sig_][-1][1] = time
+
+                    # Add new value if biase has changed
+                    #
+                    if biases[sat_][sig_][-1][2] != val_:
+                        biases[sat_][sig_].append([time, time, val_])
+
+        # Add fake GPS code biases for Beidou B2b-PPP
+        #
+        if cs.cssrmode == sc.BDS_PPP and extBdsBiases:
+
+            for sat_ in range(1, 33):
+
+                sigs = [rSigRnx('GC1C'), rSigRnx('GC2W')]
+                for sig_ in sigs:
+
+                    val_ = 0.0
+
+                    if sat_ not in biases.keys():
+                        biases.update({sat_: {}})
+                    if sig_ not in biases[sat_].keys():
+                        biases[sat_].update({sig_: []})
+
+                    # Add first entry if empty
+                    #
+                    if len(biases[sat_][sig_]) == 0:
+                        biases[sat_][sig_].append([time, time, val_])
+
+                    # Extend previous record with end time of current record
+                    #
+                    biases[sat_][sig_][-1][1] = time
+
+                    # Add new value if biase has changed
+                    #
+                    if biases[sat_][sig_][-1][2] != val_:
+                        biases[sat_][sig_].append([time, time, val_])
 
 # Write results to output file
 #
