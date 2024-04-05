@@ -200,16 +200,19 @@ orb = peph()
 #
 navfiles = []
 for dt in (-1, 0, +1):
-    
+
     t = timeadd(time, dt*86400)
     ep = time2epoch(t)
     year = ep[0]
     hour = ep[3]
     doy = int(time2doy(t))
 
-    navfiles.append(baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
-    .format('/doy223' if doy == 223 else '', year, doy))
-    
+    navfile = baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+        .format('/doy223' if doy == 223 else '', year, doy)
+
+    if os.path.exists(navfile):
+        navfiles.append(navfile)
+
 # Decode RINEX NAV data
 #
 for navfile in navfiles:
