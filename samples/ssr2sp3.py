@@ -277,13 +277,6 @@ for vi in v:
     cs.week = week
     cs.tow0 = tow//3600*3600
 
-    # Set initial epoch
-    #
-    if t0 is None:
-        t0 = deepcopy(time)
-        t0.time = t0.time//30*30
-        nav.time_p = t0
-
     if 'gale6' in ssrfile:
 
         buff = unhexlify(vi['nav'])
