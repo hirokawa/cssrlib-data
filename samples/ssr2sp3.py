@@ -341,6 +341,11 @@ for vi in v:
         cs.decode_cssr(buff, 0)
         hasNew = (tow % 10 == 0)
 
+        # Check message type
+        mt = bs.unpack_from('u6', buff, 0)[0]
+        if mt > 7:
+            continue
+
     else:
 
         continue
