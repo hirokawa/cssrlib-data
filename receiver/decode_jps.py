@@ -10,6 +10,7 @@ Javad Receiver GREIS messages decoder
 import os
 import numpy as np
 import struct as st
+import bitstruct.c as bs
 from cssrlib.gnss import epoch2time, time2gpst, prn2sat, uGNSS, uTYP, rSigRnx
 from cssrlib.rawnav import rcvDec, rcvOpt
 from enum import IntEnum
@@ -271,6 +272,44 @@ class jps(rcvDec):
             fn = fn_t[freq]
         return fn
 
+    def decode_nd(self, buff, sys=uGNSS.GPS):
+        prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
+        sat = prn2sat(sys, prn)
+        if self.monlevel >= 2:
+            msg_ = 'gd' if sys == uGNSS.GPS else 'qd'
+            print("[{:s}] prn={:2d} tow={:6d} type={:d} len={:d}".
+                  format(msg_, prn, time_, type_, len_))
+        msg = st.unpack_from('>'+len_*'L', buff, 12)
+        b = bytearray(np.array(msg, dtype='uint32'))
+        # type_= 0: LNAV, 1:L2C CNAV, 2:L5 CNAV, 3: L1C CNAV2
+
+        if self.flg_rnxnav:
+            eph = None
+            if type_ == 0:  # LNAV
+                eph = self.rn.decode_gps_lnav(self.week, time_, sat, b)
+            elif type_ == 1 or type_ == 2:  # CNAV
+                eph = self.rn.decode_gps_cnav(self.week, time_, sat, b)
+            elif type_ == 3:  # CNAV2
+                msg = bytearray(228)  # recover original L1C msg structure
+                # toi: 9b, data2: 600b, data3: 274b
+                toi = bs.unpack_from('u9', b, 0)[0]
+                bs.pack_into('u9', msg, 0, toi)
+                for k in range(75):
+                    b_ = bs.unpack_from('u8', b, k*8+9)[0]
+                    bs.pack_into('u8', msg, k*8+52, b_)
+                for k in range(35):
+                    b_ = bs.unpack_from('u8', b, k*8+609)[0]
+                    bs.pack_into('u8', msg, k*8+1252, b_)
+                eph = self.rn.decode_gps_cnav2(self.week, time_, sat, msg)
+            if eph is not None:
+                self.re.rnx_nav_body(eph, self.fh_rnxnav)
+
+        if sys == uGNSS.GPS and self.flg_gpslnav:
+            self.fh_gpslnav.write(
+                "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
+                format(self.week, time_, prn, type_, len_*4,
+                       hexlify(b).decode()))
+
     def decode(self, buff, len_, sys=[], prn=[]):
         head = buff[0:2].decode()
         if head == 'RE':
@@ -359,25 +398,8 @@ class jps(rcvDec):
             self.osn = st.unpack_from('B'*self.nsat_glo, buff, 5)
 
         elif head == 'qd':  # QZSS Raw Navigation Data
-            # prn,time_,type_,len_=bs.unpack_from("u8u32u8u8",buff,5*8)
-            prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
-            sat = prn2sat(uGNSS.QZS, prn)
-            if self.monlevel >= 2:
-                print("[qd] prn={:d} tow={:d} type={:d} len={:d}".
-                      format(prn, time_, type_, len_))
-            msg = st.unpack_from('>'+len_*'L', buff, 12)
-            b = bytearray(np.array(msg, dtype='uint32'))
-            if type_ == 0:  # LNAV
-                if self.flg_rnxnav:
-                    eph = self.rn.decode_gps_lnav(self.week, time_, sat, b)
-                    if eph is not None:
-                        self.re.rnx_nav_body(eph, self.fh_rnxnav)
-                if self.flg_qzslnav:
-                    self.fh_qzslnav.write(
-                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
-                        format(self.week, time_, prn, type_, len_*4,
-                               hexlify(b).decode()))
-            # data=st.unpack('L'*len_,buff[13:13+len_*4])
+            self.decode_nd(buff, sys=uGNSS.QZS)
+
         elif head == 'xd':  # QZSS L6 Message Data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
             if self.monlevel >= 1:
@@ -397,45 +419,47 @@ class jps(rcvDec):
         elif head == 'cd':  # BeiDou Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
             time_ = (time_ + 14) % 604800  # BDST -> GPST
+            ch = type_ & 0x3f
+            B2bq = (type_ >> 6) & 1
+            D2 = (type_ >> 7) & 1
             if self.monlevel >= 2:
-                s = "{:2d} B2bq:{:1d} D2-GEO:{:1d}". \
-                    format(type_ & 0x3f, (type_ >> 6) & 1, (type_ >> 7) & 1)
+                s = "{:2d} B2bq:{:1d} D2-GEO:{:1d}".format(ch, B2bq, D2)
                 print("[cd] prn={:2d} tow={:6d} type={:s} len={:d}".
                       format(prn, time_, s, len_))
+
+            # type_[0:5] 0:B1,1:B2,2:B3,3:B1C,5:B2a,6:B2b
             msg = st.unpack_from('>'+len_*'L', buff, 12)
             b = bytearray(np.array(msg, dtype='uint32'))
-            if (type_ & 0x3f) == 3:  # B1C
-                if self.flg_bdsb1c and self.week >= 0:
-                    if self.flg_rnxnav:
-                        eph = self.rn.decode_bds_b1c(self.week, time_, prn, b)
-                        if eph is not None:
-                            self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
-            if prn >= 59 and (type_ & 0x3f) == 6:  # B2b: BDS PPP
-                if self.flg_bdsb2b and self.week >= 0:
-                    self.fh_bdsb2b.write(
-                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
-                        format(self.week, time_, prn, type_, len_*4,
-                               hexlify(b).decode()))
+            sat = prn2sat(uGNSS.BDS, prn)
+            if self.week < 0:
+                return
+
+            if self.flg_rnxnav:
+                eph = None
+                if ch == 0:  # B1 (D1/D2)
+                    if D2 == 0:
+                        eph = self.rn.decode_bds_d1(self.week, time_, sat, b)
+                    else:
+                        eph = self.rn.decode_bds_d2(self.week, time_, sat, b)
+                elif ch == 3:  # B1C
+                    eph = self.rn.decode_bds_b1c(self.week, time_, sat, b)
+                elif ch == 5:  # B2a
+                    eph = self.rn.decode_bds_b2a(self.week, time_, sat, b)
+                elif ch == 6 and prn < 59 and B2bq == 0:  # B2b
+                    eph = self.rn.decode_bds_b2b(self.week, time_, sat, b, 0)
+
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
+
+            if ch == 6 and self.flg_bdsb2b and prn >= 59:  # B2b: BDS PPP
+                self.fh_bdsb2b.write(
+                    "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
+                    format(self.week, time_, prn, type_, len_*4,
+                           hexlify(b).decode()))
 
         elif head == 'gd':  # GPS Navigation data
-            prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
-            sat = prn2sat(uGNSS.GPS, prn)
-            if self.monlevel >= 2:
-                print("[gd] prn={:2d} tow={:6d} type={:d} len={:d}".
-                      format(prn, time_, type_, len_))
-            msg = st.unpack_from('>'+len_*'L', buff, 12)
-            b = bytearray(np.array(msg, dtype='uint32'))
-            if type_ == 0:  # LNAV
-                if self.flg_rnxnav:
-                    eph = self.rn.decode_gps_lnav(self.week, time_, sat, b)
-                    if eph is not None:
-                        self.re.rnx_nav_body(eph, self.fh_rnxnav)
-                if self.flg_gpslnav:
-                    self.fh_gpslnav.write(
-                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
-                        format(self.week, time_, prn, type_, len_*4,
-                               hexlify(b).decode()))
+            self.decode_nd(buff, sys=uGNSS.GPS)
 
         elif head == 'id':  # NavIC Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
@@ -447,6 +471,7 @@ class jps(rcvDec):
             if self.monlevel >= 2:
                 print("[ED] time={:6d} prn={:2d}".format(time_, prn))
 
+            # type_ = 0:E1B(INAV), 1:E5a(FNAV), 2:E5b(INAV), 6:E6(CNAV)
             if type_ == 0 or type_ == 2:  # INAV
                 b = buff[12:]
                 if self.flg_rnxnav:
@@ -459,7 +484,12 @@ class jps(rcvDec):
                         "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n"
                         .format(self.week, time_, prn, type_, len_,
                                 hexlify(b).decode()))
-
+            elif type_ == 1:  # FNAV
+                if self.flg_rnxnav:
+                    eph = self.rn.decode_gal_fnav(
+                        self.week, time_, sat, type_, buff[12:])
+                    if eph is not None:
+                        self.re.rnx_nav_body(eph, self.fh_rnxnav)
             elif type_ == 6:  # CNAV
                 if self.flg_gale6 and self.week >= 0:
                     self.fh_gale6.write(
@@ -693,8 +723,6 @@ blen = os.path.getsize(bdir+fname)
 
 opt = rcvOpt()
 opt.flg_qzsl6 = True
-opt.flg_qzslnav = False
-opt.flg_gpslnav = False
 opt.flg_gale6 = True
 opt.flg_galinav = True
 opt.flg_bdsb2b = True
