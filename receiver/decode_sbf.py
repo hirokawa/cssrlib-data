@@ -3,6 +3,9 @@ Septentrio Receiver SBF messages decoder
 
  [1] mosaic-X5 Reference Guide, Applicable to version 4.14.0
      of the Firmware, 2023
+     
+ [2] PolaRX5 Reference Guide, Applicable to version 5.5.0
+     of the Firmware, 2023
 
 @author Rui Hirokawa
 """
@@ -13,7 +16,7 @@ import os
 import struct as st
 
 from cssrlib.gnss import uGNSS, uTYP, prn2sat, Eph, Obs, rSigRnx, gpst2time
-from cssrlib.gnss import rCST, gst2time, pos2ecef
+from cssrlib.gnss import rCST, gst2time, pos2ecef, uSIG
 from cssrlib.rawnav import RawNav, rcvDec, rcvOpt
 from crccheck.crc import Crc16Xmodem
 import bitstruct.c as bs
@@ -26,6 +29,53 @@ class sbf(rcvDec):
 
     def __init__(self, opt=None, prefix='', gnss_t='GECJ'):
         super().__init__(opt, prefix, gnss_t)
+
+        # from 4.1.10 Signal Type [2]
+        sig_tbl = {
+            0: [uGNSS.GPS, uSIG.L1C],
+            1: [uGNSS.GPS, uSIG.L1W],
+            2: [uGNSS.GPS, uSIG.L2W],
+            3: [uGNSS.GPS, uSIG.L2L],
+            4: [uGNSS.GPS, uSIG.L5Q],
+            5: [uGNSS.GPS, uSIG.L1L],
+            6: [uGNSS.QZS, uSIG.L1C],
+            7: [uGNSS.QZS, uSIG.L2L],
+            8: [uGNSS.GLO, uSIG.L1C],
+            9: [uGNSS.GLO, uSIG.L1P],
+            10: [uGNSS.GLO, uSIG.L2P],
+            11: [uGNSS.GLO, uSIG.L2C],
+            12: [uGNSS.GLO, uSIG.L3Q],
+            13: [uGNSS.BDS, uSIG.L1P],
+            14: [uGNSS.BDS, uSIG.L5P],
+            15: [uGNSS.IRN, uSIG.L5A],
+            17: [uGNSS.GAL, uSIG.L1C],
+            19: [uGNSS.GAL, uSIG.L6C],
+            20: [uGNSS.GAL, uSIG.L5Q],
+            21: [uGNSS.GAL, uSIG.L7Q],
+            22: [uGNSS.GAL, uSIG.L8Q],
+            24: [uGNSS.SBS, uSIG.L1C],
+            25: [uGNSS.SBS, uSIG.L5I],
+            26: [uGNSS.QZS, uSIG.L5Q],
+            27: [uGNSS.QZS, uSIG.L6Z],
+            28: [uGNSS.BDS, uSIG.L2I],
+            29: [uGNSS.BDS, uSIG.L7I],
+            30: [uGNSS.BDS, uSIG.L6I],
+            32: [uGNSS.QZS, uSIG.L1L],
+            33: [uGNSS.QZS, uSIG.L1Z],
+            34: [uGNSS.BDS, uSIG.L7D],
+            38: [uGNSS.QZS, uSIG.L1E],
+            39: [uGNSS.QZS, uSIG.L5P],
+        }
+
+        self.sig_t = {}
+        for key in sig_tbl.keys():
+            s = sig_tbl[key]
+            self.sig_t[key] = {
+                uTYP.C: rSigRnx(s[0], uTYP.C, s[1]),
+                uTYP.L: rSigRnx(s[0], uTYP.L, s[1]),
+                uTYP.D: rSigRnx(s[0], uTYP.D, s[1]),
+                uTYP.S: rSigRnx(s[0], uTYP.S, s[1]),
+            }
 
         self.sig_t = {
             0: {uTYP.C: rSigRnx('GC1C'), uTYP.L: rSigRnx('GL1C'),
