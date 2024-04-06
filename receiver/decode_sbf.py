@@ -824,8 +824,8 @@ class sbf(rcvDec):
                 msg[76:109] = v[159:225]
                 msg[109] = bs.unpack_from('u8', v, 21)[0]
                 msg = bytes(msg)
-
-                eph = self.rn.decode_bds_b1c(self.week, self.tow, prn, msg)
+                sat = prn2sat(sys, prn)
+                eph = self.rn.decode_bds_b1c(self.week, self.tow, sat, msg)
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
