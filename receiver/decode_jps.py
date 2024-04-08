@@ -13,6 +13,7 @@ import struct as st
 import bitstruct.c as bs
 from cssrlib.gnss import epoch2time, time2gpst, prn2sat, uGNSS, uTYP, rSigRnx
 from cssrlib.rawnav import rcvDec, rcvOpt
+from glob import glob
 from enum import IntEnum
 from binascii import hexlify
 
@@ -717,10 +718,6 @@ fname = 'jav3244c.jps'
 bdir = '../data/doy223/'
 fname = 'jav3223v.jps'
 
-rtype = []
-
-blen = os.path.getsize(bdir+fname)
-
 opt = rcvOpt()
 opt.flg_qzsl6 = True
 opt.flg_gale6 = True
@@ -730,25 +727,31 @@ opt.flg_bdsb1c = True
 opt.flg_sbas = True
 opt.flg_rnxnav = True
 
-jps = jps(opt=opt, prefix=bdir+fname[4:].removesuffix('.jps')+'_')
-# jps.dec.mon_level = 2
-jps.monlevel = 2
-
 prn_ref = 199
 sbs_ref = -1
 
-if True:
+for f in glob(bdir+fnames):
+
+    print("Decoding {}".format(f))
+    bdir, fname = os.path.split(f)
+    bdir += '/'
+
+    prefix = bdir+fname[4:].removesuffix('.jps')+'_'
+    jpsdec = jps(opt=opt, prefix=bdir+fname[4:].removesuffix('.jps')+'_')
+    jpsdec.monlevel = 2
+
+    blen = os.path.getsize(bdir+fname)
     with open(bdir+fname, 'rb') as f:
         msg = f.read(blen)
         maxlen = len(msg)-5
         # maxlen = 400000
         for k in range(maxlen):
-            stat = jps.sync(msg, k)
+            stat = jpsdec.sync(msg, k)
             if not stat:
                 continue
             k += 1
             len_ = int(msg[k+2:k+5], 16)+5
-            jps.decode(msg[k:k+len_], len_)
+            jpsdec.decode(msg[k:k+len_], len_)
             k += len_
 
-    jps.file_close()
+    jpsdec.file_close()
