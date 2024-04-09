@@ -4,7 +4,6 @@ SSR correction conversion to SP3 file format
 
 from binascii import unhexlify
 import bitstruct as bs
-from copy import deepcopy
 from itertools import chain
 import numpy as np
 import os
@@ -167,10 +166,7 @@ elif "bdsb2b" in ssrfiles[0]:
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
     prn_ref = 59  # satellite PRN to receive BDS PPP collection
-
-    # NOTE: igs14 values seem to be yield better consistency with
-    #       CODE reference orbits
-    atxfile = baseDirName+'../data/igs14.atx'
+    atxfile = baseDirName+'../data/igs20.atx'
 
 else:
 
@@ -212,6 +208,8 @@ for dt in (-1, 0, +1):
 
     if os.path.exists(navfile):
         navfiles.append(navfile)
+    else:
+        print("WARNING: cannot find  {}".format(navfile))
 
 # Decode RINEX NAV data
 #
@@ -252,8 +250,8 @@ sats = set()
 
 # Set flags for adding additional biases
 #
-extClasBiases = False
-extBdsBiases = False
+extClasBiases = True
+extBdsBiases = True
 
 # Initialize HAS decoding
 #
@@ -306,7 +304,7 @@ for vi in v:
             cs.decode_cssr(HASmsg)
             hasNew = (ms_ == 2)  # only clock messages
             time = cs.time
-            
+
             rec = []
             mid_decoded += [mid_]
             mid_ = -1
@@ -340,11 +338,6 @@ for vi in v:
         buff = unhexlify(vi['nav'])
         cs.decode_cssr(buff, 0)
         hasNew = (tow % 10 == 0)
-
-        # Check message type
-        mt = bs.unpack_from('u6', buff, 0)[0]
-        if mt > 7:
-            continue
 
     else:
 
