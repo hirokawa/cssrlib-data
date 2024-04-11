@@ -543,7 +543,9 @@ class sbf(rcvDec):
                     k += 4
                 msg = bytes(msg)
 
-                eph = self.rn.decode_gps_lnav(self.week, self.time, sat, msg)
+                eph = self.rn.decode_gps_lnav(self.week, self.tow, sat, msg)
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num in (4018, 4019, 4067, 4068):  # GPSRawL2C/L5, QZSRawL2C/L5
             sys, prn = self.decode_head(buff, k)
