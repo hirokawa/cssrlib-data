@@ -707,7 +707,7 @@ P2_40 = 9.094947017729280e-13
 year = 2023
 
 bdir = '../data/doy223/'
-fname = 'jav3223v.jps'
+fnames = 'jav3223v.jps'
 
 opt = rcvOpt()
 opt.flg_qzsl6 = True
@@ -731,6 +731,9 @@ for f in glob(bdir+fnames):
     prefix = bdir+fname[4:].removesuffix('.jps')+'_'
     jpsdec = jps(opt=opt, prefix=bdir+fname[4:].removesuffix('.jps')+'_')
     jpsdec.monlevel = 2
+
+    jpsdec.re.anttype = "JAVRINGANT_DM   JVDM"
+    jpsdec.re.rectype = "JAVAD DELTA-3"
 
     blen = os.path.getsize(bdir+fname)
     with open(bdir+fname, 'rb') as f:

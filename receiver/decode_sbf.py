@@ -666,7 +666,7 @@ class sbf(rcvDec):
                     bs.pack_into('u8', msg_, 120+i*8, d)
                     k += 8
                 msg_ = bytes(msg_)
-                
+
                 eph = self.rn.decode_gal_inav(self.week, self.tow,
                                               sat, 2, msg_)
                 if self.mode_galinav == 0 and eph is not None:
@@ -1006,6 +1006,9 @@ if __name__ == "__main__":
         sbfdec.monlevel = 1
         nep = 0
         nep_max = 0
+
+        sbfdec.re.anttype = "JAVRINGANT_DM   JVDM"
+        sbfdec.re.rectype = "SEPT POLARX5        "
 
         blen = os.path.getsize(bdir+fname)
         with open(bdir+fname, 'rb') as f:
