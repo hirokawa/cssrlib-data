@@ -561,19 +561,21 @@ class sbf(rcvDec):
                               format(int(self.tow), prn, crcpass, cnt, src))
                     return -1
 
+                fh = self.fh_gpscnav if sys == uGNSS.GPS else self.fh_qzscnav
+
                 blen = (300+7)//8
-                self.fh_gpscnav.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
-                                      format(self.week, int(self.tow), prn,
-                                             src, blen))
+                fh.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                         format(self.week, int(self.tow), prn,
+                                src, blen))
                 msg = bytearray(40)
                 for i in range(10):
                     d = st.unpack_from('<L', buff, k)[0]
-                    self.fh_gpscnav.write("{:08x}".format(d))
+                    fh.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
                 msg = bytes(msg)
 
-                self.fh_gpscnav.write("\n")
+                fh.write("\n")
 
                 sat = prn2sat(sys, prn)
                 eph = self.rn.decode_gps_cnav(self.week, self.tow, sat, msg)
