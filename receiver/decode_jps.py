@@ -281,7 +281,7 @@ class jps(rcvDec):
             print("[{:s}] prn={:2d} tow={:6d} type={:d} len={:d}".
                   format(msg_, prn, time_, type_, len_))
         msg = st.unpack_from('>'+len_*'L', buff, 12)
-        b = bytearray(np.array(msg, dtype='uint32'))
+        b = bytes(np.array(msg, dtype='uint32'))
         # type_= 0: LNAV, 1:L2C CNAV, 2:L5 CNAV, 3: L1C CNAV2
 
         if self.flg_rnxnav:
@@ -301,6 +301,7 @@ class jps(rcvDec):
                 for k in range(35):
                     b_ = bs.unpack_from('u8', b, k*8+609)[0]
                     bs.pack_into('u8', msg, k*8+1252, b_)
+                msg = bytes(msg)
                 eph = self.rn.decode_gps_cnav2(self.week, time_, sat, msg)
             if eph is not None:
                 self.re.rnx_nav_body(eph, self.fh_rnxnav)
@@ -430,7 +431,7 @@ class jps(rcvDec):
 
             # type_[0:5] 0:B1,1:B2,2:B3,3:B1C,5:B2a,6:B2b
             msg = st.unpack_from('>'+len_*'L', buff, 12)
-            b = bytearray(np.array(msg, dtype='uint32'))
+            b = bytes(np.array(msg, dtype='uint32'))
 
             sat = prn2sat(uGNSS.BDS, prn)
             if self.week < 0:
@@ -703,17 +704,7 @@ P2_40 = 9.094947017729280e-13
 # set,/par/lock/sig/qzss/l6,n
 # set,/par/lock/sig/qzss/l6/193,y
 
-
-# bdir='d:/work/log/javad/'
-bdir = '../log/'
-bdir = 'C:/work/gps/cssrlib-data/data/'
-bdir += 'doy244/'
-
 year = 2023
-
-# fname = 'jav3223w.jps'
-fname = 'jav3244c.jps'
-
 
 bdir = '../data/doy223/'
 fname = 'jav3223v.jps'
@@ -722,9 +713,10 @@ opt = rcvOpt()
 opt.flg_qzsl6 = True
 opt.flg_gale6 = True
 opt.flg_galinav = True
+opt.flg_galfnav = True
 opt.flg_bdsb2b = True
 opt.flg_bdsb1c = True
-opt.flg_sbas = True
+opt.flg_sbas = False
 opt.flg_rnxnav = True
 
 prn_ref = 199
