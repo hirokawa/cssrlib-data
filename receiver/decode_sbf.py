@@ -3,7 +3,7 @@ Septentrio Receiver SBF messages decoder
 
  [1] mosaic-X5 Reference Guide, Applicable to version 4.14.0
      of the Firmware, 2023
-     
+
  [2] PolaRX5 Reference Guide, Applicable to version 5.5.0
      of the Firmware, 2023
 
@@ -541,8 +541,11 @@ class sbf(rcvDec):
                     d = st.unpack_from('<L', buff, k)[0]
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                msg = bytes(msg)
 
-                eph = self.rn.decode_gps_lnav(self.week, self.time, sat, msg)
+                eph = self.rn.decode_gps_lnav(self.week, self.tow, sat, msg)
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num in (4018, 4019, 4067, 4068):  # GPSRawL2C/L5, QZSRawL2C/L5
             sys, prn = self.decode_head(buff, k)
@@ -558,21 +561,24 @@ class sbf(rcvDec):
                               format(int(self.tow), prn, crcpass, cnt, src))
                     return -1
 
+                fh = self.fh_gpscnav if sys == uGNSS.GPS else self.fh_qzscnav
+
                 blen = (300+7)//8
-                self.fh_gpscnav.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
-                                      format(self.week, int(self.tow), prn,
-                                             src, blen))
+                fh.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                         format(self.week, int(self.tow), prn,
+                                src, blen))
                 msg = bytearray(40)
                 for i in range(10):
                     d = st.unpack_from('<L', buff, k)[0]
-                    self.fh_gpscnav.write("{:08x}".format(d))
+                    fh.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
-                self.fh_gpscnav.write("\n")
+                msg = bytes(msg)
+
+                fh.write("\n")
 
                 sat = prn2sat(sys, prn)
-                eph = self.rn.decode_gps_cnav(
-                    self.week, self.tow, sat, msg)
+                eph = self.rn.decode_gps_cnav(self.week, self.tow, sat, msg)
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
@@ -589,8 +595,7 @@ class sbf(rcvDec):
                               format(int(self.tow), prn, crcpass, cnt, src))
                     return -1
                 self.fh_sbas.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
-                                   format(self.week, self.tow, prn, src-24,
-                                          32))
+                                   format(self.week, self.tow, prn, src-24, 32))
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
                     self.fh_sbas.write("{:08x}".format(d))
@@ -612,18 +617,18 @@ class sbf(rcvDec):
                     return -1
 
                 self.fh_galfnav.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
-                                      format(self.week, self.tow, prn,
-                                             src, 32))
+                                      format(self.week, self.tow, prn, src, 32))
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
                     self.fh_galfnav.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                msg = bytes(msg)
+
                 self.fh_galfnav.write("\n")
 
-                eph = self.rn.decode_gal_fnav(
-                    self.week, self.tow, sat, 1, msg)
+                eph = self.rn.decode_gal_fnav(self.week, self.tow, sat, 1, msg)
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
@@ -660,9 +665,10 @@ class sbf(rcvDec):
                     d = bs.unpack_from('u8', bytes(msg), k)[0]
                     bs.pack_into('u8', msg_, 120+i*8, d)
                     k += 8
+                msg_ = bytes(msg_)
 
-                eph = self.rn.decode_gal_inav(
-                    self.week, self.tow, sat, 2, msg_)
+                eph = self.rn.decode_gal_inav(self.week, self.tow,
+                                              sat, 2, msg_)
                 if self.mode_galinav == 0 and eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
@@ -707,10 +713,11 @@ class sbf(rcvDec):
                     d = st.unpack_from('<L', buff, k)[0]
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                msg = bytes(msg)
 
                 sat = prn2sat(sys, prn)
-                geph = self.rn.decode_glo_fdma(
-                    self.week, self.tow, sat, msg, freq)
+                geph = self.rn.decode_glo_fdma(self.week, self.tow,
+                                               sat, msg, freq)
                 if geph is not None:
                     self.re.rnx_gnav_body(geph, self.fh_rnxnav)
 
@@ -739,6 +746,7 @@ class sbf(rcvDec):
                     d = st.unpack_from('<L', buff, k)[0]
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                msg = bytes(msg)
 
                 sat = prn2sat(sys, prn)
                 eph = self.rn.decode_bds_d1(self.week, self.tow, sat, msg)
@@ -784,6 +792,7 @@ class sbf(rcvDec):
                     d = st.unpack_from('<L', buff, k)[0]
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                msg = bytes(msg)
 
                 sat = prn2sat(sys, prn)
                 eph = self.rn.decode_irn_lnav(self.week, self.tow, sat, msg)
@@ -811,7 +820,6 @@ class sbf(rcvDec):
                     st.pack_into('>L', v, i*4, d)
                     # self.fh_bdsb1c.write("{:08x}".format(d))
                 # self.fh_bdsb1c.write("\n")
-
                 v = bytes(v)
                 prn_ = bs.unpack_from('u6', v, 0)[0]
                 if prn != prn_:
@@ -824,6 +832,7 @@ class sbf(rcvDec):
                 msg[76:109] = v[159:225]
                 msg[109] = bs.unpack_from('u8', v, 21)[0]
                 msg = bytes(msg)
+
                 sat = prn2sat(sys, prn)
                 eph = self.rn.decode_bds_b1c(self.week, self.tow, sat, msg)
                 if eph is not None:
@@ -847,6 +856,7 @@ class sbf(rcvDec):
                     d = st.unpack_from('<L', buff, k)[0]
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                msg = bytes(msg)
 
                 sat = prn2sat(sys, prn)
                 eph = self.rn.decode_bds_b2a(self.week, self.tow, sat, msg)
@@ -878,11 +888,12 @@ class sbf(rcvDec):
                     self.fh_qzscnav2.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                msg = bytes(msg)
+
                 self.fh_qzscnav2.write("\n")
 
                 sat = prn2sat(sys, prn)
-                eph = self.rn.decode_gps_cnav2(
-                    self.week, self.tow, sat, msg)
+                eph = self.rn.decode_gps_cnav2(self.week, self.tow, sat, msg)
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
@@ -909,7 +920,6 @@ class sbf(rcvDec):
                 # 984 symbols of a BeiDou B2b navigation frame
                 # 8 unused bits in NAVBits[30]
                 msg = bytearray(64)
-
                 for i in range(16):
                     d = st.unpack_from('<L', buff, k)[0]
                     st.pack_into('>L', msg, i*4, d)
@@ -923,13 +933,13 @@ class sbf(rcvDec):
                                 "{:05x}{:06x}".format((d >> 12) & 0xffffc, 0))
                         else:
                             self.fh_bdsb2b.write("{:08x}".format(d))
+                msg = bytes(msg)
 
                 if flg_bdsppp:
                     self.fh_bdsb2b.write("\n")
                 else:  # B2b-CNAV3
                     sat = prn2sat(sys, prn)
-                    eph = self.rn.decode_bds_b2b(
-                        self.week, self.tow, sat, msg)
+                    eph = self.rn.decode_bds_b2b(self.week, self.tow, sat, msg)
                     if eph is not None:
                         self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
@@ -949,8 +959,8 @@ class sbf(rcvDec):
 
 if __name__ == "__main__":
 
-    bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/')
-    fnames = 'sep3238*.sbf'
+    bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/_sbf/')
+    fnames = 'sep3238a.sbf'
 
     gnss_t = 'GERCJ'
 
@@ -964,23 +974,23 @@ if __name__ == "__main__":
     # fnames = 'sept308b.sbf'
 
     opt = rcvOpt()
-    opt.flg_qzsl6 = False
-    opt.flg_qzslnav = False
-    opt.flg_gpslnav = False
-    opt.flg_qzscnav = False
-    opt.flg_gpscnav = False
-    opt.flg_qzscnav2 = False
-    opt.flg_gpscnav2 = False
+    opt.flg_qzsl6 = True
+    opt.flg_qzslnav = True
+    opt.flg_gpslnav = True
+    opt.flg_qzscnav = True
+    opt.flg_gpscnav = True
+    opt.flg_qzscnav2 = True
+    opt.flg_gpscnav2 = True
     opt.flg_gale6 = True
     opt.flg_galinav = True
     opt.flg_galfnav = True
-    opt.flg_bdsb1c = False
-    opt.flg_bdsb2a = False
+    opt.flg_bdsb1c = True
+    opt.flg_bdsb2a = True
     opt.flg_bdsb2b = True
-    opt.flg_bdsd12 = False
+    opt.flg_bdsd12 = True
     opt.flg_gloca = True
     opt.flg_irnnav = False
-    opt.flg_sbas = True
+    opt.flg_sbas = False
     opt.flg_rnxnav = True
     opt.flg_rnxobs = True
 
@@ -996,6 +1006,9 @@ if __name__ == "__main__":
         sbfdec.monlevel = 1
         nep = 0
         nep_max = 0
+
+        sbfdec.re.anttype = "JAVRINGANT_DM   JVDM"
+        sbfdec.re.rectype = "SEPT POLARX5        "
 
         blen = os.path.getsize(bdir+fname)
         with open(bdir+fname, 'rb') as f:
