@@ -173,12 +173,6 @@ else:
     print("ERROR: unkown SSR format for {}!".format(ssrfiles[0]))
     sys.exit(1)
 
-# Load SSR corrections
-#
-v = np.array([], dtype=dtype)
-for ssrfile in ssrfiles:
-    v = np.append(v, np.genfromtxt(ssrfile, dtype=dtype))
-
 # Output files
 #
 orbfile = '{}_{:4d}{:03d}{:02d}00_01D_{}_ORB.SP3'\
@@ -218,20 +212,26 @@ for navfile in navfiles:
 
 # Setup SSR decoder
 #
-if 'gale6' in ssrfile:
+if 'gale6' in ssrfiles[0]:
     cs = cssr_has()
     file_gm = baseDirName+'Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt'
     gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
-elif 'qzsl6' in ssrfile:
+elif 'qzsl6' in ssrfiles[0]:
     cs = cssr()
     cs.cssrmode = sc.QZS_MADOCA
-elif "bdsb2b" in ssrfile:
+elif "bdsb2b" in ssrfiles[0]:
     cs = cssr_bds()
 else:
-    print("ERROR: unkown SSR format for {}!".format(ssrfile))
+    print("ERROR: unkown SSR format for {}!".format(ssrfiles[0]))
     sys.exit(1)
 
 cs.monlevel = 0
+
+# Load SSR corrections
+#
+v = np.array([], dtype=dtype)
+for ssrfile in ssrfiles:
+    v = np.append(v, np.genfromtxt(ssrfile, dtype=dtype))
 
 # Load ANTEX data for satellites and stations
 #
@@ -275,7 +275,9 @@ for vi in v:
     cs.week = week
     cs.tow0 = tow//3600*3600
 
-    if 'gale6' in ssrfile:
+    hasNew = False
+
+    if cs.cssrmode == sc.GAL_HAS_SIS:
 
         buff = unhexlify(vi['nav'])
         i = 14
@@ -317,7 +319,7 @@ for vi in v:
                 rec = []
                 mid_ = -1
 
-    elif 'qzsl6' in ssrfile:
+    elif cs.cssrmode == sc.QZS_MADOCA:
 
         if vi['type'] != l6_ch or vi['prn'] != prn_ref:
             continue
@@ -330,7 +332,7 @@ for vi in v:
             hasNew = True
             time = cs.time
 
-    elif "bdsb2b" in ssrfile:
+    elif cs.cssrmode == sc.BDS_PPP:
 
         if vi['prn'] != prn_ref:
             continue
@@ -391,16 +393,6 @@ for vi in v:
                     print("ERROR: invalid sytem {}".format(sys2str(sys)))
                     continue
 
-            elif cs.cssrmode == sc.GAL_HAS_IDD:
-
-                if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1C"),)
-                elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"),)
-                else:
-                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
-                    continue
-
             elif cs.cssrmode == sc.BDS_PPP:
 
                 if sys == ug.GPS:
@@ -446,8 +438,7 @@ for vi in v:
 
                 # Fix GPS L2 P(Y) signal code for Galileo HAS
                 #
-                if cs.cssrmode in (sc.GAL_HAS_SIS, sc.GAL_HAS_IDD) and \
-                        rSigRnx('GC2P') == sig_:
+                if cs.cssrmode == sc.GAL_HAS_SIS and rSigRnx('GC2P') == sig_:
                     sig_ = sig_.toAtt('W')
 
                 if sat_ not in biases.keys():
