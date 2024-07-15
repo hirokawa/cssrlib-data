@@ -19,11 +19,11 @@ from cssrlib.rtcm import rtcm
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
-
+icase = 2
 # Start epoch and number of epochs
 #
 
-if True:
+if icase == 1:  # Galileo HAS IDD
     ep = [2023, 8, 17, 2, 0, 0]
     navfile = '../data/doy229/OBE42023229c.nav'
     # navfile = '../data/doy229/BRD400DLR_S_20232290000_01D_MN.rnx'
@@ -31,12 +31,20 @@ if True:
     xyz_ref = [4186704.2262, 834903.7677, 4723664.9337]
     file_rtcm = '../data/doy229/idd2023229c.rtc'
     file_rtcm_log = '../data/doy229/idd2023229c.log'
+elif icase == 2:  # JPL GDGPS  Mosaic-X5
+    ep = [2024, 2, 12, 7, 0, 0]
+    navfile = '../data/doy2024-043/043h_rnx.nav'
+    # navfile = '../data/doy2024-043/BRD400DLR_S_20240430000_01D_MN.rnx'
+    obsfile = '../data/doy2024-043/043h_rnx.obs'
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+    file_rtcm = '../data/doy2024-043/JPL32T2043h.rtcm3'
+    file_rtcm_log = '../data/doy2024-043/JPL32T2043h.log'
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900
+nep = 900*4
 
 
 # Set user reference position
@@ -45,16 +53,33 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-gnss = "GE"
-sigs = []
-if 'G' in gnss:
-    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
-                 rSigRnx("GL1C"), rSigRnx("GL2W"),
-                 rSigRnx("GS1C"), rSigRnx("GS2W")])
-if 'E' in gnss:
-    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC7Q"),
-                 rSigRnx("EL1C"), rSigRnx("EL7Q"),
-                 rSigRnx("ES1C"), rSigRnx("ES7Q")])
+
+if icase == 1:
+
+    gnss = "GE"
+    sigs = []
+    if 'G' in gnss:
+        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                     rSigRnx("GL1C"), rSigRnx("GL2W"),
+                     rSigRnx("GS1C"), rSigRnx("GS2W")])
+    if 'E' in gnss:
+        sigs.extend([rSigRnx("EC1C"), rSigRnx("EC7Q"),
+                     rSigRnx("EL1C"), rSigRnx("EL7Q"),
+                     rSigRnx("ES1C"), rSigRnx("ES7Q")])
+
+elif icase == 2:
+
+    gnss = "GE"
+    sigs = []
+    if 'G' in gnss:
+        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                     rSigRnx("GL1C"), rSigRnx("GL2W"),
+                     rSigRnx("GS1C"), rSigRnx("GS2W")])
+    if 'E' in gnss:
+        sigs.extend([rSigRnx("EC1C"), rSigRnx("EC7Q"),
+                     rSigRnx("EL1C"), rSigRnx("EL7Q"),
+                     rSigRnx("ES1C"), rSigRnx("ES7Q")])
+
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -71,8 +96,12 @@ nav.pmode = 0
 nav = rnx.decode_nav(navfile, nav)
 
 cs = rtcm(file_rtcm_log)
-cs.monlevel = 0
-cs.cssrmode = sCSSRTYPE.GAL_HAS_IDD
+cs.monlevel = 1
+cs.cssrmode = sCSSRTYPE.RTCM3_SSR
+cs.inet = 0
+
+if icase == 2:  # mask phase-bias for JPL GDGPS
+    cs.mask_pbias = True
 
 if True:
     fc = open(file_rtcm, 'rb')
@@ -300,7 +329,7 @@ elif fig_type == 2:
     # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_ppphas', plotFileFormat))
+plotFileName = '.'.join(('test_ppprtcm', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 # plt.show()

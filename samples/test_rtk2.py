@@ -10,7 +10,7 @@ import cssrlib.gnss as gn
 
 from cssrlib.gnss import rSigRnx
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.rtk import rtkinit, relpos
+from cssrlib.rtk import rtkpos
 
 atxfile = '../data/igs14.atx'
 navfile = '../data/SEPT2650.21P'
@@ -66,7 +66,7 @@ smode = np.zeros(nep, dtype=int)
 rr0 = [-3961951.1326752,  3381198.11019757,  3668916.0417232]  # from pntpos
 pos_ref = gn.ecef2pos(xyz_ref)
 
-rtkinit(nav, rr0)
+rtk = rtkpos(nav, rr0, 'test_rtk2.log')
 rr = rr0
 
 # Load ANTEX data for satellites and stations
@@ -101,7 +101,7 @@ for ne in range(nep):
     obs, obsb = rn.sync_obs(dec, decb)
     if ne == 0:
         t0 = nav.t = obs.t
-    relpos(nav, obs, obsb)
+    rtk.process(obs, obsb=obsb)
     t[ne] = gn.timediff(nav.t, t0)
     sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
     enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)

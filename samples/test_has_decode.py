@@ -45,8 +45,8 @@ file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 
 gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 
-dec = cssr_has()
-dec.mon_level = 2
+dec = cssr_has('test_has_decode.log')
+dec.monlevel = 2
 
 # example 1 MS=15 mask/orbit/cbias/pbias
 rec, has_pages = parse_has_data_sample(file, 1)
