@@ -482,6 +482,7 @@ class sbf(rcvDec):
             e5a_dvs, e5a_hs = 0, 0
 
         eph.svh = (e5b_hs << 7) | (e5b_dvs << 6) | (e1b_hs << 1) | (e1b_dvs)
+        eph.svh |= (e5a_hs << 4) | (e5a_dvs << 3)
 
         return eph
 
@@ -529,20 +530,29 @@ class sbf(rcvDec):
             k += 7
             crcpass, _, src, _, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
-            if self.flg_gpslnav:
+            if (self.flg_gpslnav and sys == uGNSS.GPS) or \
+                    (self.flg_qzslnav and sys == uGNSS.QZS):
                 if crcpass != 1:
                     if self.monlevel > 0:
                         print("crc error in GPSRawCA/QZSRawCA " +
                               "{:6d}\t{:2d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, src))
                     return -1
+
+                fh_ = self.fh_gpslnav if sys == uGNSS.GPS else self.fh_qzslnav
+
+                blen = (300+7)//8
+                fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                          format(self.week, int(self.tow), prn, src, blen))
+
                 msg = bytearray(40)
                 for i in range(10):
                     d = st.unpack_from('<L', buff, k)[0]
+                    fh_.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+                fh_.write("\n")
                 msg = bytes(msg)
-
                 eph = self.rn.decode_gps_lnav(self.week, self.tow, sat, msg)
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
@@ -561,21 +571,20 @@ class sbf(rcvDec):
                               format(int(self.tow), prn, crcpass, cnt, src))
                     return -1
 
-                fh = self.fh_gpscnav if sys == uGNSS.GPS else self.fh_qzscnav
+                fh_ = self.fh_gpscnav if sys == uGNSS.GPS else self.fh_qzscnav
 
                 blen = (300+7)//8
-                fh.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
-                         format(self.week, int(self.tow), prn,
-                                src, blen))
+                fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                          format(self.week, int(self.tow), prn,
+                                 src, blen))
                 msg = bytearray(40)
                 for i in range(10):
                     d = st.unpack_from('<L', buff, k)[0]
-                    fh.write("{:08x}".format(d))
+                    fh_.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
                 msg = bytes(msg)
-
-                fh.write("\n")
+                fh_.write("\n")
 
                 sat = prn2sat(sys, prn)
                 eph = self.rn.decode_gps_cnav(self.week, self.tow, sat, msg)
@@ -594,8 +603,9 @@ class sbf(rcvDec):
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
                     return -1
-                self.fh_sbas.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
-                                   format(self.week, self.tow, prn, src-24, 32))
+                self.fh_sbas.write(
+                    "{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
+                    format(self.week, self.tow, prn, src-24, 32))
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
                     self.fh_sbas.write("{:08x}".format(d))
@@ -613,11 +623,13 @@ class sbf(rcvDec):
                     if self.monlevel > 0:
                         print("crc error in GALRawFNAV " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
-                              format(int(self.tow), prn, crcpass, cnt, src & 0x1f))
+                              format(int(self.tow), prn, crcpass,
+                                     cnt, src & 0x1f))
                     return -1
 
                 self.fh_galfnav.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
-                                      format(self.week, self.tow, prn, src, 32))
+                                      format(self.week, self.tow,
+                                             prn, src, 32))
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
@@ -643,7 +655,8 @@ class sbf(rcvDec):
                     if self.monlevel > 0:
                         print("crc error in GALRawINAV " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
-                              format(int(self.tow), prn, crcpass, cnt, src & 0x1f))
+                              format(int(self.tow), prn, crcpass,
+                                     cnt, src & 0x1f))
                     return -1
 
                 self.fh_galinav.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
@@ -878,19 +891,20 @@ class sbf(rcvDec):
                                      crcsf2 << 1 | crcsf3, cnt, src))
                     return -1
 
+                fh_ = self.fh_gpscnav2 if sys == uGNSS.GPS \
+                    else self.fh_qzscnav2
+
                 blen = (1800+7)//8
-                self.fh_qzscnav2.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
-                                       format(self.week, int(self.tow), prn,
-                                              src, blen))
+                fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                          format(self.week, int(self.tow), prn, src, blen))
                 msg = bytearray(228)
                 for i in range(57):
                     d = st.unpack_from('<L', buff, k)[0]
-                    self.fh_qzscnav2.write("{:08x}".format(d))
+                    fh_.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
                 msg = bytes(msg)
-
-                self.fh_qzscnav2.write("\n")
+                fh_.write("\n")
 
                 sat = prn2sat(sys, prn)
                 eph = self.rn.decode_gps_cnav2(self.week, self.tow, sat, msg)
