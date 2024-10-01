@@ -292,9 +292,9 @@ if fig_type == 1:
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
-        plt.plot_date(t[idx0], enu[idx0, k], 'r.')
-        plt.plot_date(t[idx5], enu[idx5, k], 'y.')
-        plt.plot_date(t[idx4], enu[idx4, k], 'g.')
+        plt.plot(t[idx0], enu[idx0, k], 'r.')
+        plt.plot(t[idx5], enu[idx5, k], 'y.')
+        plt.plot(t[idx4], enu[idx4, k], 'g.')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
@@ -302,9 +302,9 @@ if fig_type == 1:
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
-    plt.plot_date(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot_date(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot_date(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
+    plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
+    plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
+    plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))

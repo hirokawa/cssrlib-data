@@ -278,9 +278,9 @@ if fig_type == 1:
         ylim = ylim_h if k < 2 else ylim_v
 
         plt.subplot(3, 1, k+1)
-        plt.plot_date(t[idx0], enu[idx0, k], 'r.', label='none')
-        plt.plot_date(t[idx2], enu[idx2, k], 'y.', label='SBAS/DGPS')
-        plt.plot_date(t[idx1], enu[idx1, k], 'g.', label='standalone')
+        plt.plot(t[idx0], enu[idx0, k], 'r.', label='none')
+        plt.plot(t[idx2], enu[idx2, k], 'y.', label='SBAS/DGPS')
+        plt.plot(t[idx1], enu[idx1, k], 'g.', label='standalone')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
