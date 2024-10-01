@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
 from os.path import exists
-from sys import stdout, exit
+import sys
+from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
@@ -128,7 +129,7 @@ else:
 atx = atxdec()
 atx.readpcv(atxfile)
 
-# Intialize data structures for results
+# Initialize data structures for results
 #
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
@@ -167,16 +168,28 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-
-    # Set PCO/PCV information
+    # Set satellite PCO/PCV information
     #
     nav.sat_ant = atx.pcvs
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+
+    # Set receiver PCO/PCV information, check antenna name and exit if unknown
+    #
+    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    #       receiver antenna corrections!
+    #
+    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
+        sys.exit(1)
+    else:
+        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+        if nav.rcv_ant is None:
+            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                           .format(rnx.ant))
+            sys.exit(1)
+
     if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
+        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
+        nav.fout.write("\n")
 
     # Print available signals
     #

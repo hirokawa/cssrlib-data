@@ -4,6 +4,7 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -99,15 +100,28 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
+    # Set satellite PCO/PCV information
+    #
+    nav.sat_ant = atx.pcvs
+
+    # Set receiver PCO/PCV information, check antenna name and exit if unknown
+    #
+    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    #       receiver antenna corrections!
+    #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
+        sys.exit(1)
+    else:
+        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+        if nav.rcv_ant is None:
+            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                           .format(rnx.ant))
+            sys.exit(1)
 
-    # Set PCO/PCV information
-    #
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
+        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
+        nav.fout.write("\n")
 
     # Print available signals
     #
@@ -134,7 +148,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     if l6_mode == 1:
         fc = open(l6file, 'rb')
         if not fc:
-            nav.fout.write("ERROR: cannot open L6 messsage file {}!"
+            nav.fout.write("ERROR: cannot open L6 message file {}!"
                            .format(l6file))
             sys.exit(-1)
     else:
