@@ -29,6 +29,7 @@ dataset = 0
 
 # Start epoch and number of epochs
 #
+fromSbfConvert = False
 if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
@@ -54,9 +55,22 @@ nep = 900*4
 
 # Load SSR correction file
 #
-dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
-v = np.genfromtxt(file_has, dtype=dtype)
+if fromSbfConvert:
+
+    dtype = [('tow', 'float64'), ('wn', 'int'),  ('prn', 'S3'),
+             ('validity', 'object'), ('num1', 'int'), ('signal', 'object'),
+             ('num2', 'int'), ('num3', 'int'), ('nav', 'S144')]
+    v = np.genfromtxt(file_has, dtype=dtype, delimiter=',')
+    v = v[v['validity'] == b'Passed']
+    # Eliminate whitespace
+    for i, nav in enumerate(v['nav']):
+        v[i]['nav'] = (b''.join(nav.split()))
+
+else:
+
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+    v = np.genfromtxt(file_has, dtype=dtype)
 
 # Define signals to be processed
 #
