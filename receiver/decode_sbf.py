@@ -494,8 +494,8 @@ class sbf(rcvDec):
         blk_rev = (id_ >> 13) & 0x7
         if self.monlevel > 1 and blk_num not in \
            (4002, 4004, 4006, 4007, 4017, 4018, 4019, 4020, 4021, 4022, 4023,
-            4024, 4026, 4027, 4036, 4047, 4066, 4067, 4068, 4081, 4093, 4095,
-                4218, 4219, 4242, 5891, 5894, 5896):
+            4024, 4026, 4027, 4036, 4047, 4066, 4067, 4068, 4069, 4081, 4093,
+                4095, 4218, 4219, 4228, 4242, 4246, 5891, 5894, 5896):
             print("block_num = {:d} rev={:d} len={:d}".format(
                 blk_num, blk_rev, len_))
 
@@ -604,7 +604,7 @@ class sbf(rcvDec):
                               format(int(self.tow), prn, crcpass, cnt, src))
                     return -1
                 self.fh_sbas.write(
-                    "{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
+                    "{:4d}\t{:6.1f}\t{:3d}\t{:2d}\t{:3d}\t".
                     format(self.week, self.tow, prn, src-24, 32))
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
@@ -911,6 +911,40 @@ class sbf(rcvDec):
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
+        elif blk_num in (4228, 4246):  # QZSRawL1S, QZSRawL5S
+            src_t = {24: 0, 25: 1, 33: 2, 39: 3}  # L1C/A, L5, L1S, L5S
+            sys, prn = self.decode_head(buff, k)
+            k += 7
+            crc, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
+            k += 5
+            if sys == uGNSS.QZS and (self.flg_qzsl1s or self.flg_qzsl5s):
+                if crc != 1:
+                    if self.monlevel > 0:
+                        print("crc error in QZSRawL1S, QZSRawL5S " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crc, cnt, src))
+                    return -1
+
+                if src not in src_t.keys():
+                    if self.monlevel > 0:
+                        print("src not recgonised in QZSRawL1S/QZSRawL5S " +
+                              "{:2d}".format(src))
+                    return -1
+
+                fh_ = self.fh_sbas
+
+                blen = (250+7)//8
+                fh_.write("{:4d}\t{:6.1f}\t{:3d}\t{:2d}\t{:3d}\t".
+                          format(self.week, self.tow, prn, src_t[src], blen))
+
+                msg = bytearray(32)
+                for i in range(8):
+                    d = st.unpack_from('<L', buff, k)[0]
+                    fh_.write("{:08x}".format(d))
+                    st.pack_into('>L', msg, i*4, d)
+                    k += 4
+                fh_.write("\n")
+
         elif blk_num == 4242:  # BDSRawB2b
             sys, prn = self.decode_head(buff, k)
             k += 7
@@ -995,6 +1029,8 @@ if __name__ == "__main__":
     opt.flg_gpscnav = True
     opt.flg_qzscnav2 = True
     opt.flg_gpscnav2 = True
+    opt.flg_qzsl1s = False
+    opt.flg_qzsl5s = False
     opt.flg_gale6 = True
     opt.flg_galinav = True
     opt.flg_galfnav = True
