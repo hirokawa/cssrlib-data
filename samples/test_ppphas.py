@@ -1,12 +1,15 @@
 """
- static test for PPP (Galileo HAS)
+ static test for PPP (Galileo HAS SIS)
 """
+
 from binascii import unhexlify
 import bitstruct as bs
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
+from os.path import expanduser
+import sys
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -19,35 +22,55 @@ from cssrlib.cssr_has import cssr_has
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
+
+# Select test case
+#
+dataset = 0
+
 # Start epoch and number of epochs
 #
-
-if False:
+fromSbfConvert = False
+if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     navfile = '../data/SEPT1890.23P'
     obsfile = '../data/SEPT1890.23O'
     file_has = '../data/gale6_189e.txt'
-else:
+elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     navfile = '../data/doy223/NAV223.23p'
     # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_has = '../data/doy223/223v_gale6.txt'
 
+# Convert epoch and user reference position
+#
+pos_ref = ecef2pos(xyz_ref)
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
 nep = 900*4
 
-dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
-v = np.genfromtxt(file_has, dtype=dtype)
-
-# Set user reference position
+# Load SSR correction file
 #
-xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-pos_ref = ecef2pos(xyz_ref)
+if fromSbfConvert:
+
+    dtype = [('tow', 'float64'), ('wn', 'int'),  ('prn', 'S3'),
+             ('validity', 'object'), ('num1', 'int'), ('signal', 'object'),
+             ('num2', 'int'), ('num3', 'int'), ('nav', 'S144')]
+    v = np.genfromtxt(file_has, dtype=dtype, delimiter=',')
+    v = v[v['validity'] == b'Passed']
+    # Eliminate whitespace
+    for i, nav in enumerate(v['nav']):
+        v[i]['nav'] = (b''.join(nav.split()))
+
+else:
+
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+    v = np.genfromtxt(file_has, dtype=dtype)
 
 # Define signals to be processed
 #
@@ -92,7 +115,7 @@ atxfile = '../data/igs14.atx'
 atx = atxdec()
 atx.readpcv(atxfile)
 
-# Intialize data structures for results
+# Initialize data structures for results
 #
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
@@ -127,16 +150,28 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-
-    # Set PCO/PCV information
+    # Set satellite PCO/PCV information
     #
     nav.sat_ant = atx.pcvs
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+
+    # Set receiver PCO/PCV information, check antenna name and exit if unknown
+    #
+    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    #       receiver antenna corrections!
+    #
+    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
+        sys.exit(1)
+    else:
+        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+        if nav.rcv_ant is None:
+            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                           .format(rnx.ant))
+            sys.exit(1)
+
     if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
+        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
+        nav.fout.write("\n")
 
     # Print available signals
     #
@@ -300,9 +335,9 @@ if fig_type == 1:
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
-        plt.plot_date(t[idx0], enu[idx0, k], 'r.')
-        plt.plot_date(t[idx5], enu[idx5, k], 'y.')
-        plt.plot_date(t[idx4], enu[idx4, k], 'g.')
+        plt.plot(t[idx0], enu[idx0, k], 'r.')
+        plt.plot(t[idx5], enu[idx5, k], 'y.')
+        plt.plot(t[idx4], enu[idx4, k], 'g.')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
@@ -310,9 +345,9 @@ if fig_type == 1:
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
-    plt.plot_date(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot_date(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot_date(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
+    plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
+    plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
+    plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
