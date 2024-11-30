@@ -665,20 +665,23 @@ class sbf(rcvDec):
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
-                    self.fh_galinav.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
-                self.fh_galinav.write("\n")
 
                 # GALRawINAV is missing tail bit (6) of even page
+                # add 6 bits offset for odd page
                 msg_ = bytearray(30)
-                msg_[0:15] = msg[0:15]
+                msg_[0:15] = msg[0:15]  # even page
                 k = 114
                 for i in range(15):
                     d = bs.unpack_from('u8', bytes(msg), k)[0]
                     bs.pack_into('u8', msg_, 120+i*8, d)
                     k += 8
                 msg_ = bytes(msg_)
+
+                for i in range(30):
+                    self.fh_galinav.write("{:08x}".format(msg_[i]))
+                self.fh_galinav.write("\n")
 
                 eph = self.rn.decode_gal_inav(self.week, self.tow,
                                               sat, 2, msg_)
