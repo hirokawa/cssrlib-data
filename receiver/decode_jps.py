@@ -473,6 +473,16 @@ class jps(rcvDec):
             if self.monlevel >= 2:
                 print("[ED] time={:6d} prn={:2d}".format(time_, prn))
 
+            # [I/NAV]
+            # even/odd,page-type,data(1/2),tail => 1,1,112,6
+            # evan/odd,page-type,data(2/2),field1,crc,field2,tail
+            # => 1,1,16,64,24,8,6
+            # For E1B: field1(64) = OSNMA(40)+SAR(22)+spare(2), field2(8)=SSP
+            # For E5B: field1(64) = resv, field2(8) = resv
+
+            # [FNAV]
+            # page-type(6), nav(208), crc(24), tail(6)
+
             # type_ = 0:E1B(INAV), 1:E5a(FNAV), 2:E5b(INAV), 6:E6(CNAV)
             if type_ == 0 or type_ == 2:  # INAV
                 b = buff[12:]
