@@ -497,11 +497,17 @@ class jps(rcvDec):
                         .format(self.week, time_, prn, type_, len_,
                                 hexlify(b).decode()))
             elif type_ == 1:  # FNAV
+                b = buff[12:]
                 if self.flg_rnxnav:
                     eph = self.rn.decode_gal_fnav(
-                        self.week, time_, sat, type_, buff[12:])
+                        self.week, time_, sat, type_, b)
                     if eph is not None:
                         self.re.rnx_nav_body(eph, self.fh_rnxnav)
+                if self.flg_galfnav and self.week >= 0:
+                    self.fh_galfnav.write(
+                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n"
+                        .format(self.week, time_, prn, type_, len_,
+                                hexlify(b).decode()))
             elif type_ == 6:  # CNAV
                 if self.flg_gale6 and self.week >= 0:
                     self.fh_gale6.write(

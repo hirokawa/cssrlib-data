@@ -619,6 +619,11 @@ class sbf(rcvDec):
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_galfnav:
+                if src & 0x1f == 20:  # E5a
+                    type_ = 1
+                else:
+                    return -1
+
                 if crcpass != 1:
                     if self.monlevel > 0:
                         print("crc error in GALRawFNAV " +
@@ -629,7 +634,7 @@ class sbf(rcvDec):
 
                 self.fh_galfnav.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
                                       format(self.week, self.tow,
-                                             prn, src, 32))
+                                             prn, type_, 32))
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
@@ -651,6 +656,13 @@ class sbf(rcvDec):
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_galinav:
+                if src & 0x1f == 17:  # E1B
+                    type_ = 0
+                elif src & 0x1f == 21:  # E5b
+                    type_ = 2
+                else:
+                    return -1
+
                 if crcpass != 1:
                     if self.monlevel > 0:
                         print("crc error in GALRawINAV " +
@@ -661,7 +673,7 @@ class sbf(rcvDec):
 
                 self.fh_galinav.write("{:4d}\t{:6.1f}\t{:3d}\t{:1d}\t{:3d}\t".
                                       format(self.week, self.tow, prn,
-                                             src, 32))
+                                             type_, 32))
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
@@ -694,6 +706,11 @@ class sbf(rcvDec):
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_gale6:
+                if src & 0x1f == 19:
+                    type_ = 6
+                else:
+                    return -1
+
                 if crcpass != 1:
                     if self.monlevel > 0:
                         print("crc error in GALRawCNAV " +
