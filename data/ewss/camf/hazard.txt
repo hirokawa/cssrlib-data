@@ -1,0 +1,113 @@
+1	CBRNE - Air strike
+2	CBRNE - Attack on IT systems
+3	CBRNE - Attack with nuclear weapons
+4	CBRNE - Biological hazard
+5	CBRNE - Chemical hazard
+6	CBRNE - Explosive hazard
+7	CBRNE - Meteorite impact
+8	CBRNE – Missile attack
+9	CBRNE - Nuclear hazard
+10	CBRNE - Nuclear power station accident
+11	CBRNE - Radiological hazard
+12	CBRNE - Satellite/space re-entry debris
+13	CBRNE - Siren test
+14	ENVIRONMENT - Acid rain
+15	ENVIRONMENT - Air pollution
+16	ENVIRONMENT - Contaminated drinking water
+17	ENVIRONMENT - Gas leak
+18	ENVIRONMENT - Marine pollution
+19	ENVIRONMENT - Noise pollution
+20	ENVIRONMENT - Plague of insects
+21	ENVIRONMENT - River pollution
+22	ENVIRONMENT – Suspended dust
+23	ENVIRONMENT – UV radiation
+24	FIRE – Conflagration
+25	FIRE - Fire brigade deployment
+26	FIRE - Fire gases
+27	FIRE - Forest fire
+28	FIRE - Fumes
+29	FIRE - Odour nuisance
+30	FIRE - Risk of fire
+31	FIRE - Structure fire / Industrial fire
+32	GEO - Ash fall
+33	GEO - Avalanche risk
+34	GEO - Crack in the ground/sinkhole
+35	GEO - Debris flow
+36	GEO - Earthquake
+37	GEO - Geomagnetic or solar storm
+38	GEO - Glacial ice avalanche
+39	GEO - Landslide
+40	GEO - Lava flow
+41	GEO - Pyroclastic flow
+42	GEO - Snowdrifts
+43	GEO - Tidal wave
+44	GEO - Tsunami
+45	GEO - Volcanic mud flow
+46	GEO - Volcano eruption
+47	GEO - Wind/wave/storm surge
+48	HEALTH - Epizootic
+49	HEALTH - Food safety alert
+50	HEALTH - Health hazard
+51	HEALTH - Pandemic
+52	HEALTH - Pest infestation
+53	HEALTH - Risk of infection
+54	INFRASTRUCTURE - Building collapse
+55	INFRASTRUCTURE - Emergency number outage
+56	INFRASTRUCTURE - Gas supply outage
+57	INFRASTRUCTURE – Outage of IT systems
+58	INFRASTRUCTURE - Power outage
+59	INFRASTRUCTURE – Raw sewage
+60	INFRASTRUCTURE - Telephone line outage
+61	MET - Black Ice
+62	MET - Coastal flooding
+63	MET - Cold wave
+64	MET - Derecho
+65	MET - Drought
+66	MET - Dust storm
+67	MET - Floating ice / icebergs
+68	MET - Flood
+69	MET - Fog
+70	MET - Hail
+71	MET - Heat wave
+72	MET - Lightning
+73	MET - Pollens
+74	MET - Rainfall
+75	MET - Snow storm / blizzard
+76	MET - Snowfall
+77	MET - Storm or thunderstorm
+78	MET - Thawing
+79	MET - Tornado
+80	MET - Tropical cyclone (hurricane)
+81	MET - Wind chill/frost
+82	MET - Tropical cyclone (typhoon)
+83	RESCUE - Dam failure or bursting of a dam
+84	RESCUE - Dike failure or bursting of a dike
+85	RESCUE - Explosive ordnance disposal
+86	RESCUE - Factory accident
+87	RESCUE - Mine hazard
+88	SAFETY - Bomb/ammunition discovery
+89	SAFETY - Demonstration
+90	SAFETY - Hazardous material accident
+91	SAFETY - Life Threatening situation
+92	SAFETY - Major event
+93	SAFETY - Missing person/abduction
+94	SAFETY - Risk of explosion
+95	SAFETY - Safety warning
+96	SAFETY - Undefined flying object
+97	SAFETY - Unidentified animal
+98	SECURITY - Chemical attack
+99	SECURITY - Guerrilla attack
+100	SECURITY - Hijack
+101	SECURITY - Shooting or danger due to weapons
+102	SECURITY - Special forces attack
+103	SECURITY - Terrorism
+104	TRANSPORT - Aircraft crash
+105	TRANSPORT - Bridge collapse
+106	TRANSPORT - Dangerous goods accident
+107	TRANSPORT - Inland waterway transport accident
+108	TRANSPORT - Nautical disaster/Maritime/Marine Security
+109	TRANSPORT - Oil spill
+110	TRANSPORT - Road traffic incident
+111	TRANSPORT - Train/rail accident
+112	TRANSPORT - Tunnel accident
+113	OTHER - Test alert

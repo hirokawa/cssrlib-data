@@ -1,0 +1,63 @@
+0	Anthrax
+1	Avian influenza in humans
+2	Botulism
+3	Brucellosis
+4	Campylobacteriosis
+5	Chikungunya virus disease
+6	Chlamydia infections
+7	Cholera
+8	COVID-19
+9	Creutzfeldt - Jakob Disease-variant (vCJD)
+10	Cryptosporidiosis
+11	Dengue
+12	Diphtheria
+13	Echinococcosis
+14	Giardiasis
+15	Gonorrhoea
+16	Hepatitis A
+17	Hepatitis B
+18	Hepatitis C
+19	HIV infection and AIDS
+20	Infections with haemophilus influenza group B
+21	Influenza including Influenza A(H1N1)
+22	Invasive meningococcal disease
+23	Invasive pneumococcal disease
+24	Legionnaries' disease
+25	Leptospirosis
+26	Listeriosis
+27	Lyme neuroborreliosis
+28	Malaria
+29	Measles
+30	Meningoccocal disease, invasive
+31	Mumps
+32	Pertussis
+33	Plague
+34	Pneumoccocal invasive diseases
+35	Poliomyelitis
+36	Q fever
+37	Rabies
+38	Rubella
+39	Rubella, congenital
+40	Salmonellosis
+41	Severe Acute Respiratory Syndrome (SARS)
+42	Shiga toxin /verocytotoxin -producing Escherichia coli (STEC/VTEC)
+43	Shigellosis
+44	Smallpox
+45	Syphilis
+46	Syphilis, congenital
+47	Tetanus
+48	Tick-borne encephalitis
+49	Toxoplasmosis, congenital
+50	Trichinellosis
+51	Tuberculosis
+52	Tularaemia
+53	Typhoid and paratyphoid fevers
+54	Viral haemorrhagic fevers
+55	West Nile virus infection
+56	Yellow fever
+57	Yersinosis
+58	Zika virus disease
+59	Zika virus disease, congenital
+60	Nosocomial infections
+61	Antimicrobial resistance
+62	unidentified infection
