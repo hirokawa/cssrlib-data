@@ -645,7 +645,8 @@ class sbf(rcvDec):
 
                 self.fh_galfnav.write("\n")
 
-                eph = self.rn.decode_gal_fnav(self.week, self.tow, sat, 1, msg)
+                eph = self.rn.decode_gal_fnav(self.week, self.tow, sat, type_,
+                                              msg)
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
@@ -696,7 +697,7 @@ class sbf(rcvDec):
                 self.fh_galinav.write("\n")
 
                 eph = self.rn.decode_gal_inav(self.week, self.tow,
-                                              sat, 2, msg_)
+                                              sat, type_, msg_)
                 if self.mode_galinav == 0 and eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
