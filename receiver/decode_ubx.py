@@ -16,7 +16,7 @@ from cssrlib.gnss import uGNSS, uTYP, prn2sat, Obs, rSigRnx, gpst2time, uSIG
 from cssrlib.rawnav import rcvDec, rcvOpt
 from binascii import hexlify
 
-CPSTD_VALID = 5           # stdev threshold of valid carrier-phase
+CPSTD_VALID = 0.2           # stdev threshold of valid carrier-phase
 
 
 class ubx(rcvDec):
@@ -156,9 +156,15 @@ class ubx(rcvDec):
                 '<HBBBBB', buff, k)
             k += 8
 
-            if trk & 1 != 0:
+            sig_cp *= 0.004
+            # tracking status:
+            # b0: pr-valid
+            # b1: cp-valid
+            # b2: half-cycle valid
+            # b3: half-cycle subtracted from phase
+            if (trk & 1) == 0:
                 pr_ = 0.0
-            if (trk & 2) != 0 or cp_ == -0.5 or (sig_cp & 0xf) > CPSTD_VALID:
+            if (trk & 2) == 0 or cp_ == -0.5 or (sig_cp > CPSTD_VALID):
                 cp_ = 0.0
 
             sys, prn = self.svid2prn(gnss, svid)
@@ -187,10 +193,10 @@ class ubx(rcvDec):
                 cn[sat] = {}
 
             slip = 0x01 if locktime == 0 else 0
-            halfv = 0x02 if (trk & 4) != 0 else 0
-            halfc = 0x80 if (trk & 8) != 0 else 0
+            halfv = 0x02 if (trk & 4) == 0 else 0
+            # halfc = 0x80 if (trk & 8) != 0 else 0
 
-            lli_ = slip + halfv + halfc
+            lli_ = slip + halfv
 
             pr[sat][idx] = pr_
             cp[sat][idx] = cp_
