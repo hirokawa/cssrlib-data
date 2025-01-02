@@ -33,7 +33,7 @@ i = 0
 v = v[v['type'] == 0]  # E1 only
 tow = np.unique(v['tow'])
 ntow = len(tow)
-nsat = np.zeros((ntow, 2), dtype=int)
+nsat = np.zeros((ntow, 3), dtype=int)
 vstatus = np.zeros(ntow, dtype=int)
 
 # nep = 90
@@ -51,9 +51,10 @@ for i, t in enumerate(tow[0:nep]):
         nma.load_nav(nav, prn, tow_)
         if nma_b[0] != 0:  # for connected satellite
             nma.decode(nma_b, int(vn['wn']), tow_, prn)
+            nsat[i, 1] += 1
 
     nsat[i, 0] = len(vi)
-    nsat[i, 1] = nma.nsat
+    nsat[i, 2] = nma.nsat  # authenticated sat
     vstatus[i] = nma.status
 
 
@@ -63,7 +64,8 @@ if True:
 
     fig, ax = plt.subplots()
     plt.plot(tow-tow[0], nsat[:, 0], label='tracked')
-    plt.plot(tow-tow[0], nsat[:, 1], label='authenticated')
+    plt.plot(tow-tow[0], nsat[:, 1], label='connected')
+    plt.plot(tow-tow[0], nsat[:, 2], label='authenticated')
     plt.grid()
     plt.legend()
     plt.xlim([0, tmax])
