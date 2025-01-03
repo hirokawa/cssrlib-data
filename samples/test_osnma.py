@@ -4,7 +4,7 @@ test script for Galileo OSNMA
 @author Rui Hirokawa
 
 """
-
+import os
 import numpy as np
 import cssrlib.osnma as om
 from binascii import unhexlify, hexlify
@@ -13,9 +13,12 @@ import matplotlib.pyplot as plt
 tofst = -2  # time offset to syncronize tow
 mt_file = 'OSNMA_MerkleTree_20240115100000_newPKID_1.xml'
 
+if not os.path.exists('../data/pubkey/osnma/'+mt_file):
+    print('please install OSNMA_MerkleTree*.xml from EUSPA.')
+
 nma = om.osnma(mt_file)
 
-nma.flg_slowmac = True
+nma.flg_slowmac = False
 
 file_galinav = '../data/doy2024-305/305a_galinav.txt'
 doy = 305
@@ -40,6 +43,7 @@ vstatus = np.zeros(ntow, dtype=int)
 # nep = 90
 # nep = 180
 nep = 300
+nep = 1799
 
 for i, t in enumerate(tow[0:nep]):
     vi = v[v['tow'] == t]
