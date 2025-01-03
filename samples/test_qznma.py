@@ -1,15 +1,27 @@
 """
 sample for QZNMA
 
+[1] Quasi-Zenith Satellite System Interface Specification
+    Satellite Positioning, Navigation and Timing Service (IS-QZSS-PNT-006),
+    July, 2024
+
+Note:
+    to use the package for QZSNMA, the user needs to
+    install the public keys provided by QSS.
+
 @author Rui Hirokawa
 
 """
 
+import os
 from binascii import unhexlify
 import numpy as np
 from cssrlib.gnss import prn2sat, uGNSS
 from cssrlib.qznma import qznma, uNavId
 import matplotlib.pyplot as plt
+
+if not os.path.exists('../data/pubkey/qznma/002.der'):
+    print('please install public key file from QSS.')
 
 dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S512')]

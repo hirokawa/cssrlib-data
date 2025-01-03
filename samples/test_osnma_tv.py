@@ -1,7 +1,10 @@
 """
-test script for Galileo OSNMA based on [1]
+test script for Galileo OSNMA based on [2]
 
 [1] Galileo Open Service Navigation Message Authentication (OSNMA)
+    Signal-in-Space Interface Control Document (SIS ICD), October, 2023.
+
+[2] Galileo Open Service Navigation Message Authentication (OSNMA)
     Receiver Guidelines Issue 1.3, January, 2024.
 
 @author Rui Hirokawa

@@ -1,6 +1,16 @@
 """
 test script for Galileo OSNMA
 
+[1] Galileo Open Service Navigation Message Authentication (OSNMA)
+    Signal-in-Space Interface Control Document (SIS ICD), October, 2023.
+
+[2] Galileo Open Service Navigation Message Authentication (OSNMA)
+    Receiver Guidelines Issue 1.3, January, 2024.
+
+Note:
+    to use the package for OSNMA, the user needs to
+    install the public keys provided by EUSPA.
+
 @author Rui Hirokawa
 
 """
