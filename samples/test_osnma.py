@@ -63,8 +63,8 @@ for i, t in enumerate(tow[0:nep]):
         prn = int(vn['prn'])
         nma.prn_a = prn
         msg = unhexlify(vn['nav'])  # I/NAV (120bit+120bit)
-        nav, nma_b = nma.load_inav(msg)
-        nma.load_nav(nav, prn, tow_)
+        nav, nma_b = nma.load_gal_inav(msg)
+        nma.save_gal_inav(nav, prn, tow_)
         if nma_b[0] != 0:  # for connected satellite
             nma.decode(nma_b, int(vn['wn']), tow_, prn)
             nsat[i, 1] += 1

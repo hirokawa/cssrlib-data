@@ -11,7 +11,9 @@ test script for Galileo OSNMA based on [2]
 
 """
 
+import copy
 from cssrlib.osnma import osnma, uOSNMA, taginfo
+from cssrlib.gnss import prn2sat, uGNSS
 from binascii import unhexlify, hexlify
 
 nma = osnma()
@@ -67,8 +69,10 @@ nma.decode_dsm_kroot(did)
 result = (hexlify(nma.alp) == b'610bdf26d77b')
 print(f"A.4.1 DSM-KROOT interpretation result={result}")
 
-nma.prn_a = 2
+nma.prn_a = 2  # E2
 gst_wn = 1248
+
+sat = prn2sat(uGNSS.GAL, nma.prn_a)
 
 # A.4.2 DSM-KROOT verification
 pubk_path = 'OSNMA_PublicKey_test.crt'
@@ -127,17 +131,16 @@ print(f"A.6.4 MACSEQ Verification result={result}")
 prn = nma.prn_a
 for k in range(len(navmsg)//2):
     msg = unhexlify(navmsg[2*k])+unhexlify(navmsg[2*k+1])
-    nav, nma_b = nma.load_inav(msg)
-    nma.load_nav(nav, prn, nma.gst_tow-60+(k+1)*2)
+    nav, nma_b = nma.load_gal_inav(msg)
+    nma.save_gal_inav(nav, prn, nma.gst_tow-60+(k+1)*2)
 
     nma.hk[prn-1][k] = nma_b[0]              # HK-ROOT message
     nma.mack[prn-1][k*4:k*4+4] = nma_b[1:5]  # MACK message
 
 
-i0 = (prn-1)*160
-nma.subfrm[i0:i0+160] = nma.subfrm_n[i0:i0+160]
+nma.subfrm[sat] = copy.copy(nma.subfrm_n[sat])
 
-adkd0 = nma.gen_navmsg(nma.prn_a)
+adkd0 = nma.gen_gal_inavmsg(nma.prn_a)
 # print('ADKD0=', hexlify(adkd0))
 
 # tag0 = unhexlify('E37BC4F858')  # tow=345660
@@ -163,7 +166,7 @@ i0 = 7*(ctr-1)
 tag4 = msg2[i0+0:i0+5]
 adkd = msg2[i0+6] >> 4
 
-adkd4 = nma.gen_utcmsg()
+adkd4 = nma.gen_gal_utcmsg()
 m4 = nma.gen_msg(adkd, prn_d, tag_.gst_sf, ctr, adkd4)
 tag_c = nma.process_mac(m4)[:5]
 print(f"A.6.5.2 ADKD4 Verification result={tag_c == tag4}")
