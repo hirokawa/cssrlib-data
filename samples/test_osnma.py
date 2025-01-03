@@ -25,7 +25,7 @@ mt_file = 'OSNMA_MerkleTree_20240115100000_newPKID_1.xml'
 
 if not os.path.exists('../data/pubkey/osnma/'+mt_file):
     print('please install OSNMA_MerkleTree*.xml from EUSPA.')
-    exit(-1)
+    exit(0)
 
 nma = om.osnma(mt_file)
 
