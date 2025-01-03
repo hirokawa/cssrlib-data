@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 
 if not os.path.exists('../data/pubkey/qznma/002.der'):
     print('please install public key file from QSS.')
+    exit(-1)
 
 dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S512')]
