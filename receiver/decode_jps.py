@@ -145,6 +145,7 @@ class jps(rcvDec):
         self.nsat = 0
         self.qzl6_time_p = -1
         self.tod = -1
+        self.freqn = None
 
         self.sig_tab = {
             uGNSS.GPS: {
@@ -597,7 +598,7 @@ class jps(rcvDec):
         elif head == 'lD':  # Glonass Raw Navigation data
             svn, fcn, time_, type_, len_ = st.unpack_from('<BbLBB', buff, 5)
             # type 0 - L1, 2 - L2C, 3 - P1, 4 - P2
-            msg = st.unpack_from('>'+len_*'L', buff, 12)
+            msg = st.unpack_from('>'+len_*'L', buff, 13)
             b = bytes(np.array(msg, dtype='uint32'))
             sat = prn2sat(uGNSS.GLO, svn)
 
@@ -621,7 +622,6 @@ class jps(rcvDec):
             if self.monlevel >= 2:
                 print(f"[lD] time={time_:6d} svn={svn:2d} fcn{fcn:2d} " +
                       f"type={type_}")
-
         elif head == 'ud':  # Glonass CDMA Raw Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
             # type: 0 - L1, 1 - L2, 3 - L3
@@ -631,10 +631,12 @@ class jps(rcvDec):
 
             if self.flg_rnxnav:
                 geph = None
-                if type_ == 0:
-                    geph = self.rn.decode_glo_l1oc(self.week, time_, sat, b)
-                elif type_ == 2:
-                    geph = self.rn.decode_glo_l3oc(self.week, time_, sat, b)
+                if type_ == 0:  # L1OC
+                    geph = self.rn.decode_glo_l1oc(self.week, self.tow, sat, b)
+                elif type_ == 1:  # L2CSI
+                    None
+                elif type_ == 2:  # L3OC
+                    geph = self.rn.decode_glo_l3oc(self.week, self.tow, sat, b)
 
                 if geph is not None:
                     self.re.rnx_gnav_body(geph, self.fh_rnxnav)
@@ -833,6 +835,7 @@ class jps(rcvDec):
                 self.dp[k, ch] = dp[k]*1e-4
                 if dp[k] == 2147483647:
                     self.dp[k, ch] = 0.0
+
         elif head[0] == 'E' and head[1].lower() in self.ch_t.keys():
             # C/N [dB-Hz]
             ch = self.ch_t[head[1]]
