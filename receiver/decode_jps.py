@@ -1,8 +1,8 @@
 """
 Javad Receiver GREIS messages decoder
 
-[1] GREIS: GNSS Receiver External Interface Specification for 4.3.00,
-     June, 2023
+[1] GREIS: GNSS Receiver External Interface Specification for 4.5.00,
+     October, 2024
 
 @author: Rui Hirokawa
 """
@@ -12,7 +12,7 @@ import numpy as np
 import struct as st
 import bitstruct.c as bs
 from cssrlib.gnss import epoch2time, time2gpst, prn2sat, uGNSS, uTYP, rSigRnx
-from cssrlib.gnss import Obs, rCST, gpst2time, uSIG
+from cssrlib.gnss import Obs, rCST, gpst2time, uSIG, copy_buff
 from cssrlib.rawnav import rcvDec, rcvOpt
 from glob import glob
 from enum import IntEnum
@@ -114,7 +114,7 @@ class jps(rcvDec):
              [uSIG.L2I, uSIG.L8X, uSIG.L7I, uSIG.L6I, uSIG.L5X, uSIG.L1X],
              [uSIG.L9A,        0,        0,        0, uSIG.L5A, uSIG.L1X],
              [0,        0,        0,        0,        0,        0],
-             [uSIG.L4X,        0,        0,        0, uSIG.L6X, uSIG.L3X]]
+             [uSIG.L4X,        0,        0, uSIG.L6X, uSIG.L3X,        0]]
     freqs = [[1, 1, 2, 2, 3, 1], [1, 1, 2, 2, 3, 0], [1, 0, 0, 0, 3, 0],
              [1, 6, 2, 4, 3, 0], [1, 1, 4, 2, 3, 1], [1, 6, 2, 3, 3, 1],
              [0, 0, 0, 0, 3, 1]]
@@ -142,6 +142,7 @@ class jps(rcvDec):
         self.CNO = np.zeros((self.nmax, self.nsigmax))
         self.CNOd = np.zeros((self.nmax, self.nsigmax))
 
+        self.nsat = 0
         self.qzl6_time_p = -1
         self.tod = -1
 
@@ -405,7 +406,7 @@ class jps(rcvDec):
     def decode(self, buff, len_, sys=[], prn=[]):
         head = buff[0:2].decode()
         if head == 'RE':
-            if self.monlevel >= 1:
+            if self.monlevel > 1:
                 print("[{:2s}] {:}".format(head, buff[5:5+len_].decode()))
 
         elif self.crc8(buff, len_-1) != buff[-1]:
@@ -414,19 +415,26 @@ class jps(rcvDec):
 
         if head == '~~':  # receiver time [RT] (epoch start)
             self.tod = st.unpack_from('<L', buff, 5)[0]*1e-3
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[RT] tod={:.1f}".format(self.tod))
         elif head == 'RE':
             return
         elif head == '::':  # epoch time [ET] (epoch end)
             self.tod = st.unpack_from('<L', buff, 5)[0]*1e-3
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[ET] tod={:.1f}".format(self.tod))
+
+            obs = self.decode_obs()
+            if self.flg_rnxobs and obs is not None:
+                self.obs = obs
+                self.re.rnx_obs_header(obs.time, self.fh_rnxobs)
+                self.re.rnx_obs_body(obs, self.fh_rnxobs)
+
         elif head == 'GT':  # GPS time [GT]
             tow, wn, cycle = st.unpack_from('<LHB', buff, 5)  # ms
             self.week = wn+cycle*1024
             self.tow = tow*1e-3
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[GT] tow={:.1f} week={:4d}".format(self.tow, self.week))
         elif head == 'RD':  # Receiver Date and Receiver Time
             # base 0:GPS,1:UTC USNO,2:GLO,3:UTC SU
@@ -439,7 +447,7 @@ class jps(rcvDec):
                 ep = [year, month, day, h, m, s]
                 self.week, self.tow = time2gpst(epoch2time(ep))
 
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[RD] {:d}/{:d}/{:d} {:d}".
                       format(year, month, day, base))
         elif head == 'SX':  # satellite index
@@ -447,6 +455,7 @@ class jps(rcvDec):
             prn = []
             nsat = (len_-6)//2
             esi = st.unpack_from('<'+'B'*2*nsat, buff, 5)
+            self.nsat = nsat
             self.freqn = np.zeros(nsat, dtype=int)
             for k in range(nsat):
                 ssid = esi[k*2]
@@ -494,7 +503,7 @@ class jps(rcvDec):
 
         elif head == 'xd':  # QZSS L6 Message Data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
-            if self.monlevel >= 1:
+            if self.monlevel > 1:
                 print("[xd] prn={:d} tow={:d} type={:d} len={:d}".
                       format(prn, time_, type_, len_))
             if self.week >= 0:
@@ -555,13 +564,78 @@ class jps(rcvDec):
 
         elif head == 'id':  # NavIC Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
+            sat = prn2sat(uGNSS.IRN, prn)
+            # type 0 - L5, 1 - S, 2 - L1
+            msg = st.unpack_from('>'+len_*'L', buff, 12)
+            b = bytes(np.array(msg, dtype='uint32'))
+
+            if self.flg_rnxnav:
+                eph = None
+                if type_ == 0:
+                    eph = self.rn.decode_irn_lnav(self.week, time_, sat, b)
+                elif type_ == 2:
+                    # for L1
+                    # data[0] – subframe 1 (toi)
+                    # data[1…19] – subframe 2
+                    # data[20…28] – subframe 3
+
+                    msg = bytearray(228)  # recover original L1C msg structure
+                    # toi: 9b, data2: 600b, data3: 274b
+                    toi = bs.unpack_from('u32', b, 0)[0]
+                    bs.pack_into('u9', msg, 0, toi)
+                    copy_buff(b, msg, 32, 52, 600)
+                    copy_buff(b, msg, 640, 1252, 274)
+                    msg = bytes(msg)
+                    eph = self.rn.decode_irn_l1nav(self.week, time_, sat, msg)
+
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
+
+            if self.monlevel >= 2:
+                print(f"[id] time={time_:6d} prn={prn:2d} type={type_}")
+
         elif head == 'lD':  # Glonass Raw Navigation data
             svn, fcn, time_, type_, len_ = st.unpack_from('<BbLBB', buff, 5)
-        elif head == 'ED':  # Galileo Navigation data
+            # type 0 - L1, 2 - L2C, 3 - P1, 4 - P2
+            msg = st.unpack_from('>'+len_*'L', buff, 12)
+            b = bytes(np.array(msg, dtype='uint32'))
+
+            if self.flg_rnxnav:
+                geph = None
+                geph = self.rn.decode_glo_fdma(self.week, time_, sat, b)
+
+                if geph is not None:
+                    self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+
+            if self.monlevel >= 2:
+                print(f"[lD] time={time_:6d} svn={svn:2d} fcn{fcn:2d} " +
+                      f"type={type_}")
+
+        elif head == 'ud':  # Glonass CDMA Raw Navigation data
+            prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
+            # type: 0 - L1, 1 - L2, 3 - L3
+            sat = prn2sat(uGNSS.GLO, prn)
+            msg = st.unpack_from('>'+len_*'L', buff, 12)
+            b = bytes(np.array(msg, dtype='uint32'))
+
+            if self.flg_rnxnav:
+                geph = None
+                if type_ == 0:
+                    geph = self.rn.decode_glo_l1oc(self.week, time_, sat, b)
+                elif type_ == 2:
+                    geph = self.rn.decode_glo_l3oc(self.week, time_, sat, b)
+
+                if geph is not None:
+                    self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+
+            if self.monlevel >= 2:
+                print(f"[ud] time={time_:6d} prn={prn:2d} type={type_}")
+
+        elif head == 'ED':  # Galileo Raw Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
             sat = prn2sat(uGNSS.GAL, prn)
             if self.monlevel >= 2:
-                print("[ED] time={:6d} prn={:2d}".format(time_, prn))
+                print(f"[ED] time={time_:6d} prn={prn:2d} type={type_}")
 
             # [I/NAV]
             # even/odd,page-type,data(1/2),tail => 1,1,112,6
@@ -795,6 +869,12 @@ class jps(rcvDec):
             ch = self.ch_t[head[0]]
             nsat = (len_-6)//2
             # srdp = st.unpack_from('h'*nsat, buff, 5)
+        elif head in ('ST', 'SP', 'PV', 'PG'):
+            # [ST] Solution Time-Tag
+            # [SP] Position Covariance Matrix
+            # [PV] Cartesian Position and Velocity
+            # [PG] Geodetic Position
+            None
         else:
             print("[{:s}] undef".format(head))
         return 0
@@ -826,7 +906,8 @@ if __name__ == "__main__":
     opt.flg_sbas = False
     opt.flg_rnxnav = True
 
-    prn_ref = 199
+    # prn_ref = 199
+    prn_ref = -1
     sbs_ref = -1
 
     for f in glob(bdir+fnames):
@@ -837,7 +918,7 @@ if __name__ == "__main__":
 
         prefix = bdir+fname[4:].removesuffix('.jps')+'_'
         jpsdec = jps(opt=opt, prefix=bdir+fname[4:].removesuffix('.jps')+'_')
-        jpsdec.monlevel = 2
+        jpsdec.monlevel = 1
 
         jpsdec.re.anttype = "JAVRINGANT_DM   JVDM"
         jpsdec.re.rectype = "JAVAD DELTA-3"

@@ -399,8 +399,8 @@ class ubx(rcvDec):
 
 if __name__ == "__main__":
 
-    bdir = '../data/doy2024-342/'
-    fnames = 'ux20342h.ubx'
+    bdir = '../data/doy2025-004/'
+    fnames = 'ubf9004c.ubx'
 
     gnss_t = 'GERCJ'
 
