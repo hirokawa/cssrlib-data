@@ -599,10 +599,21 @@ class jps(rcvDec):
             # type 0 - L1, 2 - L2C, 3 - P1, 4 - P2
             msg = st.unpack_from('>'+len_*'L', buff, 12)
             b = bytes(np.array(msg, dtype='uint32'))
+            sat = prn2sat(uGNSS.GLO, svn)
 
-            if self.flg_rnxnav:
-                geph = None
-                geph = self.rn.decode_glo_fdma(self.week, time_, sat, b)
+            # get 77 bit (25x3+2) in frame without hamming and time mark
+            if type_ == 0:
+                buff = bytearray(12)
+                for k in range(4):
+                    d = bs.unpack_from('u32', b, 32*k)[0]
+                    if k < 3:
+                        bs.pack_into('u25', buff, 25*k, d & 0x1ffffff)
+                    else:
+                        bs.pack_into('u2', buff, 25*k, (d >> 23) & 0x3)
+
+            if self.flg_rnxnav and type_ == 0:
+                geph = self.rn.decode_glo_fdma(
+                    self.week, self.tow, sat, buff, fcn)
 
                 if geph is not None:
                     self.re.rnx_gnav_body(geph, self.fh_rnxnav)
@@ -869,11 +880,13 @@ class jps(rcvDec):
             ch = self.ch_t[head[0]]
             nsat = (len_-6)//2
             # srdp = st.unpack_from('h'*nsat, buff, 5)
-        elif head in ('ST', 'SP', 'PV', 'PG'):
+        elif head in ('ST', 'SP', 'PV', 'PG', 'IE', 'UO'):
             # [ST] Solution Time-Tag
             # [SP] Position Covariance Matrix
             # [PV] Cartesian Position and Velocity
             # [PG] Geodetic Position
+            # [IE] IRNSS Ephemeris
+            # [UO] GPS UTC Time Parameters
             None
         else:
             print("[{:s}] undef".format(head))
