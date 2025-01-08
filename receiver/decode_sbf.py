@@ -558,11 +558,20 @@ class sbf(rcvDec):
                 self.fh_sbas.write("{:4d}\t{:6d}\t{:3d}\t{:2d}\t{:3d}\t".
                                    format(self.week, int(self.tow), prn,
                                           src-24, 32))
+                msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
                     self.fh_sbas.write("{:08x}".format(d))
+                    st.pack_into('>L', msg, i*4, d)
                     k += 4
                 self.fh_sbas.write("\n")
+
+                sat = prn2sat(uGNSS.SBS, prn)
+                seph = None
+                if blk_num == 4020:
+                    seph = self.rn.decode_sbs_l1(self.week, self.tow, sat, msg)
+                if seph is not None:
+                    self.re.rnx_snav_body(seph, self.fh_rnxnav)
 
         elif blk_num == 4022:  # GalRawFNAV
             sys, prn = self.decode_head(buff, k)
@@ -683,6 +692,7 @@ class sbf(rcvDec):
             k += 7
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
+            freq -= 8
             if self.flg_gloca:
                 if crcpass != 1:
                     if self.monlevel > 0:

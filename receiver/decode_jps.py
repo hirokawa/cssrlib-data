@@ -698,12 +698,19 @@ class jps(rcvDec):
                 print("[WD] prn={:d} tow={:d} type={:d}".
                       format(prn, time_, type_))
 
+            sat = prn2sat(uGNSS.SBS, prn)
+            b = buff[12:]
+            if self.flg_sbas and self.flg_rnxnav:
+                seph = self.rn.decode_sbs_l1(self.week, time_, sat, b)
+                if seph is not None:
+                    self.re.rnx_snav_body(seph, self.fh_rnxnav)
+
             if self.flg_sbas and self.week >= 0:
                 if sbs_ref > 0 and prn != sbs_ref:
                     return
                 self.fh_sbas.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
                                    format(self.week, time_, prn, type_, len_,
-                                          hexlify(buff[12:]).decode()))
+                                          hexlify(b).decode()))
 
         elif head[0] == 'r' and head[1] in self.ch_t.keys():
             # Integer Pseudo-ranges

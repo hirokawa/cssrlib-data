@@ -246,6 +246,7 @@ class ubx(rcvDec):
         fh_ = None
         eph = None
         geph = None
+        seph = None
         type_ = sigid
         blen = len_*4
         if sys == uGNSS.GPS:
@@ -287,8 +288,18 @@ class ubx(rcvDec):
                 fh_ = self.fh_galcnav
                 type_ = 6
         elif sys == uGNSS.BDS:
-            if sigid == 4 and self.flg_bdsd12:  # B3I D1
+            if sigid == 0 and self.flg_bdsd12:  # B1I D1
+                type_ = 0
+                # eph = self.rn.decode_bds_d1(self.week, self.tow, sat, b)
+            elif sigid == 1 and self.flg_bdsd12:  # B1I D2
+                type_ = 0
+            elif sigid == 2 and self.flg_bdsd12:  # B2I D1
+                type_ = 1
+            elif sigid == 3 and self.flg_bdsd12:  # B2I D2
+                type_ = 1
+            elif sigid == 4 and self.flg_bdsd12:  # B3I D1
                 type_ = 2
+                # eph = self.rn.decode_bds_d1(self.week, self.tow, sat, b, 2)
             elif sigid == 6 and self.flg_bdsb1c:  # B1Cd
                 fh_ = self.fh_bdsb1c
                 type_ = 3
@@ -312,7 +323,10 @@ class ubx(rcvDec):
                             self.week, self.tow, sat, b)
             elif sigid == 8 and self.flg_bdsb2a:  # B2ad
                 type_ = 5
+            elif sigid == 10 and self.flg_bdsd12:  # B3I D2
+                type_ = 2
         elif sys == uGNSS.GLO:
+            freqid -= 7
             if sigid == 0 and self.flg_gloca:  # L1 OF
                 type_ = 0
                 geph = self.rn.decode_glo_fdma(self.week, self.tow,
@@ -325,6 +339,7 @@ class ubx(rcvDec):
             if sigid == 0 and self.flg_sbas:  # L1C/A
                 fh_ = self.fh_sbas
                 type_ = 0
+                seph = self.rn.decode_sbs_l1(self.week, self.tow, sat, b)
         elif sys == uGNSS.QZS:
             if sigid == 0 and self.flg_qzslnav:  # L1C/A
                 fh_ = self.fh_qzslnav
@@ -344,6 +359,8 @@ class ubx(rcvDec):
                 self.re.rnx_nav_body(eph, self.fh_rnxnav)
             if geph is not None:
                 self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+            if seph is not None:
+                self.re.rnx_snav_body(seph, self.fh_rnxnav)
 
         if fh_ is not None and blen > 0:
             fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
@@ -417,10 +434,10 @@ if __name__ == "__main__":
     opt.flg_bdsb1c = True
     opt.flg_bdsb2a = False
     opt.flg_bdsb2b = False
-    opt.flg_bdsd12 = False
-    opt.flg_gloca = False
+    opt.flg_bdsd12 = True
+    opt.flg_gloca = True
     opt.flg_irnnav = False
-    opt.flg_sbas = False
+    opt.flg_sbas = True
     opt.flg_rnxnav = True
     opt.flg_rnxobs = True
 
