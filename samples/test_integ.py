@@ -11,9 +11,8 @@ from cssrlib.rtcm import rtcm, rtcme, Integrity
 from random import randint, seed, sample
 
 
-def gen_data(mt, sys_t, svid_t, s=1):
+def gen_data(mt, sys_t, svid_t):
     """ generate random message data """
-    seed(s)
     intr = Integrity()
 
     if mt in (11, 12, 13):  # SSR integrity messages
@@ -146,7 +145,8 @@ if __name__ == "__main__":
 
     mt = msg_t[0]
 
+    seed(seed_)
     prn_t = gen_sat_list(sys_t, prn_rng_t)  # generate random sat list
-    intr = gen_data(mt, sys_t, prn_t, s=seed_)  # generate random message data
+    intr = gen_data(mt, sys_t, prn_t)  # generate random message data
     write_rtcm(file_rtcm, msg_t, intr, nep)
     cs = read_rtcm(file_rtcm, intr, nep)
