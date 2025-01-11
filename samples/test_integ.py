@@ -6,7 +6,7 @@
 
 import os
 import copy
-from cssrlib.gnss import uGNSS
+from cssrlib.gnss import uGNSS, prn2sat
 from cssrlib.rtcm import rtcm, rtcme, Integrity
 from random import randint, seed, sample
 
@@ -22,7 +22,8 @@ def gen_data(mt, sys_t, svid_t):
             intr.nid[sys] = randint(0, 255)  # network id DFi071 0-255
             intr.flag[sys] = {}
             for svid in svid_t[sys]:
-                intr.flag[sys][svid] = randint(0, 2)
+                sat = prn2sat(sys, svid)
+                intr.flag[sys][sat] = randint(0, 2)
                 # integrity flag DFi068 0:use,1:DNU,2:not monitored,3:reserved
 
         # issue of GNSS satellite mask DFi010
@@ -75,10 +76,12 @@ def write_rtcm(file_rtcm, msg_t, intr, nep=1):
     fc.write(msg[:k])
     fc.close()
 
+    return msg[:k]
 
-def read_rtcm(file_rtcm, intr, nep=1):
 
-    cs = rtcm()
+def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
+
+    cs = rtcm(foutname=logfile)
     cs.monlevel = 2
 
     fc = open(file_rtcm, 'rb')
@@ -121,6 +124,7 @@ def read_rtcm(file_rtcm, intr, nep=1):
 
 if __name__ == "__main__":
     file_rtcm = '../data/sample.rtcm'
+    file_log = '../data/sample.log'
     nep = 1
     maxlen = 1024
     nsatmax = 10
@@ -136,17 +140,17 @@ if __name__ == "__main__":
     sys_t = [uGNSS.GPS, uGNSS.GLO, uGNSS.GAL, uGNSS.QZS]
 
     # GNSS satellite mask DFi009
-    prn_rng_t = {uGNSS.GPS: [1, 63],  # Table 8.5-1
+    prn_rng_t = {uGNSS.GPS: [1, 32],  # Table 8.5-1
                  uGNSS.GLO: [1, 24],  # Table 8.5-3
-                 uGNSS.GAL: [1, 52],  # Table 8.5-5
+                 uGNSS.GAL: [1, 36],  # Table 8.5-5
                  uGNSS.BDS: [1, 63],
                  uGNSS.QZS: [193, 202],
-                 uGNSS.IRN: [1, 10]}
+                 uGNSS.IRN: [1, 14]}
 
     mt = msg_t[0]
 
     seed(seed_)
     prn_t = gen_sat_list(sys_t, prn_rng_t)  # generate random sat list
     intr = gen_data(mt, sys_t, prn_t)  # generate random message data
-    write_rtcm(file_rtcm, msg_t, intr, nep)
-    cs = read_rtcm(file_rtcm, intr, nep)
+    msg = write_rtcm(file_rtcm, msg_t, intr, nep)
+    cs = read_rtcm(file_rtcm, intr, nep, logfile=file_log)
