@@ -271,29 +271,36 @@ fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
 fmt = '%H:%M'
+col_t = ['#d62728', '#1f77b4', '#2ca02c']  # tab:red, tab:blue, tab:green
 
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
+    # nm = 4
+    nm = 3
 
     for k in range(3):
-        plt.subplot(4, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], 'r.')
-        plt.plot(t[idx5], enu[idx5, k], 'y.')
-        plt.plot(t[idx4], enu[idx4, k], 'g.')
+        plt.subplot(nm, 1, k+1)
+        plt.plot(t[idx0], enu[idx0, k], color=col_t[0], marker='.')
+        plt.plot(t[idx5], enu[idx5, k], color=col_t[1], marker='.')
+        plt.plot(t[idx4], enu[idx4, k], color=col_t[2], marker='.')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
-    plt.subplot(4, 1, 4)
-    plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.ylabel('ZTD [cm]')
-    plt.grid()
-    plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+    if nm > 3:
+        plt.subplot(nm, 1, 4)
+        plt.plot(t[idx0], ztd[idx0]*1e2, color=col_t[0],
+                 marker='.', markersize=8, label='none')
+        plt.plot(t[idx5], ztd[idx5]*1e2, color=col_t[1],
+                 marker='.', markersize=8, label='float')
+        plt.plot(t[idx4], ztd[idx4]*1e2, color=col_t[2],
+                 marker='.', markersize=8, label='fix')
+        plt.ylabel('ZTD [cm]')
+        plt.grid()
+        plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.xlabel('Time [HH:MM]')
     plt.legend()
@@ -302,9 +309,12 @@ elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='none')
-    plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
-    plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
+    plt.plot(enu[idx0, 0], enu[idx0, 1],
+             color=col_t[0], marker='.', label='none')
+    plt.plot(enu[idx5, 0], enu[idx5, 1],
+             color=col_t[1], marker='.', label='float')
+    plt.plot(enu[idx4, 0], enu[idx4, 1],
+             color=col_t[2], marker='.', label='fix')
 
     plt.xlabel('Easting [m]')
     plt.ylabel('Northing [m]')
@@ -313,7 +323,7 @@ elif fig_type == 2:
     plt.legend()
     # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
-plotFileFormat = 'eps'
+plotFileFormat = 'png'
 plotFileName = '.'.join(('test_ppppvs', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)

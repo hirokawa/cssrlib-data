@@ -128,8 +128,8 @@ class jps(rcvDec):
     rec = []
     mid_decoded = []
 
-    def __init__(self, opt=None, prefix=''):
-        super().__init__()
+    def __init__(self, opt=None, prefix='', gnss_t='GECJ'):
+        super().__init__(opt, prefix, gnss_t)
 
         self.pr_ref = np.zeros(self.nmax)
         self.PR_REF = np.zeros(self.nmax)
@@ -913,11 +913,12 @@ if __name__ == "__main__":
     # turn off GALILEO E6 signal tracking for all SVs
     # set,/par/lock/sig/qzss/l6,n
     # set,/par/lock/sig/qzss/l6/193,y
+    gnss_t = 'GERCJ'
 
     year = 2023
 
-    bdir = '../data/doy223/'
-    fnames = 'jav3223v.jps'
+    bdir = '../data/doy2025-020/'
+    fnames = 'jav3020?.jps'
 
     opt = rcvOpt()
     opt.flg_qzsl6 = True
@@ -928,6 +929,7 @@ if __name__ == "__main__":
     opt.flg_bdsb1c = True
     opt.flg_sbas = False
     opt.flg_rnxnav = True
+    opt.flg_rnxobs = False
 
     # prn_ref = 199
     prn_ref = -1
@@ -940,7 +942,7 @@ if __name__ == "__main__":
         bdir += '/'
 
         prefix = bdir+fname[4:].removesuffix('.jps')+'_'
-        jpsdec = jps(opt=opt, prefix=bdir+fname[4:].removesuffix('.jps')+'_')
+        jpsdec = jps(opt=opt, prefix=prefix, gnss_t=gnss_t)
         jpsdec.monlevel = 1
 
         jpsdec.re.anttype = "JAVRINGANT_DM   JVDM"

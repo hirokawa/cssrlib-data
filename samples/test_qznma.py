@@ -113,5 +113,5 @@ if True:
     # ax.set_xticks(np.arange(0, 300, 30))
     plt.ylabel('number of satellites')
     plt.xlabel('time [s]')
-    # plt.savefig('qznma-{0:d}-nsat-{1:d}.png'.format(doy, tmax))
+    plt.savefig('qznma-{0:d}-nsat-{1:d}.png'.format(doy, tmax))
     plt.show()

@@ -549,26 +549,37 @@ class sbf(rcvDec):
             crcpass, cnt, src, freq, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if self.flg_sbas:
+                itype = src-24  # 0:L1, 1:L5
                 if crcpass != 1:
                     if self.monlevel > 0:
                         print("crc error in GEORawL1/5 " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
                     return -1
-                self.fh_sbas.write("{:4d}\t{:6d}\t{:3d}\t{:2d}\t{:3d}\t".
-                                   format(self.week, int(self.tow), prn,
-                                          src-24, 32))
+                if prn < 120 or prn > 158:
+                    return 0
+
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
-                    self.fh_sbas.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
+
+                bl = 8 if itype == 0 else 4
+
+                if self.prn_ref > 0 and prn != self.prn_ref:
+                    return 0
+
+                mt = bs.unpack_from('u6', msg, bl)[0]
+                self.fh_sbas.write("{:4d}{:7d}{:4d}{:3d} : ".
+                                   format(self.week, int(self.tow), prn, mt))
+                for i in range(29):
+                    self.fh_sbas.write("{:02X}".format(msg[i]))
                 self.fh_sbas.write("\n")
 
                 sat = prn2sat(uGNSS.SBS, prn)
                 seph = None
-                if blk_num == 4020:
+                if itype == 0:
                     seph = self.rn.decode_sbs_l1(self.week, self.tow, sat, msg)
                 if seph is not None:
                     self.re.rnx_snav_body(seph, self.fh_rnxnav)
@@ -989,22 +1000,16 @@ class sbf(rcvDec):
 
 if __name__ == "__main__":
 
-    bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/_sbf/')
-    fnames = 'sep3238a.sbf'
+    # bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/_sbf/')
+    # fnames = 'sep3238a.sbf'
 
     gnss_t = 'GERCJ'
 
-    # bdir = '../data/doy244/'
-    # fnames = 'sep3244*.sbf'
-
-    # bdir = '../data/doy223/'
-    # fnames = 'sept223v.sbf'
-
-    # bdir = '../data/doy308/'
-    # fnames = 'sept308b.sbf'
+    bdir = '../data/doy2025-046/'
+    fnames = 'sep3046*.sbf'
 
     opt = rcvOpt()
-    opt.flg_qzsl6 = True
+    opt.flg_qzsl6 = False
     opt.flg_qzslnav = True
     opt.flg_gpslnav = True
     opt.flg_qzscnav = True
@@ -1019,10 +1024,10 @@ if __name__ == "__main__":
     opt.flg_bdsb1c = True
     opt.flg_bdsb2a = True
     opt.flg_bdsb2b = True
-    opt.flg_bdsd12 = True
+    opt.flg_bdsd12 = False
     opt.flg_gloca = True
     opt.flg_irnnav = False
-    opt.flg_sbas = False
+    opt.flg_sbas = True
     opt.flg_rnxnav = True
     opt.flg_rnxobs = True
 
@@ -1040,7 +1045,8 @@ if __name__ == "__main__":
         nep_max = 0
 
         sbfdec.re.anttype = "JAVRINGANT_DM   JVDM"
-        sbfdec.re.rectype = "SEPT POLARX5        "
+        # sbfdec.re.rectype = "SEPT POLARX5        "
+        sbfdec.re.rectype = "SEPT MOSAIC-X5      "
 
         blen = os.path.getsize(bdir+fname)
         with open(bdir+fname, 'rb') as f:

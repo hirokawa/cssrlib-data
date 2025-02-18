@@ -32,6 +32,16 @@ if icase == 1:  # MSAS, L1 SBAS
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
 
+    ep = [2025, 1, 5, 6, 0, 0]
+    navfile = '../data/doy2025-005/005g_rnx.nav'
+    obsfile = '../data/doy2025-005/005g_rnx.obs'  # PolaRX5
+    file_sbas = '../data/doy2025-005/005g_sbas.txt'
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    prn_ref = 137  # satellite PRN for SBAS correction
+    sbas_type = 0  # L1: 0, L5: 1
+    nf = 1
+
+
 elif icase == 2:  # QZSS, L5 DFMC
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
@@ -64,7 +74,7 @@ if sbas_type == 0:  # single frequency L1 SBAS
 
 else:  # dual frequency
     nf = 2
-    gnss = "E"
+    gnss = "GE"
     if 'G' in gnss:
         sigs.extend([rSigRnx("GC1C"), rSigRnx("GC5Q"),
                      rSigRnx("GL1C"), rSigRnx("GL5Q"),
@@ -73,7 +83,6 @@ else:  # dual frequency
         sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
                      rSigRnx("EL1C"), rSigRnx("EL5Q"),
                      rSigRnx("ES1C"), rSigRnx("ES5Q")])
-
     if 'J' in gnss:
         sigs.extend([rSigRnx("JC1C"), rSigRnx("JC5Q"),
                      rSigRnx("JL1C"), rSigRnx("JL5Q"),
@@ -108,6 +117,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros(nep, dtype=int)
 
 # Logging level
 #
@@ -178,7 +188,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         obs = rnx.decode_obs()
 
     dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-             ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+             ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
     v = np.genfromtxt(file_sbas, dtype=dtype)
 
     # Loop over number of epoch from file start
@@ -198,8 +208,13 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
-               & (v['type'] == sbas_type)]
+        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+        if sbas_type == 0:  # L1
+            vi = vi[vi['type'] <= 30]
+        else:  # DFMC L5
+            vi = vi[vi['type'] > 30]
+
+        #       & (v['type'] == sbas_type)]
         if len(vi) > 0:
             buff = unhexlify(vi['nav'][0])
             cs.decode_cssr(buff, 0, src=sbas_type, prn=prn_ref)
@@ -221,6 +236,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         # ztd[ne] = nav.xa[std.IT(nav.na)] \
         #    if nav.smode == 4 else nav.x[std.IT(nav.na)]
         smode[ne] = nav.smode
+        # nsat[ne] = std.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
@@ -258,8 +274,8 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim_h = 2.0
-ylim_v = 6.0
+ylim_h = 10.0
+ylim_v = 12.0
 
 idx2 = np.where(smode == 2)[0]
 idx1 = np.where(smode == 1)[0]

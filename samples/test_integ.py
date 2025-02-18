@@ -9,6 +9,16 @@ import copy
 from cssrlib.gnss import uGNSS, prn2sat
 from cssrlib.rtcm import rtcm, rtcme, Integrity
 from random import randint, seed, sample
+from binascii import unhexlify
+
+
+def read_asc(file):
+    b = bytearray()
+    with open(file) as fh:
+        for line in fh:
+            b += unhexlify(''.join(line.split()))
+
+    return b
 
 
 def gen_data(mt, sys_t, svid_t):
@@ -79,19 +89,10 @@ def write_rtcm(file_rtcm, msg_t, intr, nep=1):
     return msg[:k]
 
 
-def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
-
+def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024):
     cs = rtcm(foutname=logfile)
     cs.monlevel = 2
 
-    fc = open(file_rtcm, 'rb')
-    if not fc:
-        print("RTCM messsage file cannot open.")
-
-    blen = os.path.getsize(file_rtcm)
-    msg = fc.read(blen)
-    maxlen = len(msg)-5
-    fc.close()
     k = 0
     for ne in range(nep):
 
@@ -103,28 +104,46 @@ def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
                 continue
             if not cs.checksum(msg, k, maxlen):
                 print("checksum failed.")
-                k += 1
-                continue
+                # k += 1
+                # continue
 
             cs.decode(msg[k:k+cs.len+3])
             k += cs.dlen
 
-            print(cs.integ.pid == intr.pid)
-            print(cs.integ.tow == intr.tow)
-            print(cs.integ.flag == intr.flag)
-            print(cs.integ.nid == intr.nid)
-            print(cs.integ.iod_sys == intr.iod_sys)
+            if intr is not None:
+                print(cs.integ.pid == intr.pid)
+                print(cs.integ.tow == intr.tow)
+                print(cs.integ.flag == intr.flag)
+                print(cs.integ.nid == intr.nid)
+                print(cs.integ.iod_sys == intr.iod_sys)
 
-            if cs.msgtype == 11:
-                print(cs.integ.vp == intr.vp)
-                print(cs.integ.uri == intr.uri)
+                if cs.msgtype == 11:
+                    print(cs.integ.vp == intr.vp)
+                    print(cs.integ.uri == intr.uri)
 
     return cs
+
+
+def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
+
+    fc = open(file_rtcm, 'rb')
+    if not fc:
+        print("RTCM messsage file cannot open.")
+
+    blen = os.path.getsize(file_rtcm)
+    msg = fc.read(blen)
+    maxlen = len(msg)-5
+    fc.close()
+
+    return decode_rtcm(msg, intr, nep, logfile, maxlen)
 
 
 if __name__ == "__main__":
     file_rtcm = '../data/sample.rtcm'
     file_log = '../data/sample.log'
+
+    file_asc = '../data/sc134/MT05_DFi56=00.txt'
+
     nep = 1
     maxlen = 1024
     nsatmax = 10
@@ -154,3 +173,7 @@ if __name__ == "__main__":
     intr = gen_data(mt, sys_t, prn_t)  # generate random message data
     msg = write_rtcm(file_rtcm, msg_t, intr, nep)
     cs = read_rtcm(file_rtcm, intr, nep, logfile=file_log)
+
+    msg = read_asc(file_asc)
+    # cs = rtcm(foutname=file_log)
+    decode_rtcm(msg)
