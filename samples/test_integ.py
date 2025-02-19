@@ -174,6 +174,6 @@ if __name__ == "__main__":
     msg = write_rtcm(file_rtcm, msg_t, intr, nep)
     cs = read_rtcm(file_rtcm, intr, nep, logfile=file_log)
 
-    msg = read_asc(file_asc)
+    # msg = read_asc(file_asc)
     # cs = rtcm(foutname=file_log)
-    decode_rtcm(msg)
+    # decode_rtcm(msg)
