@@ -23,6 +23,7 @@ icase = 1  # 1: MSAS L1, 2: QZSS DFMC L5
 # Start epoch and number of epochs
 #
 if icase == 1:  # MSAS, L1 SBAS
+    """
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
@@ -31,16 +32,15 @@ if icase == 1:  # MSAS, L1 SBAS
     prn_ref = 137  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
-
-    ep = [2025, 1, 5, 6, 0, 0]
-    navfile = '../data/doy2025-005/005g_rnx.nav'
-    obsfile = '../data/doy2025-005/005g_rnx.obs'  # PolaRX5
-    file_sbas = '../data/doy2025-005/005g_sbas.txt'
+    """
+    ep = [2025, 2, 15, 12, 0, 0]
+    navfile = '../data/doy2025-046/046m_rnx.nav'
+    obsfile = '../data/doy2025-046/046m_rnx.obs'  # PolaRX5
+    file_sbas = '../data/doy2025-046/046m_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     prn_ref = 137  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
-
 
 elif icase == 2:  # QZSS, L5 DFMC
     ep = [2023, 8, 11, 21, 0, 0]
