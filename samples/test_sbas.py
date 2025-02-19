@@ -33,9 +33,9 @@ if icase == 1:  # MSAS, L1 SBAS
     nf = 1
 
     ep = [2025, 1, 5, 6, 0, 0]
-    navfile = '../data/doy2025-005/005g_rnx.nav'
-    obsfile = '../data/doy2025-005/005g_rnx.obs'  # PolaRX5
-    file_sbas = '../data/doy2025-005/005g_sbas.txt'
+    navfile = '../data/doy2025-046/046m_rnx.nav'
+    obsfile = '../data/doy2025-046/046m_rnx.obs'  # PolaRX5
+    file_sbas = '../data/doy2025-046/046m_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     prn_ref = 137  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
