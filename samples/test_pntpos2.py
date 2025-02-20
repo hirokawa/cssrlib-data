@@ -1,5 +1,5 @@
 """
- kinematic test for standalone positioning
+ kinematic test for stand-alone positioning
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,8 +15,8 @@ nep = 360
 
 E = xyz2enu(pos_ref)
 
-navfile = '../data/SEPT2650.21P'
-obsfile = '../data/SEPT265G.21O'
+navfile = '../data/doy2021-265/SEPT2650.21P'
+obsfile = '../data/doy2021-265/SEPT265G.21O'
 
 # Define signals to be processed
 #

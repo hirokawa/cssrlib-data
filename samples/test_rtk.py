@@ -14,11 +14,11 @@ from cssrlib.gnss import rSigRnx, time2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkpos
 
-bdir = '../data/'
-ngsantfile = bdir+'GSI_PCV.TXT'
+ngsantfile = '../data/GSI_PCV.TXT'
 
 nav = gn.Nav()
 
+bdir = '../data/antex/'
 if False:
     navfile = bdir+'SEPT078M.21P'
     obsfile = bdir+'SEPT078M.21O'

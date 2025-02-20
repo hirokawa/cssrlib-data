@@ -32,16 +32,16 @@ fromSbfConvert = False
 if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-    navfile = '../data/SEPT1890.23P'
-    obsfile = '../data/SEPT1890.23O'
-    file_has = '../data/gale6_189e.txt'
+    navfile = '../data/doy2023-189/SEPT1890.23P'
+    obsfile = '../data/doy2023-189/SEPT1890.23O'
+    file_has = '../data/doy2023-189/gale6_189e.txt'
 elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-    navfile = '../data/doy223/NAV223.23p'
-    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_has = '../data/doy223/223v_gale6.txt'
+    navfile = '../data/doy2023-223/NAV223.23p'
+    # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+    file_has = '../data/doy2023-223/223v_gale6.txt'
 elif dataset == 2:
     ep = [2025, 2, 15, 13, 0, 0]
     navfile = '../data/doy2025-046/046n_rnx.nav'
@@ -116,7 +116,7 @@ gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 
 # Load ANTEX data for satellites and stations
 #
-atxfile = '../data/igs14.atx'
+atxfile = '../data/antex/igs14.atx'
 atx = atxdec()
 atx.readpcv(atxfile)
 

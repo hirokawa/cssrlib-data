@@ -117,7 +117,7 @@ ssrfiles = []
 if len(sys_argv) > 1:
     ssrfiles = sys_argv[1:]
 else:
-    ssrfiles = ['../data/gale6_189e.txt', ]
+    ssrfiles = ['../data/doy2023-189/gale6_189e.txt', ]
 
 # Start time
 #
@@ -145,7 +145,7 @@ if "qzsl6" in ssrfiles[0]:
 
     prn_ref = 199  # QZSS PRN
     l6_ch = 1  # 0:L6D, 1:L6E
-    atxfile = baseDirName+'../data/igs20.atx'
+    atxfile = baseDirName+'../data/antex/igs20.atx'
 
 elif "gale6" in ssrfiles[0]:
 
@@ -157,7 +157,7 @@ elif "gale6" in ssrfiles[0]:
 
     # NOTE: igs14 values seem to be yield better consistency with
     #       CODE reference orbits
-    atxfile = baseDirName+'../data/igs14.atx'
+    atxfile = baseDirName+'../data/antex/igs14.atx'
 
 elif "bdsb2b" in ssrfiles[0]:
 
@@ -168,7 +168,7 @@ elif "bdsb2b" in ssrfiles[0]:
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
     prn_ref = 59  # satellite PRN to receive BDS PPP collection
-    atxfile = baseDirName+'../data/igs20.atx'
+    atxfile = baseDirName+'../data/antex/igs20.atx'
 
 else:
 
@@ -199,8 +199,8 @@ for dt in (-1, 0, +1):
     hour = ep[3]
     doy = int(time2doy(t))
 
-    navfile = baseDirName+'../data{}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
-        .format('/doy223' if doy == 223 else '', year, doy)
+    navfile = baseDirName+'../data/doy{:4d}-{:03d}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+        .format(year, doy, year, doy)
 
     if os.path.exists(navfile):
         navfiles.append(navfile)

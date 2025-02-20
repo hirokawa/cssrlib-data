@@ -34,19 +34,20 @@ nep = 360
 
 pos_ref = ecef2pos(xyz_ref)
 
-navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
-obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
+bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+navfile = bdir+'SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
+obsfile = bdir+'SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
 # ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
 
-orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
 
-clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+clkfile = '../data/igs/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
     .format(ac, year, doy)
 
-bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
 if not exists(clkfile):
@@ -100,12 +101,13 @@ bsx.parse(bsxfile)
 
 # Load ANTEX data for satellites and stations
 #
+atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20.atx'
 elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
-    atxfile = '../data/M20.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M20.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 else:
-    atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M14.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 
 atx = atxdec()
 atx.readpcv(atxfile)

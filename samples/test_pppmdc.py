@@ -29,16 +29,16 @@ dataset = 2
 #
 if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
-    navfile = '../data/SEPT1890.23P'
-    obsfile = '../data/SEPT1890.23O'
-    file_l6 = '../data/qzsl6_189e.txt'
+    navfile = '../data/doy2023-189/SEPT1890.23P'
+    obsfile = '../data/doy2023-189/SEPT1890.23O'
+    file_l6 = '../data/doy2023-189/qzsl6_189e.txt'
 elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/NAV223.23p'
-    # navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_l6 = '../data/doy223/223v_qzsl6.txt'
+    navfile = '../data/doy2023-223/NAV223.23p'
+    # navfile = '../data/doy2023-223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+    file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
 elif dataset == 2:
     ep = [2025, 2, 15, 13, 0, 0]
     navfile = '../data/doy2025-046/046n_rnx.nav'
@@ -65,8 +65,8 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-# gnss = "GE"
-gnss = "GEJR"
+gnss = "GE"
+#gnss = "GEJR"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -110,11 +110,11 @@ cs.cssrmode = sc.QZS_MADOCA
 
 # Load ANTEX data for satellites and stations
 #
-
+atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
+    atxfile += 'igs20.atx'
 else:
-    atxfile = '../data/igs14.atx'
+    atxfile += 'igs14.atx'
 
 atx = atxdec()
 atx.readpcv(atxfile)

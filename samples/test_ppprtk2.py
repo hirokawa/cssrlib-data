@@ -15,10 +15,10 @@ from cssrlib.peph import atxdec, searchpcv
 ep = [2021, 9, 22, 6, 30, 0]
 time = gn.epoch2time(ep)
 
-atxfile = '../data/igs14.atx'
-navfile = '../data/SEPT2650.21P'
-obsfile = '../data/SEPT265G.21O'
-l6file = '../data/2021265G.l6'
+atxfile = '../data/antex/igs14.atx'
+navfile = '../data/doy2021-265/SEPT2650.21P'
+obsfile = '../data/doy2021-265/SEPT265G.21O'
+l6file = '../data/doy2021-265/2021265G.l6'
 griddef = '../data/clas_grid.def'
 
 xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)

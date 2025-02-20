@@ -1,5 +1,5 @@
 """
- static test for standalone positioning
+ static test for stand-alone positioning
 """
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
@@ -13,17 +13,17 @@ from cssrlib.pntpos import stdpos
 
 if False:
     xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
-    navfile = '../data/SEPT078M.21P'
-    obsfile = '../data/SEPT078M.21O'
+    navfile = '../data/doy2021-078/SEPT078M.21P'
+    obsfile = '../data/doy2021-078/SEPT078M.21O'
     ep = [2021, 3, 19, 12, 0, 0]
 else:
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    # navfile = '../data/doy223/BRDC00IGS_R_20232230000_01D_MN.rnx'
-    # navfile = '../data/doy223/NAV223.23p'
-    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
+    navfile = '../data/doy2023-223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    # navfile = '../data/doy2023-223/BRDC00IGS_R_20232230000_01D_MN.rnx'
+    # navfile = '../data/doy2023-223/NAV223.23p'
+    # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
 
 pos_ref = ecef2pos(xyz_ref)
 nep = 360

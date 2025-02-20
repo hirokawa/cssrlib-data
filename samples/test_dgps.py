@@ -21,16 +21,16 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
-dataset = 1
+dataset = 0
 
 # Start epoch and number of epochs
 #
 if dataset == 0:  # MSAS, L1 SBAS
     ep = [2023, 8, 11, 21, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
-    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_sbas = '../data/doy223/223v_sbas.txt'
+    # navfile = '../data/doy2023-308/308c_rnx.nav'
+    navfile = '../data/doy2023-223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+    file_sbas = '../data/doy2023-223/223v_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     prn_ref = 189  # satellite PRN for SLAS
     sbas_type = 0  # L1: 0, L5: 1
@@ -104,9 +104,9 @@ cs.monlevel = 0
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()
-atx.readpcv('../data/igs20.atx')
+atx.readpcv('../data/antex/igs20.atx')
 
-# Intialize data structures for results
+# Initialize data structures for results
 #
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan

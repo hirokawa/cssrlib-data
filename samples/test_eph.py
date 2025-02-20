@@ -9,13 +9,13 @@ from cssrlib.ephemeris import findeph, eph2pos
 rnx_ver = 4
 
 if rnx_ver == 3:  # RINEX 3
-    navfile = '../data/30340780.21q'
+    navfile = '../data/doy2021-078/30340780.21q'
     t0 = epoch2time([2021, 3, 19, 0, 0, 0])
     sys_ref = uGNSS.QZS
     prn_ref = 194
     mode_ref = 0  # 0: LNAV, 1: CNAV, 2: CNAV2
 elif rnx_ver == 4:  # RINEX 4
-    navfile = '../data/BRD400DLR_S_20231890000_01D_MN.rnx'
+    navfile = '../data/doy2023-189/BRD400DLR_S_20231890000_01D_MN.rnx'
     t0 = epoch2time([2023, 7, 8, 4, 0, 0])
     sys_ref = uGNSS.BDS
     prn_ref = 35

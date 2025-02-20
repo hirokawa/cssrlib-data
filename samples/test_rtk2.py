@@ -12,7 +12,7 @@ from cssrlib.gnss import rSigRnx
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkpos
 
-atxfile = '../data/igs14.atx'
+atxfile = '../data/antex/igs14.atx'
 navfile = '../data/SEPT2650.21P'
 obsfile = '../data/SEPT265G.21O'
 basefile = '../data/3034265G.21O'

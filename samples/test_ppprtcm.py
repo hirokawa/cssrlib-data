@@ -29,12 +29,12 @@ icase = 2
 #
 if icase == 1:  # Galileo HAS IDD
     ep = [2023, 8, 17, 2, 0, 0]
-    navfile = '../data/doy229/OBE42023229c.nav'
-    # navfile = '../data/doy229/BRD400DLR_S_20232290000_01D_MN.rnx'
-    obsfile = '../data/doy229/OBE42023229c.obs'
+    navfile = '../data/doy2023-229/OBE42023229c.nav'
+    # navfile = '../data/doy2023-229/BRD400DLR_S_20232290000_01D_MN.rnx'
+    obsfile = '../data/doy2023-229/OBE42023229c.obs'
     xyz_ref = [4186704.2262, 834903.7677, 4723664.9337]
-    file_rtcm = '../data/doy229/idd2023229c.rtc'
-    file_rtcm_log = '../data/doy229/idd2023229c.log'
+    file_rtcm = '../data/doy2023-229/idd2023229c.rtc'
+    file_rtcm_log = '../data/doy2023-229/idd2023229c.log'
 elif icase == 2:  # JPL GDGPS  Mosaic-X5
     ep = [2024, 2, 12, 7, 0, 0]
     navfile = '../data/doy2024-043/043h_rnx.nav'
@@ -119,7 +119,7 @@ if True:
 
 # Load ANTEX data for satellites and stations
 #
-atxfile = '../data/igs20.atx'
+atxfile = '../data/antex/igs20.atx'
 atx = atxdec()
 atx.readpcv(atxfile)
 

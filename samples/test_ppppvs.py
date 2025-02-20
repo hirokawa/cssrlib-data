@@ -23,23 +23,21 @@ from cssrlib.cssr_pvs import decode_sinca_line
 
 # Select test case
 #
-dataset = 2  # 0: SIS, 1: DAS
+dataset = 2  # 0: SIS, 1: DAS, 2: SIS
 
 # Start epoch and number of epochs
 #
 if dataset == 0:
     ep = [2023, 11, 4, 2, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
-    navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
-    obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
-    file_pvs = '../data/doy308/308c_sbas.txt'
+    navfile = '../data/doy2023-308/BRD400DLR_S_20233080000_01D_MN.rnx'
+    obsfile = '../data/doy2023-308/308c_rnx.obs'  # Mosaic-X5
+    file_pvs = '../data/doy2023-308/308c_sbas.txt'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 elif dataset == 1:
     ep = [2023, 12, 13, 12, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
-    navfile = '../data/doy347/STR1347m.nav'
-    obsfile = '../data/doy347/STR1347m.obs'  # STR100, Septentrio PolaRX5
-    file_pvs = '../data/doy347/DAS2023347m.txt'
+    navfile = '../data/doy2023-347/STR1347m.nav'
+    obsfile = '../data/doy2023-347/STR1347m.obs'  # STR100, Septentrio PolaRX5
+    file_pvs = '../data/doy2023-347/DAS2023347m.txt'
     xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
 elif dataset == 2:
     ep = [2025, 2, 15, 13, 0, 0]
@@ -96,7 +94,7 @@ cs.monlevel = 2
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()
-atx.readpcv('../data/igs20.atx')
+atx.readpcv('../data/antex/igs20.atx')
 
 # Initialize data structures for results
 #
