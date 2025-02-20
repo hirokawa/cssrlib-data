@@ -3,7 +3,7 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import exit as sys_exit
 
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
@@ -79,12 +79,12 @@ atx.readpcv(atxfile)
 nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
 if nav.rcv_ant is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 
 nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
 if nav.rcv_ant_b is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 
 # Print equipment information
 #
@@ -110,36 +110,50 @@ for ne in range(nep):
 dec.fobs.close()
 decb.fobs.close()
 
-if True:
-    idx4 = np.where(smode == 4)[0]
-    idx5 = np.where(smode == 5)[0]
-    idx1 = np.where(smode == 1)[0]
 
-    lbl_t = ['east [m]', 'north [m]', 'up [m]']
-    fig = plt.figure(figsize=(6, 10))
+idx4 = np.where(smode == 4)[0]
+idx5 = np.where(smode == 5)[0]
+idx1 = np.where(smode == 1)[0]
 
-    for k in range(3):
-        plt.subplot(3, 1, k+1)
-        plt.plot(t, enu[:, k], '-', color='gray')
-        # plt.plot(t[idx1], enu[idx1, k], 'm.', label='stdpos')
-        plt.plot(t[idx5], enu[idx5, k], 'r.', markersize=1, label='float')
-        plt.plot(t[idx4], enu[idx4, k], 'b.', markersize=1, label='fix')
-        plt.xticks(np.arange(0, nep+1, step=30))
-        plt.ylabel(lbl_t[k])
-        plt.xlabel('time[s]')
-        if k == 0:
-            plt.legend()
-        plt.grid()
-    plt.show()
+# East-north-up position error plot
+#
 
-    plt.plot(enu[:, 0], enu[:, 1], '-', color='gray')
-    # plt.plot(enu[idx1, 0], enu[idx1, 1], 'm.', markersize=1, label='stdpos')
-    plt.plot(enu[idx5, 0], enu[idx5, 1], 'r.', markersize=1, label='float')
-    plt.plot(enu[idx4, 0], enu[idx4, 1], 'b.', markersize=1, label='fix')
+lbl_t = ['east [m]', 'north [m]', 'up [m]']
+fig = plt.figure(figsize=(6, 10))
 
-    plt.xlabel('easting [m]')
-    plt.ylabel('northing [m]')
+for k in range(3):
+    plt.subplot(3, 1, k+1)
+    plt.plot(t, enu[:, k], '-', color='gray')
+    # plt.plot(t[idx1], enu[idx1, k], 'm.', label='stdpos')
+    plt.plot(t[idx5], enu[idx5, k], 'r.', markersize=1, label='float')
+    plt.plot(t[idx4], enu[idx4, k], 'b.', markersize=1, label='fix')
+    plt.xticks(np.arange(0, nep+1, step=30))
+    plt.ylabel(lbl_t[k])
+    plt.xlabel('time[s]')
+    if k == 0:
+        plt.legend()
     plt.grid()
-    plt.axis('equal')
-    plt.legend()
-    plt.show()
+
+plotFileFormat = 'eps'
+plotFileName = '.'.join(('test_rtk_1', plotFileFormat))
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
+# plt.show()
+
+# East-north trajetory plot
+#
+
+plt.plot(enu[:, 0], enu[:, 1], '-', color='gray')
+# plt.plot(enu[idx1, 0], enu[idx1, 1], 'm.', markersize=1, label='stdpos')
+plt.plot(enu[idx5, 0], enu[idx5, 1], 'r.', markersize=1, label='float')
+plt.plot(enu[idx4, 0], enu[idx4, 1], 'b.', markersize=1, label='fix')
+
+plt.xlabel('easting [m]')
+plt.ylabel('northing [m]')
+plt.grid()
+plt.axis('equal')
+plt.legend()
+
+plotFileFormat = 'eps'
+plotFileName = '.'.join(('test_rtk_2', plotFileFormat))
+plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
+# plt.show()

@@ -7,7 +7,9 @@ import bitstruct as bs
 from itertools import chain
 import numpy as np
 import os
-import sys
+from sys import argv as sys_argv
+from sys import exit as sys_exit
+
 
 from cssrlib.ephemeris import satpos
 from cssrlib.gnss import Nav, sat2prn, sys2str, sat2id
@@ -79,7 +81,7 @@ def write_bsx(bsxfile, ac, data):
     lines.append("-BIAS/SOLUTION")
     lines.append("%=ENDBIA")
 
-    # Replacefirst line
+    # Replace first line
     #
     lines[0] = "%=BIA 1.00 {ac} {tn}   {ac} {ts} {te} R {nVal:08d}"\
         .format(ac=ac, tn=time2bsxstr(tNow), ts=time2bsxstr(tFirst),
@@ -112,8 +114,8 @@ baseDirName = os.path.dirname(os.path.abspath(__file__))+"/"
 # SSR file for conversion
 #
 ssrfiles = []
-if len(sys.argv) > 1:
-    ssrfiles = sys.argv[1:]
+if len(sys_argv) > 1:
+    ssrfiles = sys_argv[1:]
 else:
     ssrfiles = ['../data/gale6_189e.txt', ]
 
@@ -125,7 +127,7 @@ else:
     time = file2time(2023, ssrfiles[0])
     """
     print("ERROR: unknown epoch!")
-    sys.exit(1)
+    sys_exit(1)
     """
 
 ep = time2epoch(time)
@@ -170,8 +172,8 @@ elif "bdsb2b" in ssrfiles[0]:
 
 else:
 
-    print("ERROR: unkown SSR format for {}!".format(ssrfiles[0]))
-    sys.exit(1)
+    print("ERROR: unknown SSR format for {}!".format(ssrfiles[0]))
+    sys_exit(1)
 
 # Output files
 #
@@ -222,8 +224,8 @@ elif 'qzsl6' in ssrfiles[0]:
 elif "bdsb2b" in ssrfiles[0]:
     cs = cssr_bds()
 else:
-    print("ERROR: unkown SSR format for {}!".format(ssrfiles[0]))
-    sys.exit(1)
+    print("ERROR: unknown SSR format for {}!".format(ssrfiles[0]))
+    sys_exit(1)
 
 cs.monlevel = 0
 
@@ -242,7 +244,7 @@ atx.readpcv(atxfile)
 #
 nav.sat_ant = atx.pcvs
 
-# Intialize data structures for results
+# Initialize data structures for results
 #
 t0 = None
 biases = {}
@@ -359,7 +361,7 @@ for vi in v:
         vs = np.ones((ns, 3))*np.nan
         dts = np.ones((ns, 1))*np.nan
 
-        # Store in SP3 dataset
+        # Store in SP3 data set
         #
         peph = peph_t(time)
 
@@ -380,7 +382,7 @@ for vi in v:
                 elif sys == ug.QZS:
                     sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
                 else:
-                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
                     continue
 
             elif cs.cssrmode == sc.GAL_HAS_SIS:
@@ -390,7 +392,7 @@ for vi in v:
                 elif sys == ug.GAL:
                     sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
                 else:
-                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
                     continue
 
             elif cs.cssrmode == sc.BDS_PPP:
@@ -400,7 +402,7 @@ for vi in v:
                 elif sys == ug.BDS:
                     sig0 = (rSigRnx("CC6I"),)
                 else:
-                    print("ERROR: invalid sytem {}".format(sys2str(sys)))
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
                     continue
 
             # Skip invalid positions
@@ -455,7 +457,7 @@ for vi in v:
                 #
                 biases[sat_][sig_][-1][1] = time
 
-                # Add new value if biase has changed
+                # Add new value if bias has changed
                 #
                 if biases[sat_][sig_][-1][2] != val_:
                     biases[sat_][sig_].append([time, time, val_])
@@ -481,12 +483,12 @@ for vi in v:
                     #
                     biases[sat_][sig_][-1][1] = time
 
-                    # Add new value if biase has changed
+                    # Add new value if bias has changed
                     #
                     if biases[sat_][sig_][-1][2] != val_:
                         biases[sat_][sig_].append([time, time, val_])
 
-        # Add fake GPS code biases for Beidou B2b-PPP
+        # Add fake GPS code biases for BeiDou B2b-PPP
         #
         if cs.cssrmode == sc.BDS_PPP and extBdsBiases:
 
@@ -511,7 +513,7 @@ for vi in v:
                     #
                     biases[sat_][sig_][-1][1] = time
 
-                    # Add new value if biase has changed
+                    # Add new value if bias has changed
                     #
                     if biases[sat_][sig_][-1][2] != val_:
                         biases[sat_][sig_].append([time, time, val_])
@@ -520,6 +522,6 @@ for vi in v:
 #
 orb.write_sp3(orbfile, nav, sats)
 
-# Write biases ot Bias-SINEX
+# Write biases to Bias-SINEX
 #
 write_bsx(bsxfile, name[0:3], biases)

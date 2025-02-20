@@ -6,7 +6,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -20,24 +20,33 @@ from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 from cssrlib.cssr_pvs import decode_sinca_line
 
-icase = 1  # 1: SIS, 2: DAS
+
+# Select test case
+#
+dataset = 2  # 0: SIS, 1: DAS
 
 # Start epoch and number of epochs
 #
-if icase == 1:
+if dataset == 0:
     ep = [2023, 11, 4, 2, 0, 0]
     # navfile = '../data/doy308/308c_rnx.nav'
     navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
     obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
     file_pvs = '../data/doy308/308c_sbas.txt'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-elif icase == 2:
+elif dataset == 1:
     ep = [2023, 12, 13, 12, 0, 0]
     # navfile = '../data/doy308/308c_rnx.nav'
     navfile = '../data/doy347/STR1347m.nav'
     obsfile = '../data/doy347/STR1347m.obs'  # STR100, Septentrio PolaRX5
     file_pvs = '../data/doy347/DAS2023347m.txt'
     xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
+elif dataset == 2:
+    ep = [2025, 2, 15, 13, 0, 0]
+    navfile = '../data/doy2025-046/046n_rnx.nav'
+    obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
+    file_pvs = '../data/doy2025-046/046n_sbas.txt'
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -130,18 +139,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
@@ -170,12 +179,15 @@ if rnx.decode_obsh(obsfile) >= 0:
     while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
 
-    if icase == 1:  # SIS
+    if "_sbas.txt" in file_pvs:  # SIS
         dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
                  ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
         v = np.genfromtxt(file_pvs, dtype=dtype)
-    else:  # DAS
+    elif "DAS" in file_pvs:  # DAS
         fc = open(file_pvs, 'rt')
+    else:
+        print("ERROR: unknown file format for correction data")
+        sys_exit(1)
 
     # Loop over number of epoch from file start
     #
@@ -194,7 +206,7 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        if icase == 1:  # SIS
+        if "_sbas.txt" in file_pvs:  # SIS
             vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
                    & (v['type'] == sbas_type)]
             if len(vi) > 0:
