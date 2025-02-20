@@ -135,6 +135,15 @@ If the warnings persist, installing the latest version from the repository can h
 pip install -U git+https://github.com/insarlab/PySolid.git@main
 ```
 
+## Data download from IGS
+
+Most sample scripts require IGS data for processing. The data can be downloaded with a script, which must be called before the scripts can be executed:
+
+```bash
+cd ./cssrlib-data/samples
+python3 igs_download.py
+```
+
 ## Ephemeris: RINEX/TLE
 
 - test_eph.py reading/plotting ephemeris from RINEX 3
