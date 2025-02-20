@@ -5,6 +5,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from sys import exit as sys_exit
+from sys import stdout
 
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
@@ -129,15 +130,15 @@ for ne in range(nep):
 
     # Log to standard output
     #
-    sys.stdout.write('\r {} ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
+    stdout.write('\r {} ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}'
+                 .format(time2str(obs.t),
+                         enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                         np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                         smode[ne]))
 
 # Send line-break to stdout
 #
-sys.stdout.write('\n')
+stdout.write('\n')
 
 dec.fobs.close()
 decb.fobs.close()
