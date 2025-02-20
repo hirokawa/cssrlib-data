@@ -34,12 +34,18 @@ jobs:
         run: |
           cd cssrlib
           pip install -r requirements.txt
- 
+ 	  
+      - name: Download IGS data
+		run: |
+		  cd ./samples
+		  python igs_download.py
+
       - name: Execute Python scripts
         run: |
           export PYTHONPATH="../cssrlib/src:$PYTHONPATH"
           cd ./samples
           for file in $(find . -name "*.py"); do
+		  	if [ "$file" == "./igs_download.py" ]; then continue; fi
             echo "# Execute $file"
             echo "#"
             python "$file" > /dev/null
