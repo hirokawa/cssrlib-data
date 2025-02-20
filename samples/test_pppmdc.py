@@ -20,20 +20,32 @@ from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
+
+# Select test case
+#
+dataset = 2
+
 # Start epoch and number of epochs
 #
-if False:
+if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
     navfile = '../data/SEPT1890.23P'
     obsfile = '../data/SEPT1890.23O'
     file_l6 = '../data/qzsl6_189e.txt'
-else:
+elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/NAV223.23p'
     # navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_l6 = '../data/doy223/223v_qzsl6.txt'
+elif dataset == 2:
+    ep = [2025, 2, 15, 13, 0, 0]
+    navfile = '../data/doy2025-046/046n_rnx.nav'
+    obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
+    file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+
 
 time = epoch2time(ep)
 year = ep[0]

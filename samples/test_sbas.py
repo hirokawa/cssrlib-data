@@ -8,7 +8,6 @@ import matplotlib.dates as md
 import numpy as np
 from sys import stdout
 
-from cssrlib.cssrlib import sCType
 from cssrlib.gnss import ecef2pos, Nav, ecef2enu
 from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx, sys2str, uIonoModel
@@ -18,12 +17,14 @@ from cssrlib.sbas import sbasDec
 from cssrlib.rinex import rnxdec
 # from cssrlib.cssr_pvs import decode_sinca_line
 
-icase = 1  # 1: MSAS L1, 2: QZSS DFMC L5
+
+# Select test case
+#
+dataset = 1
 
 # Start epoch and number of epochs
 #
-if icase == 1:  # MSAS, L1 SBAS
-    """
+if dataset == 0:  # MSAS, L1 SBAS
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
@@ -32,7 +33,8 @@ if icase == 1:  # MSAS, L1 SBAS
     prn_ref = 137  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
-    """
+
+elif dataset == 1:  # MSAS, L1 SBAS
     ep = [2025, 2, 15, 12, 0, 0]
     navfile = '../data/doy2025-046/046m_rnx.nav'
     obsfile = '../data/doy2025-046/046m_rnx.obs'  # PolaRX5
@@ -42,7 +44,7 @@ if icase == 1:  # MSAS, L1 SBAS
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
 
-elif icase == 2:  # QZSS, L5 DFMC
+elif dataset == 2:  # QZSS, L5 DFMC
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5

@@ -8,7 +8,6 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-from os.path import expanduser
 import sys
 from sys import stdout
 
@@ -25,7 +24,7 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
-dataset = 0
+dataset = 2
 
 # Start epoch and number of epochs
 #
@@ -43,6 +42,12 @@ elif dataset == 1:
     # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_has = '../data/doy223/223v_gale6.txt'
+elif dataset == 2:
+    ep = [2025, 2, 15, 13, 0, 0]
+    navfile = '../data/doy2025-046/046n_rnx.nav'
+    obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
+    file_has = '../data/doy2025-046/046n_gale6.txt'
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 
 # Convert epoch and user reference position
 #
