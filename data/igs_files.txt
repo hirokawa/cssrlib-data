@@ -1,0 +1,26 @@
+antex ftp://igs-ftp.bkg.bund.de/IGS/station/general/igs20.atx
+antex ftp://igs-ftp.bkg.bund.de/IGS/station/general/igs14.atx
+
+antex ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/I20.ATX
+antex ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/M20.ATX
+antex ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/M14.ATX
+
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2025/COD0MGXFIN_20250460000_01D_05M_ORB.SP3.gz
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2025/COD0MGXFIN_20250460000_01D_30S_CLK.CLK.gz
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2025/COD0MGXFIN_20250460000_01D_01D_OSB.BIA.gz
+
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2023/COD0MGXFIN_20232230000_01D_01D_OSB.BIA.gz
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2023/COD0MGXFIN_20232230000_01D_05M_ORB.SP3.gz
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2023/COD0MGXFIN_20232230000_01D_30S_CLK.CLK.gz
+
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2023/COD0MGXFIN_20231890000_01D_01D_OSB.BIA.gz
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2023/COD0MGXFIN_20231890000_01D_05M_ORB.SP3.gz
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2023/COD0MGXFIN_20231890000_01D_30S_CLK.CLK.gz
+
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2021/COM21763.BIA.Z
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2021/COM21763.EPH.Z
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2021/COM21763.CLK.Z
+
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2021/COM21495.BIA.Z
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2021/COM21495.EPH.Z
+igs   ftp://ftp.aiub.unibe.ch/CODE_MGEX/CODE/2021/COM21495.CLK.Z
