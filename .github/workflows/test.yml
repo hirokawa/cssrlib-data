@@ -46,11 +46,12 @@ jobs:
 
             echo "Downloading $url to $folder/..."
 
+
             mkdir -p "$folder"  # Ensure destination folder exists
             file_name=$(basename "$url")  # Extract file name from URL
             dest_file="$folder/$file_name"  # Full path to downloaded file
 
-            lftp -c "open $(dirname "$url"); get $file_name -o $dest_file"
+            lftp -e "set ftp:passive-mode yes; open $(dirname "$url"); get $file_name -o $dest_file; bye"
 
             # Decompress if needed
             if [[ "$dest_file" == *.gz ]]; then
