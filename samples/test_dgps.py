@@ -6,7 +6,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -48,7 +48,7 @@ elif dataset == 1:  # MSAS, L1 SBAS
 
 elif dataset == 2:  # SouthPAN L5
     print("ERROR: datset not yet available!")
-    sys.exit(1)
+    sys_exit(1)
 
 
 time = epoch2time(ep)

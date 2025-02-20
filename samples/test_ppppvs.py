@@ -6,7 +6,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -45,7 +45,7 @@ elif dataset == 2:
     ep = [2025, 2, 15, 13, 0, 0]
     navfile = '../data/doy2025-046/046n_rnx.nav'
     obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
-    file_pvs = '../data/doy2025-046/046n_gale6.txt'
+    file_pvs = '../data/doy2025-046/046n_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 
 time = epoch2time(ep)
@@ -139,18 +139,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
@@ -187,7 +187,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         fc = open(file_pvs, 'rt')
     else:
         print("ERROR: unknown file format for correction data")
-        sys.exit(1)
+        sys_exit(1)
 
     # Loop over number of epoch from file start
     #

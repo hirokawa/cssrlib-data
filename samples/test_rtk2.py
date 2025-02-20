@@ -3,7 +3,7 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import exit as sys_exit
 
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
@@ -79,12 +79,12 @@ atx.readpcv(atxfile)
 nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
 if nav.rcv_ant is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 
 nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
 if nav.rcv_ant_b is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 
 # Print equipment information
 #
