@@ -25,7 +25,7 @@ jobs:
 
       - name: Get branch name
         id: get_branch_name
-        run: echo "branch_name=$(basename $GITHUB_REF)" >> $GITHUB_OUTPUT       
+        run: echo "branch_name=$(basename $GITHUB_REF)" >> $GITHUB_OUTPUT
 
       - name: Clone cssrlib repository
         run: git clone -b ${{ steps.get_branch_name.outputs.branch_name }} https://github.com/${{ github.actor }}/cssrlib.git
@@ -34,18 +34,18 @@ jobs:
         run: |
           cd cssrlib
           pip install -r requirements.txt
- 	  
+
       - name: Download IGS data
-		run: |
-		  cd ./samples
-		  python igs_download.py
+        run: |
+          cd ./samples
+          python igs_download.py
 
       - name: Execute Python scripts
         run: |
           export PYTHONPATH="../cssrlib/src:$PYTHONPATH"
           cd ./samples
           for file in $(find . -name "*.py"); do
-		  	if [ "$file" == "./igs_download.py" ]; then continue; fi
+            if [ "$file" == "./igs_download.py" ]; then continue; fi
             echo "# Execute $file"
             echo "#"
             python "$file" > /dev/null
