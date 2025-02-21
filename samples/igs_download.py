@@ -186,11 +186,11 @@ def download_files():
             if filename.startswith("COM"):
                 epoch = gps_to_datetime(int(filename[3:7]), int(filename[7]))
                 if filename.endswith(".BIA"):
-                    filename = f"COD0MGXFIN_{epoch: %Y%j0000}_01D_01D_OSB.BIA"
+                    filename = f"COD0MGXFIN_{epoch:%Y%j0000}_01D_01D_OSB.BIA"
                 elif filename.endswith(".CLK"):
-                    filename = f"COD0MGXFIN_{epoch: %Y%j0000}_01D_30S_CLK.CLK"
+                    filename = f"COD0MGXFIN_{epoch:%Y%j0000}_01D_30S_CLK.CLK"
                 elif filename.endswith(".EPH"):
-                    filename = f"COD0MGXFIN_{epoch: %Y%j0000}_01D_05M_ORB.SP3"
+                    filename = f"COD0MGXFIN_{epoch:%Y%j0000}_01D_05M_ORB.SP3"
                 os.rename(local_filename,
                           os.path.join(local_folder, filename))
 
