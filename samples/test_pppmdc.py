@@ -40,10 +40,10 @@ elif dataset == 1:
     obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
     file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
 elif dataset == 2:
-    ep = [2025, 2, 15, 13, 0, 0]
-    navfile = '../data/doy2025-046/046n_rnx.nav'
-    obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
-    file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
+    ep = [2025, 2, 15, 12, 0, 0]
+    navfile = '../data/doy2025-046/046m_rnx.nav'
+    obsfile = '../data/doy2025-046/046m_rnx.obs'  # PolaRX5
+    file_l6 = '../data/doy2025-046/046m_qzsl6.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 
 

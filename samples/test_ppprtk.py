@@ -17,19 +17,33 @@ from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
 l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
+dataset = 2
 
 if l6_mode == 1:
+
     ep = [2021, 3, 19, 12, 0, 0]
     xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
     navfile = '../data/doy2021-078/SEPT078M.21P'
     obsfile = '../data/doy2021-078/SEPT078M.21O'
     l6file = '../data/doy2021-078/2021078M.l6'
+
 else:
-    ep = [2023, 8, 11, 21, 0, 0]
-    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-    navfile = '../data/doy2023-223/NAV223.23p'
-    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
-    file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
+
+    if dataset == 0:
+
+        ep = [2023, 8, 11, 21, 0, 0]
+        xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+        navfile = '../data/doy2023-223/NAV223.23p'
+        obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+        file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
+
+    elif dataset == 2:
+
+        ep = [2025, 2, 15, 12, 0, 0]
+        xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+        navfile = '../data/doy2025-046/046m_rnx.nav'
+        obsfile = '../data/doy2025-046/046m_rnx.obs'  # SEPT MOSAIC-X5
+        file_l6 = '../data/doy2025-046/046m_qzsl6.txt'
 
     prn_ref = 199  # QZSS PRN
     l6_ch = 0  # 0:L6D, 1:L6E

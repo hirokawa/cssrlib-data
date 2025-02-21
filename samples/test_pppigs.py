@@ -34,7 +34,7 @@ elif dataset == 2:  # SETP223Z.23O
     xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
 elif dataset == 3:  # 046m_rnx.obs
     ep = [2025, 2, 15, 12, 0, 0]
-    xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
+    xyz_ref = [-3962108.6819, 3381309.5707, 3668678.6750]
 else:
     print("ERROR: no RINEX data set selected!")
     exit(1)
@@ -43,7 +43,7 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*2
+nep = 900*4
 
 pos_ref = ecef2pos(xyz_ref)
 
@@ -169,7 +169,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.ephopt = 4  # IGS
     nav.armode = 3
 
-    nav.elmin = np.deg2rad(5.0)
+    nav.elmin = np.deg2rad(10.0)
     nav.thresar = 2.0
 
     # Get equipment information
