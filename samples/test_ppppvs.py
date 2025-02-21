@@ -23,23 +23,27 @@ from cssrlib.cssr_pvs import decode_sinca_line
 
 # Select test case
 #
-dataset = 2  # 0: SIS, 1: DAS, 2: SIS
+dataset = 1
 
-# Start epoch and number of epochs
+# Start epoch and input files
 #
-if dataset == 0:
+if dataset == 0:  # SIS
+
     ep = [2023, 11, 4, 2, 0, 0]
     navfile = '../data/doy2023-308/BRD400DLR_S_20233080000_01D_MN.rnx'
     obsfile = '../data/doy2023-308/308c_rnx.obs'  # Mosaic-X5
     file_pvs = '../data/doy2023-308/308c_sbas.txt'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-elif dataset == 1:
+
+elif dataset == 1:  # DAS
+
     ep = [2023, 12, 13, 12, 0, 0]
     navfile = '../data/doy2023-347/STR1347m.nav'
     obsfile = '../data/doy2023-347/STR1347m.obs'  # STR100, Septentrio PolaRX5
     file_pvs = '../data/doy2023-347/DAS2023347m.txt'
     xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
-elif dataset == 2:
+
+elif dataset == 2:  # SIS
     ep = [2025, 2, 15, 13, 0, 0]
     navfile = '../data/doy2025-046/046n_rnx.nav'
     obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
