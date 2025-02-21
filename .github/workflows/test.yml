@@ -29,7 +29,7 @@ jobs:
 
       - name: Clone cssrlib repository
         run: git clone -b ${{ steps.get_branch_name.outputs.branch_name }} https://github.com/${{ github.actor }}/cssrlib.git
-        
+
       - name: Install dependencies from cssrlib repository
         run: |
           cd cssrlib
@@ -49,20 +49,23 @@ jobs:
             base_url=$(dirname "$url" | cut -d'/' -f1-3)
             file_name=$(basename "$url")  # Extract file name from URL
             remote_folder=$(dirname "$url" | cut -d'/' -f4-)
-        
+
             echo "Downloading $file_name from $base_url/$remote_folder to $folder/..."
 
-            lftp -c "
+            lftp -e "
               set net:timeout 30;
               set net:max-retries 3;
               set ftp:passive-mode yes;
-              set xfer:clobber yes;
+              set ftp:prefer-epsv yes;
+              set ftp:use-feat no;
+              set ftp:ssl-allow no;
               open $base_url;
+              user anonymous '';
               cd $remote_folder;
               lcd $folder;
               get $file_name;
               bye"
-        
+
             # Decompress if needed
             if [[ "$dest_file" == *.gz ]]; then
               echo "Decompressing $dest_file..."
@@ -71,7 +74,7 @@ jobs:
               echo "Decompressing $dest_file..."
               uncompress -f "$dest_file"  # Decompress in place
             fi
-        
+
           done < igs_files.txt
 
       - name: Execute Python scripts
