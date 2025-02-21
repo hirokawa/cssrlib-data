@@ -43,22 +43,23 @@ jobs:
           cd ./data
           while IFS=' ' read -r folder url; do
             [[ -z "$folder" || -z "$url" || "$folder" == "#" ]] && continue  # Skip empty lines and comments
-
-            echo "Downloading $url to $folder/..."
-
+          
             mkdir -p "$folder"  # Ensure destination folder exists
+          
             file_name=$(basename "$url")  # Extract file name from URL
-
+            remote_folder=$(dirname "$url" | cut -d'/' -f4-)
+          
+            echo "Downloading $url to $folder/..."
+          
             lftp -c "
               set net:timeout 30;
-              set net:max-retries 3;   
+              set net:max-retries 3;
               set ftp:passive-mode yes;
               open $(dirname "$url");
-              lcd $folder
-              cd $(dirname "$url" | cut -d'/' -f4-);
-              get $(basename "$url");
+              lcd $folder;
+              get $file_name;
               bye"
-
+          
             # Decompress if needed
             if [[ "$dest_file" == *.gz ]]; then
               echo "Decompressing $dest_file..."
@@ -67,7 +68,7 @@ jobs:
               echo "Decompressing $dest_file..."
               uncompress -f "$dest_file"  # Decompress in place
             fi
-
+          
           done < igs_files.txt
 
       - name: Execute Python scripts
