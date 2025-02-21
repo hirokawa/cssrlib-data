@@ -50,6 +50,8 @@ jobs:
             file_name=$(basename "$url")  # Extract file name from URL
 
             lftp -c "
+              set net:timeout 30;
+              set net:max-retries 3;   
               set ftp:passive-mode yes;
               open $(dirname "$url");
               lcd $folder
