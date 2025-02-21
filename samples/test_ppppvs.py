@@ -295,14 +295,19 @@ if fig_type == 1:
 
     for k in range(3):
         plt.subplot(nm, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], color=col_t[0], marker='.')
-        plt.plot(t[idx5], enu[idx5, k], color=col_t[1], marker='.')
-        plt.plot(t[idx4], enu[idx4, k], color=col_t[2], marker='.')
+        plt.plot(t[idx0], enu[idx0, k], color=col_t[0],
+                 marker='.', label=None if nm > 3 else 'none')
+        plt.plot(t[idx5], enu[idx5, k], color=col_t[1],
+                 marker='.', label=None if nm > 3 else 'float')
+        plt.plot(t[idx4], enu[idx4, k], color=col_t[2],
+                 marker='.', label=None if nm > 3 else 'fix')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        if nm < 4:
+            plt.legend()
 
     if nm > 3:
         plt.subplot(nm, 1, 4)
@@ -315,9 +320,10 @@ if fig_type == 1:
         plt.ylabel('ZTD [cm]')
         plt.grid()
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        plt.legend()
 
     plt.xlabel('Time [HH:MM]')
-    plt.legend()
+
 
 elif fig_type == 2:
 
