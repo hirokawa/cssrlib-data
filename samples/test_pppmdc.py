@@ -15,7 +15,7 @@ from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
-from cssrlib.cssrlib import cssr
+from cssrlib.cssr_mdc import cssr_mdc
 from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
@@ -27,13 +27,28 @@ if False:
     navfile = '../data/SEPT1890.23P'
     obsfile = '../data/SEPT1890.23O'
     file_l6 = '../data/qzsl6_189e.txt'
-else:
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+elif False:
     ep = [2023, 8, 11, 21, 0, 0]
     navfile = '../data/doy223/NAV223.23p'
     # navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
     # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_l6 = '../data/doy223/223v_qzsl6.txt'
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+else:
+    ep = [2025, 2, 15, 13, 0, 0]
+    navfile = '../data/doy2025-046/046n_rnx.nav'
+    # navfile = '../data/doy2025-046/SEPT0462.25P'
+    # navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
+    obsfile = '../data/doy2025-046/046n_rnx.obs'  # Mosaic-X5
+    # obsfile = '../data/doy2025-046/SEPT0460.25O'
+    file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
+    # navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
+    # obsfile = '../data/doy2025-046/jav3046n.25o'  # Javad DELTA-3S
+    # navfile = '../data/doy2025-046/SEPT0463.25P'
+    # obsfile = '../data/doy2025-046/SEPT0463.25O'  # PolaRX5
+    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -48,7 +63,6 @@ v = np.genfromtxt(file_l6, dtype=dtype)
 prn_ref = 199  # QZSS PRN
 l6_ch = 1  # 0:L6D, 1:L6E
 
-xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
@@ -88,7 +102,7 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr()
+cs = cssr_mdc()
 cs.monlevel = 0
 """
 cs = cssr('../data/madoca_cssr.log')
@@ -174,15 +188,15 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Print available signals
     #
     nav.fout.write("Available signals\n")
-    for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
+    for sys_, sigs in rnx.sig_map.items():
+        txt = "{:7s} {}\n".format(sys2str(sys_),
                                   ' '.join([sig.str() for sig in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 
     nav.fout.write("Selected signals\n")
-    for sys, tmp in rnx.sig_tab.items():
-        txt = "{:7s} ".format(sys2str(sys))
+    for sys_, tmp in rnx.sig_tab.items():
+        txt = "{:7s} ".format(sys2str(sys_))
         for _, sigs in tmp.items():
             txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
         nav.fout.write(txt+"\n")

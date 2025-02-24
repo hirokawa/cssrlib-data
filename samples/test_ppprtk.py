@@ -16,7 +16,7 @@ from cssrlib.ppprtk import ppprtkpos
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
-l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
+l6_mode = 1  # 0: from receiver log, 1: from archive on QZSS
 
 if l6_mode == 1:
     ep = [2021, 3, 19, 12, 0, 0]
@@ -24,15 +24,32 @@ if l6_mode == 1:
     navfile = '../data/SEPT078M.21P'
     obsfile = '../data/SEPT078M.21O'
     l6file = '../data/2021078M.l6'
-else:
+
+    ep = [2025, 2, 15, 17, 0, 0]
+    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
+    navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
+    obsfile = '../data/doy2025-046/sept046r.obs'  # Mosaic-X5
+    l6file = '../data/doy2025-046/2025046R.l6'
+
+
+elif False:
     ep = [2023, 8, 11, 21, 0, 0]
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     navfile = '../data/doy223/NAV223.23p'
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_l6 = '../data/doy223/223v_qzsl6.txt'
+else:
+    ep = [2025, 2, 15, 13, 0, 0]
+    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
+    # navfile = '../data/doy2025-046/046n_rnx.nav'  # Mosaic-X5
+    navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
+    # obsfile = '../data/doy2025-046/046m_rnx.obs'  # Mosaic-X5
+    # navfile = '../data/doy2025-046/SEPT0463.25P'
+    obsfile = '../data/doy2025-046/SEPT0463.25O'  # PolaRX5
+    file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
 
-    prn_ref = 199  # QZSS PRN
-    l6_ch = 0  # 0:L6D, 1:L6E
+prn_ref = 199  # QZSS PRN
+l6_ch = 0  # 0:L6D, 1:L6E
 
 time = epoch2time(ep)
 

@@ -25,12 +25,19 @@ icase = 1  # 1: SIS, 2: DAS
 # Start epoch and number of epochs
 #
 if icase == 1:
-    ep = [2023, 11, 4, 2, 0, 0]
+    # ep = [2023, 11, 4, 2, 0, 0]
     # navfile = '../data/doy308/308c_rnx.nav'
-    navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
-    obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
-    file_pvs = '../data/doy308/308c_sbas.txt'
-    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+    # navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
+    # obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
+    # file_pvs = '../data/doy308/308c_sbas.txt'
+    # xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+
+    ep = [2025, 2, 15, 13, 0, 0]
+    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
+    navfile = '../data/doy2025-046/046n_rnx.nav'  # Mosaic-X5
+    obsfile = '../data/doy2025-046/046n_rnx.obs'  # Mosaic-X5
+    file_pvs = '../data/doy2025-046/046n_sbas.txt'  # Mosaic-X5
+
 elif icase == 2:
     ep = [2023, 12, 13, 12, 0, 0]
     # navfile = '../data/doy308/308c_rnx.nav'
@@ -38,6 +45,7 @@ elif icase == 2:
     obsfile = '../data/doy347/STR1347m.obs'  # STR100, Septentrio PolaRX5
     file_pvs = '../data/doy347/DAS2023347m.txt'
     xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
+
 
 time = epoch2time(ep)
 year = ep[0]
@@ -171,9 +179,13 @@ if rnx.decode_obsh(obsfile) >= 0:
         obs = rnx.decode_obs()
 
     if icase == 1:  # SIS
+        # dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
+        #         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+
         dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-                 ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+                 ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
         v = np.genfromtxt(file_pvs, dtype=dtype)
+
     else:  # DAS
         fc = open(file_pvs, 'rt')
 
@@ -195,8 +207,15 @@ if rnx.decode_obsh(obsfile) >= 0:
             nav.time_p = t0
 
         if icase == 1:  # SIS
-            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
-                   & (v['type'] == sbas_type)]
+            # vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
+            #       & (v['type'] == sbas_type)]
+
+            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+            if sbas_type == 0:  # L1
+                vi = vi[vi['type'] <= 30]
+            else:  # DFMC L5
+                vi = vi[vi['type'] > 30]
+
             if len(vi) > 0:
                 buff = unhexlify(vi['nav'][0])
                 cs.decode_cssr(buff, 0)

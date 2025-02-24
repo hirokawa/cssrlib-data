@@ -1006,10 +1006,10 @@ if __name__ == "__main__":
     gnss_t = 'GERCJ'
 
     bdir = '../data/doy2025-046/'
-    fnames = 'sep3046*.sbf'
+    fnames = 'sept046r.sbf'
 
     opt = rcvOpt()
-    opt.flg_qzsl6 = False
+    opt.flg_qzsl6 = True
     opt.flg_qzslnav = True
     opt.flg_gpslnav = True
     opt.flg_qzscnav = True
