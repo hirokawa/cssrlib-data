@@ -40,42 +40,8 @@ jobs:
 
       - name: Download IGS files
         run: |
-          cd ./data
-          while IFS=' ' read -r folder url; do
-            [[ -z "$folder" || -z "$url" || "$folder" == "#" ]] && continue  # Skip empty lines and comments
-
-            mkdir -p "$folder"  # Ensure destination folder exists
-
-            base_url=$(dirname "$url" | cut -d'/' -f1-3)
-            file_name=$(basename "$url")  # Extract file name from URL
-            remote_folder=$(dirname "$url" | cut -d'/' -f4-)
-
-            echo "Downloading $file_name from $base_url/$remote_folder to $folder/..."
-
-            lftp -e "
-              set net:timeout 30;
-              set net:max-retries 3;
-              set ftp:passive-mode yes;
-              set ftp:prefer-epsv yes;
-              set ftp:use-feat no;
-              set ftp:ssl-allow no;
-              open $base_url;
-              user anonymous '';
-              cd $remote_folder;
-              lcd $folder;
-              get $file_name;
-              bye"
-
-            # Decompress if needed
-            if [[ "$dest_file" == *.gz ]]; then
-              echo "Decompressing $dest_file..."
-              gunzip -f "$dest_file"  # Decompress in place
-            elif [[ "$dest_file" == *.Z ]]; then
-              echo "Decompressing $dest_file..."
-              uncompress -f "$dest_file"  # Decompress in place
-            fi
-
-          done < igs_files.txt
+          cd ./samples
+          python ./igs_download.py
 
       - name: Execute Python scripts
         run: |
