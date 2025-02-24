@@ -1,3 +1,4 @@
+import requests
 from datetime import datetime, timedelta
 from ftplib import FTP, FTP_TLS
 import gzip
@@ -66,11 +67,8 @@ def connect_ftp(host):
     else:
         ftp = FTP(host)
     ftp.login()  # Anonymous login
-    # switch to secure data connection..
-    # IMPORTANT! Otherwise, only the user and password is encrypted and
-    # not all the file data.
     if 'cddis' in host:
-        ftp.prot_p()
+        ftp.prot_p()  # switch to secure data connection
     ftp.voidcmd("TYPE I")  # Switch to binary mode
     print(f"Connected to {host} as anonymous (Binary Mode)")
     return ftp
@@ -98,7 +96,7 @@ def read_file_list():
     return entries
 
 
-def download(ftp, filename, local_filename):
+def download_ftp(ftp, filename, local_filename):
     """Download file"""
     try:
         total_size = ftp.size(filename)  # Get file size
@@ -135,6 +133,28 @@ def download(ftp, filename, local_filename):
             print(f"Warning: Failed to download {filename} - {e}")
 
 
+def download_http(url, filename, local_filename):
+    """Download a file via HTTP/HTTPS."""
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()  # Raise an error for bad status codes
+
+        total_size = int(response.headers.get('content-length', 0))
+        progress_bar = tqdm(total=total_size, unit="B",
+                            unit_scale=True, desc=filename)
+
+        with open(local_filename, 'wb') as local_file:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    local_file.write(chunk)
+                    progress_bar.update(len(chunk))
+
+        progress_bar.close()
+
+    except requests.exceptions.RequestException as e:
+        print(f"Warning: Failed to download {filename} from {url} - {e}")
+
+
 def download_files():
     """Download files from the provided list of FTP URLs."""
     entries = read_file_list()
@@ -146,10 +166,10 @@ def download_files():
     ftp = None
 
     for dest_folder, url in entries:
-        parsed = urlparse(url)
 
-        if parsed.scheme != "ftp":
-            print(f"Skipping invalid URL (not FTP): {url}")
+        parsed = urlparse(url)
+        if parsed.scheme != "ftp" and 'http' not in parsed.scheme:
+            print(f"Skipping invalid URL (not FTP/HTTP(S)): {url}")
             continue
 
         host = parsed.hostname
@@ -159,26 +179,33 @@ def download_files():
         local_filename = os.path.join(local_folder, filename)
 
         try:
-            # Connect to the FTP server if different from the previous one
-            #
-            if host != current_host:
-                if ftp:
-                    ftp.quit()
-                ftp = connect_ftp(host)
-                current_host = host
-
-            # Change to the appropriate directory
-            #
-            remote_dir = os.path.dirname(remote_path)
-            ftp.cwd(remote_dir)
 
             # Ensure local folder exists
             #
             os.makedirs(local_folder, exist_ok=True)
 
-            # Download file
-            #
-            download(ftp, filename, local_filename)
+            if parsed.scheme == "ftp":
+
+                # Connect to the FTP server if different from the previous one
+                #
+                if host != current_host:
+                    if ftp:
+                        ftp.quit()
+                    ftp = connect_ftp(host)
+                    current_host = host
+
+                # Change to the appropriate directory
+                #
+                remote_dir = os.path.dirname(remote_path)
+                ftp.cwd(remote_dir)
+
+                # Download file
+                #
+                download_ftp(ftp, filename, local_filename)
+
+            elif "http" in parsed.scheme:
+                host = parsed.scheme+"://"+host+remote_path
+                download_http(host, filename, local_filename)
 
             # Check if it is a compressed file and extract it
             #
