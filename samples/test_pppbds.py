@@ -28,11 +28,13 @@ dataset = 2
 #
 if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     navfile = '../data/brdc/BRD400DLR_S_20231890000_01D_MN.rnx'
     obsfile = '../data/doy2023-189/SEPT1890.23O'
     file_bds = '../data/doy2023-189/bdsb2b_189e.txt'
 elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
     # navfile = '../data/doy2023-223/NAV223.23p'
     # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
@@ -40,11 +42,10 @@ elif dataset == 1:
     file_bds = '../data/doy2023-223/223v_bdsb2b.txt'
 elif dataset == 2:
     ep = [2025, 2, 15, 13, 0, 0]
-    navfile = '../data/doy2025-046/046n_rnx.nav'
-    obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
-    file_bds = '../data/doy2025-046/046n_bdsb2b.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
-
+    navfile = '../data/doy2025-046/046r_rnx.nav'
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
+    file_bds = '../data/doy2025-046/046r_bdsb2b.txt'
 
 time = epoch2time(ep)
 year = ep[0]
@@ -58,7 +59,6 @@ v = np.genfromtxt(file_bds, dtype=dtype)
 
 prn_ref = 59  # satellite PRN to receive BDS PPP collection
 
-xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed

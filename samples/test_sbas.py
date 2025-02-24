@@ -1,5 +1,5 @@
 """
- static test for PPP (PVS PPP)
+ static test for SBAS (L1 or DFMC)
 """
 from binascii import unhexlify
 from copy import deepcopy
@@ -171,7 +171,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Available signals\n")
     for sys, sigs in rnx.sig_map.items():
         txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
+                                  ' '.join([s.str() for s in sigs.values()]))
         nav.fout.write(txt)
     nav.fout.write("\n")
 

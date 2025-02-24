@@ -1006,7 +1006,7 @@ if __name__ == "__main__":
     gnss_t = 'GERCJ'
 
     bdir = '../data/doy2025-046/'
-    fnames = 'sep3046*.sbf'
+    fnames = 'sep3046q.sbf'
 
     opt = rcvOpt()
     opt.flg_qzsl6 = False

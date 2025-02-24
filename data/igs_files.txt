@@ -6,6 +6,7 @@ antex http://ftp.aiub.unibe.ch/CODE_MGEX/CODE/M20.ATX
 antex http://ftp.aiub.unibe.ch/CODE_MGEX/CODE/M14.ATX
 
 brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRDC00IGS_R_20231890000_01D_MN.rnx.gz
+brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRDC00IGS_R_20231800000_01D_MN.rnx.gz
 
 brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2025/brdc/BRD400DLR_S_20250460000_01D_MN.rnx.gz
 brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRD400DLR_S_20233080000_01D_MN.rnx.gz

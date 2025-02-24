@@ -44,11 +44,13 @@ elif dataset == 1:  # DAS
     xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
 
 elif dataset == 2:  # SIS
-    ep = [2025, 2, 15, 13, 0, 0]
-    navfile = '../data/doy2025-046/046n_rnx.nav'
-    obsfile = '../data/doy2025-046/046n_rnx.obs'  # PolaRX5
-    file_pvs = '../data/doy2025-046/046n_sbas.txt'
+    
+    ep = [2025, 2, 15, 17, 0, 0]
+    navfile = '../data/doy2025-046/046r_rnx.nav'
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
+    file_pvs = '../data/doy2025-046/046r_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+
 
 time = epoch2time(ep)
 year = ep[0]
@@ -181,11 +183,15 @@ if rnx.decode_obsh(obsfile) >= 0:
     while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
 
-    if "_sbas.txt" in file_pvs:  # SIS
+    if icase == 1:  # SIS
+        # dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
+        #         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+
         dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-                 ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+                 ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
         v = np.genfromtxt(file_pvs, dtype=dtype)
-    elif "DAS" in file_pvs:  # DAS
+
+    else:  # DAS
         fc = open(file_pvs, 'rt')
     else:
         print("ERROR: unknown file format for correction data")
@@ -208,9 +214,16 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        if "_sbas.txt" in file_pvs:  # SIS
-            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
-                   & (v['type'] == sbas_type)]
+        if icase == 1:  # SIS
+            # vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
+            #       & (v['type'] == sbas_type)]
+
+            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+            if sbas_type == 0:  # L1
+                vi = vi[vi['type'] <= 30]
+            else:  # DFMC L5
+                vi = vi[vi['type'] > 30]
+
             if len(vi) > 0:
                 buff = unhexlify(vi['nav'][0])
                 cs.decode_cssr(buff, 0)
