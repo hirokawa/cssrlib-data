@@ -66,14 +66,7 @@ cssrlib-data
 cssrlib-venv
 ```
 
-Install the dependencies from the `requirements.txt` file of `cssrlib`:
-
-```bash
-pip install -r cssrlib/requirements.txt
-```
-
 Install the local module in editing mode using the `-e` flag:
-
 
 ```bash
 pip install -e ./cssrlib
