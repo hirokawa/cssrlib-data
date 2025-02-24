@@ -36,13 +36,12 @@ elif False:
     file_bds = '../data/doy223/223v_bdsb2b.txt'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 else:
-    ep = [2025, 2, 15, 13, 0, 0]
+    ep = [2025, 2, 15, 17, 0, 0]
+    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
+    file_bds = '../data/doy2025-046/046r_bdsb2b.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    # navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
-    navfile = '../data/doy2025-046/046n_rnx.nav'  # Mosaic-X5
-    obsfile = '../data/doy2025-046/046n_rnx.obs'  # Mosaic-X5
-    # obsfile = '../data/doy2025-046/SEPT0460.25O'
-    file_bds = '../data/doy2025-046/046n_bdsb2b.txt'
+
 
 time = epoch2time(ep)
 year = ep[0]

@@ -32,11 +32,11 @@ if icase == 1:
     # file_pvs = '../data/doy308/308c_sbas.txt'
     # xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 
-    ep = [2025, 2, 15, 13, 0, 0]
+    ep = [2025, 2, 15, 17, 0, 0]
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2025-046/046n_rnx.nav'  # Mosaic-X5
-    obsfile = '../data/doy2025-046/046n_rnx.obs'  # Mosaic-X5
-    file_pvs = '../data/doy2025-046/046n_sbas.txt'  # Mosaic-X5
+    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
+    file_pvs = '../data/doy2025-046/046r_sbas.txt'  # Mosaic-X5
 
 elif icase == 2:
     ep = [2023, 12, 13, 12, 0, 0]
