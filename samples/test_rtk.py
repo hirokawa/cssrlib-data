@@ -18,21 +18,23 @@ ngsantfile = '../data/GSI_PCV.TXT'
 
 nav = gn.Nav()
 
-bdir = '../data/antex/'
+
 if False:
+    bdir = '../data/doy2021-078/'
     navfile = bdir+'SEPT078M.21P'
     obsfile = bdir+'SEPT078M.21O'
     basefile = bdir+'3034078M.21O'
     xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
     nav.rb = [-3959400.631, 3385704.533, 3667523.111]  # GSI 3034 fujisawa
-    atxfile = bdir+'igs14.atx'
+    atxfile = '../data/antex/igs14.atx'
 else:
+    bdir = '../data/doy2023-238/'
     navfile = bdir+'SEPT238A.23P'
     obsfile = bdir+'SEPT238A.23O'
     basefile = bdir+'3034238A.23O'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     nav.rb = [-3959400.6443, 3385704.4948, 3667523.1275]  # GSI 3034 fujisawa
-    atxfile = bdir+'igs20.atx'
+    atxfile = '../data/antex/igs20.atx'
 
 pos_ref = gn.ecef2pos(xyz_ref)
 
