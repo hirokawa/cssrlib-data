@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from ftplib import FTP
+from ftplib import FTP, FTP_TLS
 import gzip
 import os
 from urllib.parse import urlparse
@@ -46,7 +46,7 @@ def extract_Z(z_path):
 
         # Use the gzip command to extract the file
         #
-        result = subprocess.run(
+        subprocess.run(
             ["gzip", "-df", gz_path],  # '-d' to decompress, '-f' to overwrite
             check=True,
             capture_output=True,
@@ -61,8 +61,16 @@ def extract_Z(z_path):
 
 def connect_ftp(host):
     """Connect to an FTP server using anonymous login."""
-    ftp = FTP(host)
+    if 'cddis' in host:
+        ftp = FTP_TLS(host)
+    else:
+        ftp = FTP(host)
     ftp.login()  # Anonymous login
+    # switch to secure data connection..
+    # IMPORTANT! Otherwise, only the user and password is encrypted and
+    # not all the file data.
+    if 'cddis' in host:
+        ftp.prot_p()
     ftp.voidcmd("TYPE I")  # Switch to binary mode
     print(f"Connected to {host} as anonymous (Binary Mode)")
     return ftp
