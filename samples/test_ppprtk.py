@@ -26,9 +26,10 @@ if l6_mode == 1:
     l6file = '../data/2021078M.l6'
 
     ep = [2025, 2, 15, 17, 0, 0]
-    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
     navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
-    obsfile = '../data/doy2025-046/sept046r.obs'  # Mosaic-X5
+    # obsfile = '../data/doy2025-046/sept046r.obs'  # PoLaRx5
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
     l6file = '../data/doy2025-046/2025046R.l6'
 
 
@@ -39,13 +40,10 @@ elif False:
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_l6 = '../data/doy223/223v_qzsl6.txt'
 else:
-    ep = [2025, 2, 15, 13, 0, 0]
-    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
-    # navfile = '../data/doy2025-046/046n_rnx.nav'  # Mosaic-X5
-    navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
-    # obsfile = '../data/doy2025-046/046m_rnx.obs'  # Mosaic-X5
-    # navfile = '../data/doy2025-046/SEPT0463.25P'
-    obsfile = '../data/doy2025-046/SEPT0463.25O'  # PolaRX5
+    ep = [2025, 2, 15, 17, 0, 0]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
     file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
 
 prn_ref = 199  # QZSS PRN

@@ -44,14 +44,11 @@ elif dataset == 1:
     obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
     file_has = '../data/doy223/223v_gale6.txt'
 elif dataset == 2:
-    ep = [2025, 2, 15, 13, 0, 0]
-    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
-    # navfile = '../data/doy2025-046/SEPT0462.25P'
-    # navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
-    navfile = '../data/doy2025-046/046n_rnx.nav'  # Mosaic-X5
-    obsfile = '../data/doy2025-046/046n_rnx.obs'  # Mosaic-X5
-    # obsfile = '../data/doy2025-046/SEPT0460.25O'
-    file_has = '../data/doy2025-046/046n_gale6.txt'
+    ep = [2025, 2, 15, 17, 0, 0]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
+    file_has = '../data/doy2025-046/046r_gale6.txt'
 
 
 # Convert epoch and user reference position

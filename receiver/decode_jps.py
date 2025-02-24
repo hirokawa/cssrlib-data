@@ -917,8 +917,8 @@ if __name__ == "__main__":
 
     year = 2023
 
-    bdir = '../data/doy2025-020/'
-    fnames = 'jav3020?.jps'
+    bdir = '../data/doy2025-046/'
+    fnames = 'jav3046r.jps'
 
     opt = rcvOpt()
     opt.flg_qzsl6 = True

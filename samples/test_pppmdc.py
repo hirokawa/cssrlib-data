@@ -37,18 +37,18 @@ elif False:
     file_l6 = '../data/doy223/223v_qzsl6.txt'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
 else:
-    ep = [2025, 2, 15, 13, 0, 0]
-    navfile = '../data/doy2025-046/046n_rnx.nav'
+    ep = [2025, 2, 15, 17, 0, 0]
+    # navfile = '../data/doy2025-046/046r_rnx.nav'
     # navfile = '../data/doy2025-046/SEPT0462.25P'
-    # navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
-    obsfile = '../data/doy2025-046/046n_rnx.obs'  # Mosaic-X5
+    navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
     # obsfile = '../data/doy2025-046/SEPT0460.25O'
-    file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
+    file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
     # navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
     # obsfile = '../data/doy2025-046/jav3046n.25o'  # Javad DELTA-3S
     # navfile = '../data/doy2025-046/SEPT0463.25P'
     # obsfile = '../data/doy2025-046/SEPT0463.25O'  # PolaRX5
-    xyz_ref = [-3962108.6104, 3381309.5047, 3668678.6026]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
 time = epoch2time(ep)
 year = ep[0]
