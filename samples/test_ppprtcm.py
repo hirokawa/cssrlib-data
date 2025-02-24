@@ -31,7 +31,7 @@ if icase == 1:  # Galileo HAS IDD
 
     ep = [2023, 8, 17, 2, 0, 0]
     navfile = '../data/doy2023-229/OBE42023229c.nav'
-    # navfile = '../data/doy2023-229/BRD400DLR_S_20232290000_01D_MN.rnx'
+    # navfile = '../data/brdc/BRD400DLR_S_20232290000_01D_MN.rnx'
     obsfile = '../data/doy2023-229/OBE42023229c.obs'
     xyz_ref = [4186704.2262, 834903.7677, 4723664.9337]
     file_rtcm = '../data/doy2023-229/idd2023229c.rtc'
@@ -41,7 +41,7 @@ elif icase == 2:  # JPL GDGPS  Mosaic-X5
 
     ep = [2024, 2, 12, 7, 0, 0]
     navfile = '../data/doy2024-043/043h_rnx.nav'
-    # navfile = '../data/doy2024-043/BRD400DLR_S_20240430000_01D_MN.rnx'
+    # navfile = '../data/brdc/BRD400DLR_S_20240430000_01D_MN.rnx'
     obsfile = '../data/doy2024-043/043h_rnx.obs'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     file_rtcm = '../data/doy2024-043/JPL32T2043h.rtcm3'

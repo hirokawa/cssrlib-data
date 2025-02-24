@@ -59,7 +59,8 @@ if dataset == 1:
     obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 elif dataset == 2:
     let = 'Z'
-    navfile = bdir+'BRD400DLR_S_{:04d}{:03d}0000_01D_MN.rnx'.format(year, doy)
+    navfile = '../data/brdc/' + \
+        'BRD400DLR_S_{:04d}{:03d}0000_01D_MN.rnx'.format(year, doy)
     obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 else:
     let = chr(ord('a')+ep[3])

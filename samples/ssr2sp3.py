@@ -199,7 +199,7 @@ for dt in (-1, 0, +1):
     hour = ep[3]
     doy = int(time2doy(t))
 
-    navfile = baseDirName+'../data/doy{:4d}-{:03d}/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+    navfile = baseDirName+'../data/brdc/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
         .format(year, doy, year, doy)
 
     if os.path.exists(navfile):

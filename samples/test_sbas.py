@@ -26,9 +26,9 @@ dataset = 1
 #
 if dataset == 0:  # MSAS, L1 SBAS
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_sbas = '../data/doy223/223v_sbas.txt'
+    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
+    obsfile = '../data/2023-doy223/SEPT223Y.23O'  # PolaRX5
+    file_sbas = '../data/2023-doy223/223v_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     prn_ref = 137  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
@@ -46,9 +46,9 @@ elif dataset == 1:  # MSAS, L1 SBAS
 
 elif dataset == 2:  # QZSS, L5 DFMC
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_sbas = '../data/doy223/223v_sbas.txt'
+    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
+    obsfile = '../data/2023-doy223/SEPT223Y.23O'  # PolaRX5
+    file_sbas = '../data/2023-doy223/223v_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     prn_ref = 189  # satellite PRN for SBAS correction
     sbas_type = 1  # L1: 0, L5: 1

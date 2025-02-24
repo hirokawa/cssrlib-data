@@ -28,7 +28,7 @@ dataset = 0
 if dataset == 0:  # MSAS, L1 SBAS
     ep = [2023, 8, 11, 21, 0, 0]
     # navfile = '../data/doy2023-308/308c_rnx.nav'
-    navfile = '../data/doy2023-223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
     obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
     file_sbas = '../data/doy2023-223/223v_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]

@@ -19,8 +19,8 @@ if False:
 else:
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy2023-223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    # navfile = '../data/doy2023-223/BRDC00IGS_R_20232230000_01D_MN.rnx'
+    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
+    # navfile = '../data/brdc/BRDC00IGS_R_20232230000_01D_MN.rnx'
     # navfile = '../data/doy2023-223/NAV223.23p'
     # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5

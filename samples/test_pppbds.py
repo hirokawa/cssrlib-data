@@ -28,12 +28,12 @@ dataset = 2
 #
 if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
-    navfile = '../data/doy2023-189/BRD400DLR_S_20231890000_01D_MN.rnx'
+    navfile = '../data/brdc/BRD400DLR_S_20231890000_01D_MN.rnx'
     obsfile = '../data/doy2023-189/SEPT1890.23O'
     file_bds = '../data/doy2023-189/bdsb2b_189e.txt'
 elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy2023-223/BRD400DLR_S_20232230000_01D_MN.rnx'
+    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
     # navfile = '../data/doy2023-223/NAV223.23p'
     # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
     obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5

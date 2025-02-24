@@ -15,7 +15,7 @@ if rnx_ver == 3:  # RINEX 3
     prn_ref = 194
     mode_ref = 0  # 0: LNAV, 1: CNAV, 2: CNAV2
 elif rnx_ver == 4:  # RINEX 4
-    navfile = '../data/doy2023-189/BRD400DLR_S_20231890000_01D_MN.rnx'
+    navfile = '../data/brdc/BRD400DLR_S_20231890000_01D_MN.rnx'
     t0 = epoch2time([2023, 7, 8, 4, 0, 0])
     sys_ref = uGNSS.BDS
     prn_ref = 35

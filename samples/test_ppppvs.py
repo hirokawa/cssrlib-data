@@ -30,7 +30,7 @@ dataset = 1
 if dataset == 0:  # SIS
 
     ep = [2023, 11, 4, 2, 0, 0]
-    navfile = '../data/doy2023-308/BRD400DLR_S_20233080000_01D_MN.rnx'
+    navfile = '../data/brdc/BRD400DLR_S_20233080000_01D_MN.rnx'
     obsfile = '../data/doy2023-308/308c_rnx.obs'  # Mosaic-X5
     file_pvs = '../data/doy2023-308/308c_sbas.txt'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
