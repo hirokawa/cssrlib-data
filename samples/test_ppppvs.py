@@ -6,7 +6,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -20,31 +20,36 @@ from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 from cssrlib.cssr_pvs import decode_sinca_line
 
-icase = 1  # 1: SIS, 2: DAS
 
-# Start epoch and number of epochs
+# Select test case
 #
-if icase == 1:
-    # ep = [2023, 11, 4, 2, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
-    # navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
-    # obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
-    # file_pvs = '../data/doy308/308c_sbas.txt'
-    # xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+dataset = 1
 
-    ep = [2025, 2, 15, 17, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
-    file_pvs = '../data/doy2025-046/046r_sbas.txt'  # Mosaic-X5
+# Start epoch and input files
+#
+if dataset == 0:  # SIS
 
-elif icase == 2:
+    ep = [2023, 11, 4, 2, 0, 0]
+    navfile = '../data/brdc/BRD400DLR_S_20233080000_01D_MN.rnx'
+    obsfile = '../data/doy2023-308/308c_rnx.obs'  # Mosaic-X5
+    file_pvs = '../data/doy2023-308/308c_sbas.txt'
+    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+
+elif dataset == 1:  # DAS
+
     ep = [2023, 12, 13, 12, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
-    navfile = '../data/doy347/STR1347m.nav'
-    obsfile = '../data/doy347/STR1347m.obs'  # STR100, Septentrio PolaRX5
-    file_pvs = '../data/doy347/DAS2023347m.txt'
+    navfile = '../data/doy2023-347/STR1347m.nav'
+    obsfile = '../data/doy2023-347/STR1347m.obs'  # STR100, Septentrio PolaRX5
+    file_pvs = '../data/doy2023-347/DAS2023347m.txt'
     xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
+
+elif dataset == 2:  # SIS
+    
+    ep = [2025, 2, 15, 17, 0, 0]
+    navfile = '../data/doy2025-046/046r_rnx.nav'
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
+    file_pvs = '../data/doy2025-046/046r_sbas.txt'
+    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
 
 
 time = epoch2time(ep)
@@ -95,7 +100,7 @@ cs.monlevel = 2
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()
-atx.readpcv('../data/igs20.atx')
+atx.readpcv('../data/antex/igs20.atx')
 
 # Initialize data structures for results
 #
@@ -138,18 +143,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
@@ -188,6 +193,9 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     else:  # DAS
         fc = open(file_pvs, 'rt')
+    else:
+        print("ERROR: unknown file format for correction data")
+        sys_exit(1)
 
     # Loop over number of epoch from file start
     #
@@ -300,14 +308,19 @@ if fig_type == 1:
 
     for k in range(3):
         plt.subplot(nm, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], color=col_t[0], marker='.')
-        plt.plot(t[idx5], enu[idx5, k], color=col_t[1], marker='.')
-        plt.plot(t[idx4], enu[idx4, k], color=col_t[2], marker='.')
+        plt.plot(t[idx0], enu[idx0, k], color=col_t[0],
+                 marker='.', label=None if nm > 3 else 'none')
+        plt.plot(t[idx5], enu[idx5, k], color=col_t[1],
+                 marker='.', label=None if nm > 3 else 'float')
+        plt.plot(t[idx4], enu[idx4, k], color=col_t[2],
+                 marker='.', label=None if nm > 3 else 'fix')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        if nm < 4:
+            plt.legend()
 
     if nm > 3:
         plt.subplot(nm, 1, 4)
@@ -320,9 +333,10 @@ if fig_type == 1:
         plt.ylabel('ZTD [cm]')
         plt.grid()
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        plt.legend()
 
     plt.xlabel('Time [HH:MM]')
-    plt.legend()
+
 
 elif fig_type == 2:
 

@@ -9,9 +9,7 @@ from cssrlib.gnss import time2str
 
 from os.path import expanduser
 
-#obsfile = '../data/SEPT078M.21O'
-obsfile = '../data/SEPT1890.23O'
-#obsfile = '../data/3034078M.21O'
+obsfile = '../data/doy2025-046/046m_rnx.obs'
 
 sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("CC2I"), rSigRnx("JC1C"),
         rSigRnx("GC2W"), rSigRnx("EC5Q"), rSigRnx("CC6I"), rSigRnx("JC2L"),

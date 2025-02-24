@@ -2,3 +2,4 @@ ephem
 pandas
 cryptography
 bitstruct
+tqdm

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
 from os.path import exists
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -21,20 +21,20 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 2  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
+dataset = 3  # 0: SEPT078M.21O, 1: SEPT1890.23O, 2: SEPT223Y.23O
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
-    let = 'M'
     xyz_ref = [-3962108.6617, 3381309.5232, 3668678.6410]
 elif dataset == 1:  # SETP1890.23O
     ep = [2023, 7, 8, 4, 0, 0]
-    let = '0'
     xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
 elif dataset == 2:  # SETP223Z.23O
     ep = [2023, 8, 11, 21, 0, 0]
-    let = 'Y'
     xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
+elif dataset == 3:  # 046[mno]_rnx.obs
+    ep = [2025, 2, 15, 12, 0, 0]
+    xyz_ref = [-3962108.6819, 3381309.5707, 3668678.6750]
 else:
     print("ERROR: no RINEX data set selected!")
     exit(1)
@@ -43,35 +43,49 @@ time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
-nep = 900*2
+nep = 900*4
 
 pos_ref = ecef2pos(xyz_ref)
 
-if dataset == 2:
-    navfile = '../data/doy{:03d}/BRD400DLR_S_{:04d}{:03d}0000_01D_MN.rnx'\
-        .format(doy, year, doy)
-    obsfile = '../data/doy{:03d}/SEPT{:03d}{}.{:02d}O'\
-        .format(doy, doy, let, year % 2000)
+bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+
+if dataset == 0:
+    let = chr(ord('A')+ep[3])
+    navfile = bdir+'SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
+    obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+if dataset == 1:
+    let = '0'
+    navfile = bdir+'SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
+    obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+elif dataset == 2:
+    let = 'Z'
+    navfile = '../data/brdc/' + \
+        'BRD400DLR_S_{:04d}{:03d}0000_01D_MN.rnx'.format(year, doy)
+    obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 else:
-    navfile = '../data/SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
-    obsfile = '../data/SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+    let = chr(ord('a')+ep[3])
+    navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
+    obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)
 
-# ac = 'COD0OPSFIN'
-ac = 'COD0MGXFIN'
+ac = 'COD0OPSFIN'
 
-orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
 
-clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+clkfile = '../data/igs/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
     .format(ac, year, doy)
 
-bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
 if not exists(clkfile):
     orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
     bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
+if not exists(clkfile):
+    orbfile = orbfile.replace('COD0OPSRAP', 'COD0MGXFIN')
+    clkfile = clkfile.replace('COD0OPSRAP', 'COD0MGXFIN')
+    bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0MGXFIN')
 if not exists(orbfile):
     orbfile = orbfile.replace('_05M_', '_15M_')
 
@@ -119,12 +133,13 @@ bsx.parse(bsxfile)
 
 # Load ANTEX data for satellites and stations
 #
+atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20.atx'
 elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
-    atxfile = '../data/M20.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M20.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 else:
-    atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M14.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 
 atx = atxdec()
 atx.readpcv(atxfile)
@@ -155,7 +170,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.ephopt = 4  # IGS
     nav.armode = 3
 
-    nav.elmin = np.deg2rad(5.0)
+    nav.elmin = np.deg2rad(10.0)
     nav.thresar = 2.0
 
     # Get equipment information
@@ -174,18 +189,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")

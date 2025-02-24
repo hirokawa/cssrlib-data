@@ -20,7 +20,7 @@ import cssrlib.osnma as om
 from binascii import unhexlify, hexlify
 import matplotlib.pyplot as plt
 
-tofst = -2  # time offset to syncronize tow
+tofst = -2  # time offset to synchronize tow
 mt_file = 'OSNMA_MerkleTree_20240115100000_newPKID_1.xml'
 
 if not os.path.exists('../data/pubkey/osnma/'+mt_file):

@@ -4,54 +4,61 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
-from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str
+from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str, time2doy
 from cssrlib.gnss import rSigRnx, sys2str, epoch2time
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.ppprtk import ppprtkpos
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
-l6_mode = 1  # 0: from receiver log, 1: from archive on QZSS
+l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
+dataset = 2
 
 if l6_mode == 1:
+
     ep = [2021, 3, 19, 12, 0, 0]
     xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
-    navfile = '../data/SEPT078M.21P'
-    obsfile = '../data/SEPT078M.21O'
-    l6file = '../data/2021078M.l6'
+    navfile = '../data/doy2021-078/SEPT078M.21P'
+    obsfile = '../data/doy2021-078/SEPT078M.21O'
+    l6file = '../data/doy2021-078/2021078M.l6'
 
-    ep = [2025, 2, 15, 17, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
-    # obsfile = '../data/doy2025-046/sept046r.obs'  # PoLaRx5
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
-    l6file = '../data/doy2025-046/2025046R.l6'
-
-
-elif False:
-    ep = [2023, 8, 11, 21, 0, 0]
-    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-    navfile = '../data/doy223/NAV223.23p'
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_l6 = '../data/doy223/223v_qzsl6.txt'
 else:
-    ep = [2025, 2, 15, 17, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
-    file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
 
-prn_ref = 199  # QZSS PRN
-l6_ch = 0  # 0:L6D, 1:L6E
+    if dataset == 0:
+
+        ep = [2023, 8, 11, 21, 0, 0]
+        xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+        navfile = '../data/doy2023-223/NAV223.23p'
+        obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+        file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
+
+    elif dataset == 2:
+
+        ep = [2025, 2, 15, 14, 0, 0]
+        xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+
+        time = epoch2time(ep)
+        year = ep[0]
+        doy = int(time2doy(time))
+        let = chr(ord('a')+ep[3])
+
+        bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+
+        navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
+        obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
+        file_l6 = bdir+'{:03d}{}_qzsl6.txt'.format(doy, let)
+
+    prn_ref = 199  # QZSS PRN
+    l6_ch = 0  # 0:L6D, 1:L6E
 
 time = epoch2time(ep)
 
-atxfile = '../data/igs14.atx'
+atxfile = '../data/antex/igs14.atx'
 griddef = '../data/clas_grid.def'
 
 pos_ref = ecef2pos(xyz_ref)
@@ -83,7 +90,7 @@ rnx.setSignals(sigs)
 
 nav = Nav()
 nav = rnx.decode_nav(navfile, nav)
-nep = 900*4-10
+nep = 900*4
 
 # Load ANTEX data for satellites and stations
 #
@@ -121,18 +128,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
@@ -165,7 +172,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         if not fc:
             nav.fout.write("ERROR: cannot open L6 message file {}!"
                            .format(l6file))
-            sys.exit(-1)
+            sys_exit(-1)
     else:
         dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
                  ('type', 'int'), ('len', 'int'), ('nav', 'S500')]

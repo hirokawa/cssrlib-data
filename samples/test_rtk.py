@@ -4,7 +4,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import exit as sys_exit
+from sys import stdout
 
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
@@ -13,11 +14,11 @@ from cssrlib.gnss import rSigRnx, time2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkpos
 
-bdir = '../data/'
-ngsantfile = bdir+'GSI_PCV.TXT'
+ngsantfile = '../data/GSI_PCV.TXT'
 
 nav = gn.Nav()
 
+bdir = '../data/antex/'
 if False:
     navfile = bdir+'SEPT078M.21P'
     obsfile = bdir+'SEPT078M.21O'
@@ -88,11 +89,11 @@ atx.readngspcv(ngsantfile)
 nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
 if nav.rcv_ant is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
 if nav.rcv_ant_b is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 
 # nav.excl_sat = [20]
 # nav.cnr_min_gpy = 20
@@ -129,15 +130,15 @@ for ne in range(nep):
 
     # Log to standard output
     #
-    sys.stdout.write('\r {} ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
+    stdout.write('\r {} ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}'
+                 .format(time2str(obs.t),
+                         enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                         np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                         smode[ne]))
 
 # Send line-break to stdout
 #
-sys.stdout.write('\n')
+stdout.write('\n')
 
 dec.fobs.close()
 decb.fobs.close()
