@@ -44,7 +44,7 @@ elif dataset == 1:  # DAS
     xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
 
 elif dataset == 2:  # SIS
-    
+
     ep = [2025, 2, 15, 17, 0, 0]
     navfile = '../data/doy2025-046/046r_rnx.nav'
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
@@ -183,7 +183,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
 
-    if icase == 1:  # SIS
+    if 'sbas' in file_pvs:  # SIS
         # dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
         #         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
@@ -191,7 +191,7 @@ if rnx.decode_obsh(obsfile) >= 0:
                  ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
         v = np.genfromtxt(file_pvs, dtype=dtype)
 
-    else:  # DAS
+    elif 'DAS' in file_pvs:  # DAS
         fc = open(file_pvs, 'rt')
     else:
         print("ERROR: unknown file format for correction data")
@@ -214,7 +214,7 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        if icase == 1:  # SIS
+        if 'sbas' in file_pvs:  # SIS
             # vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
             #       & (v['type'] == sbas_type)]
 

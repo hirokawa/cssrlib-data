@@ -29,13 +29,13 @@ dataset = 2
 #
 if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]        
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
     navfile = '../data/doy2023-189/SEPT1890.23P'
     obsfile = '../data/doy2023-189/SEPT1890.23O'
     file_l6 = '../data/doy2023-189/qzsl6_189e.txt'
 elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]    
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
     navfile = '../data/doy2023-223/NAV223.23p'
     # navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
     # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS

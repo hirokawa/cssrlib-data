@@ -41,7 +41,7 @@ elif dataset == 1:
     obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
     file_bds = '../data/doy2023-223/223v_bdsb2b.txt'
 elif dataset == 2:
-    ep = [2025, 2, 15, 13, 0, 0]
+    ep = [2025, 2, 15, 17, 0, 0]
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     navfile = '../data/doy2025-046/046r_rnx.nav'
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
