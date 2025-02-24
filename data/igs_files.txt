@@ -1,6 +1,9 @@
+brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRDC00IGS_R_20231890000_01D_MN.rnx.gz
 
-brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2025/brdc/BRDC00IGS_R_20240460000_01D_MN.rnx.gz
 brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2025/brdc/BRD400DLR_S_20250460000_01D_MN.rnx.gz
+brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRD400DLR_S_20233080000_01D_MN.rnx.gz
+brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRD400DLR_S_20232230000_01D_MN.rnx.gz
+brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRD400DLR_S_20231890000_01D_MN.rnx.gz
 
 antex ftp://igs-ftp.bkg.bund.de/IGS/station/general/igs20.atx
 antex ftp://igs-ftp.bkg.bund.de/IGS/station/general/igs14.atx
