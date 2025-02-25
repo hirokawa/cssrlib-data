@@ -27,10 +27,9 @@ if l6_mode == 1:
 
     ep = [2025, 2, 15, 17, 0, 0]
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2025-046/BRD400DLR_S_20250460000_01D_MN.rnx'
-    # obsfile = '../data/doy2025-046/sept046r.obs'  # PoLaRx5
+    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
-    l6file = '../data/doy2025-046/2025046R.l6'
+    l6file = '../data/doy2025-046/2025046R.l6'  # archive
 
 
 elif False:
