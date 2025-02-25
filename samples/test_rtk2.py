@@ -13,9 +13,10 @@ from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkpos
 
 atxfile = '../data/antex/igs14.atx'
-navfile = '../data/SEPT2650.21P'
-obsfile = '../data/SEPT265G.21O'
-basefile = '../data/3034265G.21O'
+bdir = '../data/doy2021-265/'
+navfile = bdir+'SEPT2650.21P'
+obsfile = bdir+'SEPT265G.21O'
+basefile = bdir+'3034265G.21O'
 
 xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)
 
@@ -135,13 +136,13 @@ for k in range(3):
     plt.grid()
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_rtk_1', plotFileFormat))
+plotFileName = '.'.join(('test_rtk2_1', plotFileFormat))
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 # plt.show()
 
 # East-north trajetory plot
 #
-
+fig = plt.figure(figsize=(6, 10))
 plt.plot(enu[:, 0], enu[:, 1], '-', color='gray')
 # plt.plot(enu[idx1, 0], enu[idx1, 1], 'm.', markersize=1, label='stdpos')
 plt.plot(enu[idx5, 0], enu[idx5, 1], 'r.', markersize=1, label='float')
@@ -154,6 +155,6 @@ plt.axis('equal')
 plt.legend()
 
 plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_rtk_2', plotFileFormat))
+plotFileName = '.'.join(('test_rtk2_2', plotFileFormat))
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 # plt.show()
