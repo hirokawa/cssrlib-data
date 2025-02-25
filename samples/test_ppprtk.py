@@ -19,15 +19,32 @@ from binascii import unhexlify
 l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
 dataset = 2
 
-if l6_mode == 1:
+if l6_mode == 1:  # from archive
 
-    ep = [2021, 3, 19, 12, 0, 0]
-    xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
-    navfile = '../data/doy2021-078/SEPT078M.21P'
-    obsfile = '../data/doy2021-078/SEPT078M.21O'
-    l6file = '../data/doy2021-078/2021078M.l6'
+    if dataset == 1:
 
-else:
+        ep = [2021, 3, 19, 12, 0, 0]
+        xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
+        navfile = '../data/doy2021-078/SEPT078M.21P'
+        obsfile = '../data/doy2021-078/SEPT078M.21O'
+        l6file = '../data/doy2021-078/2021078M.l6'
+
+    elif dataset == 2:
+        ep = [2025, 2, 15, 17, 0, 0]
+        xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+
+        time = epoch2time(ep)
+        year = ep[0]
+        doy = int(time2doy(time))
+        let = chr(ord('a')+ep[3])
+
+        bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+
+        navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
+        obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
+        l6file = bdir+'{:04d}{:03d}{}.L6'.format(year, doy, let)
+
+else:  # from receiver log
 
     if dataset == 0:
 
@@ -40,7 +57,7 @@ else:
     elif dataset == 2:
 
         ep = [2025, 2, 15, 17, 0, 0]
-        xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+        xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
         time = epoch2time(ep)
         year = ep[0]

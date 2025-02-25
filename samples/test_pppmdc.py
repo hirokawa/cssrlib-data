@@ -43,9 +43,9 @@ elif dataset == 1:
     file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
 elif dataset == 2:
     ep = [2025, 2, 15, 17, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]    
-    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    navfile = '../data/doy2025-046/046r_rnx.nav'  #
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # SEPT MOSAIC-X5
     file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
 
 time = epoch2time(ep)
@@ -66,7 +66,7 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 gnss = "GE"
-#gnss = "GEJR"
+# gnss = "GEJR"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),

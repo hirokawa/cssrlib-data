@@ -14,7 +14,7 @@ from sys import stdout
 import cssrlib.gnss as gn
 from cssrlib.gnss import ecef2pos, Nav
 from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
-from cssrlib.gnss import rSigRnx
+from cssrlib.gnss import rSigRnx, prn2sat, uGNSS
 from cssrlib.gnss import sys2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.cssr_has import cssr_has
@@ -25,7 +25,7 @@ from cssrlib.rinex import rnxdec
 # Select test case
 #
 dataset = 2
-
+excl_sat = []
 # Start epoch and number of epochs
 #
 fromSbfConvert = False
@@ -48,6 +48,7 @@ elif dataset == 2:
     navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
     file_has = '../data/doy2025-046/046r_gale6.txt'
+    excl_sat = [prn2sat(uGNSS.GAL, 29)]  # E29
 
 # Convert epoch and user reference position
 #
@@ -99,6 +100,9 @@ nav = Nav()
 # 0:static, 1:kinematic
 #
 nav.pmode = 0
+
+if len(excl_sat) > 0:
+    nav.excl_sat = excl_sat
 
 # Decode RINEX NAV data
 #

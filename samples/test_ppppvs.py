@@ -47,9 +47,9 @@ elif dataset == 2:  # SIS
 
     ep = [2025, 2, 15, 17, 0, 0]
     navfile = '../data/doy2025-046/046r_rnx.nav'
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # SEPT MOSAIC-X5
     file_pvs = '../data/doy2025-046/046r_sbas.txt'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
 
 time = epoch2time(ep)
