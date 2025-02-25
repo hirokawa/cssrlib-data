@@ -110,12 +110,12 @@ Install the dependencies from the `requirements.txt` file of `cssrlib-data`:
 pip install -r cssrlib-data/requirements.txt
 ```
 
-## Download IGS data
+## Data download from IGS
 
-Download the data files from IGS using the download script:
+Most sample scripts require IGS data for processing. The data can be downloaded with a script, which must be called before the scripts can be executed:
 
 ```bash
-cd cssrlib-data/samples
+cd ./cssrlib-data/samples
 python3 igs_download.py
 ```
 
@@ -135,15 +135,6 @@ If the warnings persist, installing the latest version from the repository can h
 
 ```bash
 pip install -U git+https://github.com/insarlab/PySolid.git@main
-```
-
-## Data download from IGS
-
-Most sample scripts require IGS data for processing. The data can be downloaded with a script, which must be called before the scripts can be executed:
-
-```bash
-cd ./cssrlib-data/samples
-python3 igs_download.py
 ```
 
 ## Ephemeris: RINEX/TLE
