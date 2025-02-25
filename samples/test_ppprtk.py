@@ -16,7 +16,7 @@ from cssrlib.ppprtk import ppprtkpos
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
-l6_mode = 1  # 0: from receiver log, 1: from archive on QZSS
+l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
 
 if l6_mode == 1:
     ep = [2021, 3, 19, 12, 0, 0]
