@@ -43,7 +43,7 @@ else:
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
     navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
-    file_l6 = '../data/doy2025-046/046n_qzsl6.txt'
+    file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
 
 prn_ref = 199  # QZSS PRN
 l6_ch = 0  # 0:L6D, 1:L6E
