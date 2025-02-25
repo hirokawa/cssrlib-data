@@ -5,8 +5,8 @@ from cssrlib.ephemeris import findeph, eph2pos
 from cssrlib.plot import skyplot, plot_elv
 from cssrlib.rinex import rnxdec
 
-navfile = '../data/doy2025-046/046m_rnx.nav'
-obsfile = '../data/doy2025-046/046m_rnx.obs'
+navfile = '../data/doy2025-046/046r_rnx.nav'
+obsfile = '../data/doy2025-046/046r_rnx.obs'
 
 # Define signals to be processed
 #

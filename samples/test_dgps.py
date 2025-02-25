@@ -38,8 +38,8 @@ if dataset == 0:  # MSAS, L1 SBAS
 
 elif dataset == 1:  # MSAS, L1 SBAS
     ep = [2025, 2, 15, 12, 0, 0]
-    navfile = '../data/doy2025-046/046m_rnx.nav'
-    obsfile = '../data/doy2025-046/046m_rnx.obs'  # PolaRX5
+    navfile = '../data/doy2025-046/046r_rnx.nav'
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
     file_sbas = '../data/doy2025-046/046m_sbas.txt'
     xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
     prn_ref = 189  # satellite PRN for SBAS correction
