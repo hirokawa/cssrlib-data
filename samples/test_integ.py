@@ -64,7 +64,7 @@ def write_rtcm(file_rtcm, msg_t, intr, nep=1):
 
     fc = open(file_rtcm, 'wb')
     if not fc:
-        print("RTCM messsage file cannot open.")
+        print("RTCM message file cannot open.")
     k = 0
     msg = bytearray(maxlen)
     buff = bytearray(1024)
@@ -128,7 +128,7 @@ def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
 
     fc = open(file_rtcm, 'rb')
     if not fc:
-        print("RTCM messsage file cannot open.")
+        print("RTCM message file cannot open.")
 
     blen = os.path.getsize(file_rtcm)
     msg = fc.read(blen)

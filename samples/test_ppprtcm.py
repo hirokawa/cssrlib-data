@@ -7,7 +7,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -28,17 +28,20 @@ icase = 2
 # Start epoch and number of epochs
 #
 if icase == 1:  # Galileo HAS IDD
+
     ep = [2023, 8, 17, 2, 0, 0]
-    navfile = '../data/doy229/OBE42023229c.nav'
-    # navfile = '../data/doy229/BRD400DLR_S_20232290000_01D_MN.rnx'
-    obsfile = '../data/doy229/OBE42023229c.obs'
+    navfile = '../data/doy2023-229/OBE42023229c.nav'
+    # navfile = '../data/brdc/BRD400DLR_S_20232290000_01D_MN.rnx'
+    obsfile = '../data/doy2023-229/OBE42023229c.obs'
     xyz_ref = [4186704.2262, 834903.7677, 4723664.9337]
-    file_rtcm = '../data/doy229/idd2023229c.rtc'
-    file_rtcm_log = '../data/doy229/idd2023229c.log'
+    file_rtcm = '../data/doy2023-229/idd2023229c.rtc'
+    file_rtcm_log = '../data/doy2023-229/idd2023229c.log'
+
 elif icase == 2:  # JPL GDGPS  Mosaic-X5
+
     ep = [2024, 2, 12, 7, 0, 0]
     navfile = '../data/doy2024-043/043h_rnx.nav'
-    # navfile = '../data/doy2024-043/BRD400DLR_S_20240430000_01D_MN.rnx'
+    # navfile = '../data/brdc/BRD400DLR_S_20240430000_01D_MN.rnx'
     obsfile = '../data/doy2024-043/043h_rnx.obs'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     file_rtcm = '../data/doy2024-043/JPL32T2043h.rtcm3'
@@ -119,7 +122,7 @@ if True:
 
 # Load ANTEX data for satellites and stations
 #
-atxfile = '../data/igs20.atx'
+atxfile = '../data/antex/igs20.atx'
 atx = atxdec()
 atx.readpcv(atxfile)
 
@@ -164,18 +167,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
@@ -312,29 +315,34 @@ if fig_type == 1:
 
     for k in range(3):
         plt.subplot(nm, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], color=col_t[0], marker='.')
-        plt.plot(t[idx5], enu[idx5, k], color=col_t[1], marker='.')
-        plt.plot(t[idx4], enu[idx4, k], color=col_t[2], marker='.')
+        plt.plot(t[idx0], enu[idx0, k], color=col_t[0],
+                 marker='.', label=None if nm > 3 else 'none')
+        plt.plot(t[idx5], enu[idx5, k], color=col_t[1],
+                 marker='.', label=None if nm > 3 else 'float')
+        plt.plot(t[idx4], enu[idx4, k], color=col_t[2],
+                 marker='.', label=None if nm > 3 else 'fix')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        if nm < 4:
+            plt.legend()
 
     if nm > 3:
         plt.subplot(nm, 1, 4)
         plt.plot(t[idx0], ztd[idx0]*1e2, color=col_t[0],
                  marker='.', markersize=8, label='none')
         plt.plot(t[idx5], ztd[idx5]*1e2, color=col_t[1],
-                 marker='.',  markersize=8, label='float')
+                 marker='.', markersize=8, label='float')
         plt.plot(t[idx4], ztd[idx4]*1e2, color=col_t[2],
                  marker='.', markersize=8, label='fix')
         plt.ylabel('ZTD [cm]')
         plt.grid()
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        plt.legend()
 
     plt.xlabel('Time [HH:MM]')
-    plt.legend()
 
 elif fig_type == 2:
 

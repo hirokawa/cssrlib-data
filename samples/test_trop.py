@@ -14,8 +14,6 @@ from cssrlib.gnss import tropmodel, tropmapf
 from cssrlib.gnss import pos2ecef
 from cssrlib.peph import atxdec, searchpcv, antModelRx
 
-bdir = '../data/'
-atxfile = bdir+"igs14.atx"
 
 igfont = {'family': 'Meiryo'}
 
@@ -32,6 +30,9 @@ hgt = 0
 
 rr = pos2ecef(np.array([lat, lon, hgt]))
 
+# Load ANTEX data for satellites and stations
+#
+atxfile = "../data/antex/igs14.atx"
 atx = atxdec()
 atx.readpcv(atxfile)
 

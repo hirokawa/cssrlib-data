@@ -3,7 +3,7 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import exit as sys_exit
 
 from cssrlib.cssrlib import cssr
 import cssrlib.rinex as rn
@@ -15,10 +15,10 @@ from cssrlib.peph import atxdec, searchpcv
 ep = [2021, 9, 22, 6, 30, 0]
 time = gn.epoch2time(ep)
 
-atxfile = '../data/igs14.atx'
-navfile = '../data/SEPT2650.21P'
-obsfile = '../data/SEPT265G.21O'
-l6file = '../data/2021265G.l6'
+atxfile = '../data/antex/igs14.atx'
+navfile = '../data/doy2021-265/SEPT2650.21P'
+obsfile = '../data/doy2021-265/SEPT265G.21O'
+l6file = '../data/doy2021-265/2021265G.l6'
 griddef = '../data/clas_grid.def'
 
 xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)
@@ -99,18 +99,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
@@ -140,7 +140,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     if not fc:
         nav.fout.write("ERROR: cannot open L6 message file {}!"
                        .format(l6file))
-        sys.exit(-1)
+        sys_exit(-1)
 
     # t_obs 06:29:30
     fc.seek(250*(29*60+30))  # seek to 06:29:30

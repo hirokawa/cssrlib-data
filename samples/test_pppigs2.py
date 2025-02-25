@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
 from os.path import exists
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -34,19 +34,20 @@ nep = 360
 
 pos_ref = ecef2pos(xyz_ref)
 
-navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
-obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
+bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+navfile = bdir+'SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
+obsfile = bdir+'SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
 # ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
 
-orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
 
-clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+clkfile = '../data/igs/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
     .format(ac, year, doy)
 
-bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
 
 if not exists(clkfile):
@@ -100,12 +101,13 @@ bsx.parse(bsxfile)
 
 # Load ANTEX data for satellites and stations
 #
+atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20.atx'
 elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
-    atxfile = '../data/M20.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M20.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 else:
-    atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M14.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 
 atx = atxdec()
 atx.readpcv(atxfile)
@@ -151,18 +153,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")

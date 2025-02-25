@@ -6,7 +6,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-import sys
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -20,28 +20,33 @@ from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 
+
+# Select test case
+#
+dataset = 2
+
 # Start epoch and number of epochs
 #
-if False:
+if dataset == 0:
     ep = [2023, 7, 8, 4, 0, 0]
-    navfile = '../data/SEPT1890.23P'
-    obsfile = '../data/SEPT1890.23O'
-    file_l6 = '../data/qzsl6_189e.txt'
-    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-elif False:
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    navfile = '../data/doy2023-189/SEPT1890.23P'
+    obsfile = '../data/doy2023-189/SEPT1890.23O'
+    file_l6 = '../data/doy2023-189/qzsl6_189e.txt'
+elif dataset == 1:
     ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/doy223/NAV223.23p'
-    # navfile = '../data/doy223/BRD400DLR_S_20232230000_01D_MN.rnx'
-    # obsfile = '../data/doy223/SEPT223Z.23O'  # MOSAIC-CLAS
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_l6 = '../data/doy223/223v_qzsl6.txt'
-    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-else:
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    navfile = '../data/doy2023-223/NAV223.23p'
+    # navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
+    # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
+    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+    file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
+elif dataset == 2:
     ep = [2025, 2, 15, 17, 0, 0]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]    
     navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
     file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
 time = epoch2time(ep)
 year = ep[0]
@@ -60,8 +65,8 @@ pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-# gnss = "GE"
-gnss = "GEJR"
+gnss = "GE"
+#gnss = "GEJR"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -105,11 +110,11 @@ cs.cssrmode = sc.QZS_MADOCA
 
 # Load ANTEX data for satellites and stations
 #
-
+atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/igs20.atx'
+    atxfile += 'igs20.atx'
 else:
-    atxfile = '../data/igs14.atx'
+    atxfile += 'igs14.atx'
 
 atx = atxdec()
 atx.readpcv(atxfile)
@@ -161,18 +166,18 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Set receiver PCO/PCV information, check antenna name and exit if unknown
     #
-    # NOTE: comment out the line with 'sys.exit(1)' to continue with zero
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
     #       receiver antenna corrections!
     #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys.exit(1)
+        sys_exit(1)
     else:
         nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
         if nav.rcv_ant is None:
             nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
                            .format(rnx.ant))
-            sys.exit(1)
+            sys_exit(1)
 
     if nav.rcv_ant is None:
         nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
