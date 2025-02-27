@@ -7,36 +7,71 @@ import numpy as np
 from sys import stdout
 
 from cssrlib.rinex import rnxdec
-from cssrlib.gnss import ecef2pos, timediff, ecef2enu
-from cssrlib.gnss import rSigRnx, epoch2time, Nav, time2str
+from cssrlib.gnss import Nav, rSigRnx, ecef2pos, ecef2enu
+from cssrlib.gnss import epoch2time, time2doy, time2str, timediff
 from cssrlib.pntpos import stdpos
 
-if False:
-    xyz_ref = [-3962108.673,   3381309.574,   3668678.638]
-    navfile = '../data/doy2021-078/SEPT078M.21P'
-    obsfile = '../data/doy2021-078/SEPT078M.21O'
-    ep = [2021, 3, 19, 12, 0, 0]
-else:
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
-    ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
-    # navfile = '../data/brdc/BRDC00IGS_R_20232230000_01D_MN.rnx'
-    # navfile = '../data/doy2023-223/NAV223.23p'
-    # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
-    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+# Start epoch and number of epochs
+#
+dataset = 3
 
-pos_ref = ecef2pos(xyz_ref)
-nep = 360
+if dataset == 0:  # SETP078M.21O
+    ep = [2021, 3, 19, 12, 0, 0]
+    xyz_ref = [-3962108.6617, 3381309.5232, 3668678.6410]
+elif dataset == 1:  # SETP1890.23O
+    ep = [2023, 7, 8, 4, 0, 0]
+    xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
+elif dataset == 2:  # SETP223Z.23O
+    ep = [2023, 8, 11, 21, 0, 0]
+    xyz_ref = [-3962108.7063, 3381309.5703, 3668678.6690]
+elif dataset == 3:  # 046r_rnx.obs
+    ep = [2025, 2, 15, 17, 0, 0]
+    xyz_ref = [-3962108.6819, 3381309.5707, 3668678.6750]
+else:
+    print("ERROR: no RINEX data set selected!")
+    exit(1)
 
 time = epoch2time(ep)
+year = ep[0]
+doy = int(time2doy(time))
+
+nep = 900*4
+
+bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+
+if dataset == 0:
+    let = chr(ord('A')+ep[3])
+    navfile = bdir+'SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
+    obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+if dataset == 1:
+    let = '0'
+    navfile = bdir+'SEPT{:03d}{}.{:02d}P'.format(doy, let, year % 2000)
+    obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+elif dataset == 2:
+    # let = 'Z' # MOSAIC-CLAS
+    let = 'Y'  # PolaRX5
+    navfile = '../data/brdc/' + \
+        'BRD400DLR_S_{:04d}{:03d}0000_01D_MN.rnx'.format(year, doy)
+    obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+else:
+    let = chr(ord('a')+ep[3])
+    navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
+    obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)
+
+pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"), rSigRnx("JC1C"),
-        rSigRnx("GL1C"), rSigRnx("EL1C"), rSigRnx("JL1C"),
-        rSigRnx("GS1C"), rSigRnx("ES1C"), rSigRnx("JS1C")]
-
-# sigs = [rSigRnx("GC1C"), rSigRnx("GL1C"), rSigRnx("GS1C")]
+gnss = "GEJ"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GL1C"), rSigRnx("GS1C")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EL1C"), rSigRnx("ES1C")])
+if 'C' in gnss:
+    sigs.extend([rSigRnx("CC2I"), rSigRnx("CL2I"), rSigRnx("CS2I")])
+if 'C' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JL1C"), rSigRnx("JS1C")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -108,7 +143,18 @@ if rnx.decode_obsh(obsfile) >= 0:
         if obs.t.time == 0:
             break
 
+    # Send line-break to stdout
+    #
+    stdout.write('\n')
+
+    # Close RINEX observation file
+    #
     rnx.fobs.close()
+
+    # Close output file
+    #
+    if nav.fout is not None:
+        nav.fout.close()
 
 
 fig_type = 1
