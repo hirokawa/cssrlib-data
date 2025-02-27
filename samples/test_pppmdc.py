@@ -23,6 +23,7 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
+l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
 dataset = 2
 
 # Start epoch and number of epochs
@@ -46,7 +47,10 @@ elif dataset == 2:
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
     navfile = '../data/doy2025-046/046r_rnx.nav'  #
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # SEPT MOSAIC-X5
-    file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
+    if l6_mode == 0:
+        file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
+    elif l6_mode == 1:
+        file_l6 = '../data/doy2025-046/2025046R.l6'
 
 time = epoch2time(ep)
 year = ep[0]
@@ -54,9 +58,15 @@ doy = int(time2doy(time))
 
 nep = 900*4-5
 
-dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-         ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
-v = np.genfromtxt(file_l6, dtype=dtype)
+if l6_mode == 1:
+    fc = open(file_l6, 'rb')
+    if not fc:
+        print("ERROR: cannot open L6 message file {}!".format(file_l6))
+        sys_exit(-1)
+else:
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
+    v = np.genfromtxt(file_l6, dtype=dtype)
 
 prn_ref = 199  # QZSS PRN
 l6_ch = 1  # 0:L6D, 1:L6E
@@ -221,13 +231,18 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
-               & (v['prn'] == prn_ref)]
-        if len(vi) > 0:
-            msg = unhexlify(vi['nav'][0])
-            cs.decode_l6msg(msg, 0)
+        if l6_mode == 1:
+            cs.decode_l6msg(fc.read(250), 0)
             if cs.fcnt == 5:  # end of sub-frame
-                cs.decode_cssr(bytes(cs.buff), 0)
+                cs.week = week
+                cs.decode_cssr(cs.buff, 0)
+        else:
+            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
+                   & (v['prn'] == prn_ref)]
+            if len(vi) > 0:
+                cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
+                if cs.fcnt == 5:  # end of sub-frame
+                    cs.decode_cssr(bytes(cs.buff), 0)
 
         # Call PPP module
         #
