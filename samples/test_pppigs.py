@@ -5,7 +5,6 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-from os.path import exists
 from sys import exit as sys_exit
 from sys import stdout
 
@@ -67,7 +66,7 @@ else:
     navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
     obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)
 
-ac = 'COD0OPSFIN'
+ac = 'COD0MGXFIN'
 
 orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -77,17 +76,6 @@ clkfile = '../data/igs/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
 
 bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
-
-if not exists(clkfile):
-    orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-    clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-    bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-if not exists(clkfile):
-    orbfile = orbfile.replace('COD0OPSRAP', 'COD0MGXFIN')
-    clkfile = clkfile.replace('COD0OPSRAP', 'COD0MGXFIN')
-    bsxfile = bsxfile.replace('COD0OPSRAP', 'COD0MGXFIN')
-if not exists(orbfile):
-    orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
 #
@@ -168,10 +156,10 @@ if rnx.decode_obsh(obsfile) >= 0:
     #
     ppp = pppos(nav, rnx.pos, 'test_pppigs.log')
     nav.ephopt = 4  # IGS
-    nav.armode = 3
+    nav.armode = 3  # 1: continuous, 3: fix-and-hold
+    nav.thresar = 2.0
 
     nav.elmin = np.deg2rad(10.0)
-    nav.thresar = 2.0
 
     # Get equipment information
     #

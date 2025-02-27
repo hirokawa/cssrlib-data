@@ -5,7 +5,6 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-from os.path import exists
 from sys import exit as sys_exit
 from sys import stdout
 
@@ -38,7 +37,6 @@ bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
 navfile = bdir+'SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
 obsfile = bdir+'SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
-# ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
 
 orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
@@ -49,13 +47,6 @@ clkfile = '../data/igs/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
 
 bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
-
-if not exists(clkfile):
-    orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-    clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-    bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-if not exists(orbfile):
-    orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
 #

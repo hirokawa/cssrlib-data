@@ -13,17 +13,17 @@ brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRD400DLR_S_
 brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRD400DLR_S_20232230000_01D_MN.rnx.gz
 brdc  ftp://gdc.cddis.eosdis.nasa.gov/pub/gnss/data/daily/2023/brdc/BRD400DLR_S_20231890000_01D_MN.rnx.gz
 
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2353/COD0OPSFIN_20250460000_01D_05M_ORB.SP3.gz
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2353/COD0OPSFIN_20250460000_01D_30S_CLK.CLK.gz
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2353/COD0OPSFIN_20250460000_01D_01D_OSB.BIA.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2353/COD0MGXFIN_20250460000_01D_05M_ORB.SP3.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2353/COD0MGXFIN_20250460000_01D_30S_CLK.CLK.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2353/COD0MGXFIN_20250460000_01D_01D_OSB.BIA.gz
 
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2274/COD0OPSFIN_20232230000_01D_01D_OSB.BIA.gz
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2274/COD0OPSFIN_20232230000_01D_05M_ORB.SP3.gz
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2274/COD0OPSFIN_20232230000_01D_30S_CLK.CLK.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2274/COD0MGXFIN_20232230000_01D_01D_OSB.BIA.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2274/COD0MGXFIN_20232230000_01D_05M_ORB.SP3.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2274/COD0MGXFIN_20232230000_01D_30S_CLK.CLK.gz
 
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2269/COD0OPSFIN_20231890000_01D_01D_OSB.BIA.gz
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2269/COD0OPSFIN_20231890000_01D_05M_ORB.SP3.gz
-igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2269/COD0OPSFIN_20231890000_01D_30S_CLK.CLK.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2269/COD0MGXFIN_20231890000_01D_01D_OSB.BIA.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2269/COD0MGXFIN_20231890000_01D_05M_ORB.SP3.gz
+igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2269/COD0MGXFIN_20231890000_01D_30S_CLK.CLK.gz
 
 igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2176/COD0MGXFIN_20212650000_01D_01D_OSB.BIA.gz
 igs   ftp://gdc.cddis.eosdis.nasa.gov/pub/gps/products/2176/COD0MGXFIN_20212650000_01D_05M_ORB.SP3.gz
