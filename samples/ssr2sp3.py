@@ -20,9 +20,10 @@ from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, peph_t, apc2com
 from cssrlib.cssrlib import sCSSRTYPE as sc
-from cssrlib.cssrlib import cssr
+#from cssrlib.cssrlib import cssr
 from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssr_has import cssr_has
+from cssrlib.cssr_mdc import cssr_mdc
 from cssrlib.rinex import rnxdec
 
 
@@ -94,14 +95,14 @@ def write_bsx(bsxfile, ac, data):
             f.write(line+'\n')
 
 
-def file2time(year, fileName):
+def file2time(fileName):
     """
     Convert hourly SBF filename to epoch
     """
 
-    doy = os.path.basename(fileName).split('_')[0]
-    hour = ord(doy[3])-ord('a')
-    doy = int(doy[0:3])
+    year = int(os.path.dirname(fileName).split('/')[-1][3:7])
+    doy = int(os.path.dirname(fileName).split('/')[-1][8:11])
+    hour = ord(os.path.basename(fileName)[3])-ord('a')
     time = epoch2time([year, 1, 1, hour, 0, 0])
 
     return timeadd(time, (doy-1)*86400)
@@ -117,27 +118,21 @@ ssrfiles = []
 if len(sys_argv) > 1:
     ssrfiles = sys_argv[1:]
 else:
-    ssrfiles = ['../data/doy2023-189/gale6_189e.txt', ]
+    ssrfiles = ['../data/doy2025-046/046r_gale6.txt', ]
 
 # Start time
 #
-if "_189e" in ssrfiles[0]:
-    time = epoch2time([2023, 7, 8, 4, 0, 0])
-else:
-    time = file2time(2023, ssrfiles[0])
-    """
-    print("ERROR: unknown epoch!")
-    sys_exit(1)
-    """
+time = file2time(ssrfiles[0])
 
 ep = time2epoch(time)
+
 year = ep[0]
 hour = ep[3]
 doy = int(time2doy(time))
 
 if "qzsl6" in ssrfiles[0]:
 
-    name = 'QZS0CLSOPS'
+    name = 'QZS0MDCOPS'
     step = "10S"
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
@@ -219,8 +214,7 @@ if 'gale6' in ssrfiles[0]:
     file_gm = baseDirName+'Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt'
     gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 elif 'qzsl6' in ssrfiles[0]:
-    cs = cssr()
-    cs.cssrmode = sc.QZS_MADOCA
+    cs = cssr_mdc()
 elif "bdsb2b" in ssrfiles[0]:
     cs = cssr_bds()
 else:
@@ -412,7 +406,11 @@ for vi in v:
 
             # Convert to CoM using ANTEX PCO corrections
             #
-            rs[0, :] += apc2com(nav, sat, time, rs[0, :], sig0, k=0)
+            pco = apc2com(nav, sat, time, rs[0, :], sig0, k=0)
+            if pco is None:
+                continue
+
+            rs[0, :] += pco
 
             for i in range(3):
                 peph.pos[sat-1, i] = rs[0, i]
