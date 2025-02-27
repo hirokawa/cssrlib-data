@@ -17,6 +17,7 @@ Note:
 import os
 import numpy as np
 import cssrlib.osnma as om
+from sys import exit as sys_exit
 from binascii import unhexlify, hexlify
 import matplotlib.pyplot as plt
 
@@ -25,13 +26,13 @@ mt_file = 'OSNMA_MerkleTree_20240115100000_newPKID_1.xml'
 
 if not os.path.exists('../data/pubkey/osnma/'+mt_file):
     print('please install OSNMA_MerkleTree*.xml from EUSPA.')
-    exit(0)
+    sys_exit(0)
 
 nma = om.osnma(mt_file)
 
 nma.flg_slowmac = False
 
-file_galinav = '../data/doy2024-305/305a_galinav.txt'
+file_galinav = '../data/doy2025-046/046r_galinav.txt'
 doy = 305
 
 dtype_ = [('tow', 'i8'), ('wn', 'i8'), ('prn', 'i8'),

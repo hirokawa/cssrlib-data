@@ -14,6 +14,7 @@ Note:
 """
 
 import os
+from sys import exit as sys_exit
 from binascii import unhexlify
 import numpy as np
 from cssrlib.gnss import prn2sat, uGNSS
@@ -22,7 +23,7 @@ import matplotlib.pyplot as plt
 
 if not os.path.exists('../data/pubkey/qznma/002.der'):
     print('please install public key file from QSS.')
-    exit(0)
+    sys_exit(0)
 
 dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
          ('type', 'int'), ('len', 'int'), ('nav', 'S512')]
@@ -33,18 +34,22 @@ msg_nav_t = {uNavId.GPS_LNAV: 'LNAV', uNavId.GPS_CNAV: 'CNAV',
 # prn_ref = -1
 prn_ref = 199
 navmode = uNavId.GPS_LNAV  # 1:LNAV, 2:CNAV, 3:CNAV2
-doy = 305
+year = 2025
+doy = 46
+session = 'r'
 flg_gnss = True
 
 qz = qznma()
 qz.monlevel = 1
 
+bdir = f'../data/doy{year}-{doy:03d}/'
+
 if navmode == uNavId.GPS_LNAV:
-    navfile = '../data/doy2024-305/305a_qzslnav.txt'
+    navfile = bdir+f'{doy:03d}{session}_qzslnav.txt'
 elif navmode == uNavId.GPS_CNAV:
-    navfile = '../data/doy2024-305/305a_qzscnav.txt'
+    navfile = bdir+f'{doy:03d}{session}_qzscnav.txt'
 elif navmode == uNavId.GPS_CNAV2:
-    navfile = '../data/doy2024-305/305a_qzscnav2.txt'
+    navfile = bdir+f'{doy:03d}{session}_qzscnav2.txt'
 
 v = np.genfromtxt(navfile, dtype=dtype)
 
@@ -52,12 +57,12 @@ if navmode == uNavId.GPS_CNAV:
     v = v[v['type'] == 26]  # L5 CNAV only
 
 if flg_gnss:
-    navfile_n = '../data/doy2024-305/305a_qzsl6.txt'
-    navfile_gpslnav = '../data/doy2024-305/305a_gpslnav.txt'
-    navfile_gpscnav = '../data/doy2024-305/305a_gpscnav.txt'
-    # navfile_gpscnav2 = '../data/doy2024-305/305a_gpscnav2.txt'
-    navfile_galinav = '../data/doy2024-305/305a_galinav.txt'
-    navfile_galfnav = '../data/doy2024-305/305a_galfnav.txt'
+    navfile_n = bdir+f'{doy:03d}{session}_qzsl6.txt'
+    navfile_gpslnav = bdir+f'{doy:03d}{session}_gpslnav.txt'
+    navfile_gpscnav = bdir+f'{doy:03d}{session}_gpscnav.txt'
+    # navfile_gpscnav2 = bdir+'{doy:03d}{session}_gpscnav2.txt'
+    navfile_galinav = bdir+f'{doy:03d}{session}_galinav.txt'
+    navfile_galfnav = bdir+f'{doy:03d}{session}_galfnav.txt'
 
     # load navigation message
     qz.load_navmsg_lnav(navfile_gpslnav)
