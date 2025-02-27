@@ -32,8 +32,11 @@ nma = om.osnma(mt_file)
 
 nma.flg_slowmac = False
 
-file_galinav = '../data/doy2025-046/046r_galinav.txt'
-doy = 305
+year = 2025
+doy = 46
+session = 'r'
+
+file_galinav = f'../data/doy{year}-{doy:03d}/{doy:03d}{session}_galinav.txt'
 
 dtype_ = [('tow', 'i8'), ('wn', 'i8'), ('prn', 'i8'),
           ('mt', 'i8'), ('k', 'i8'), ('nma', 'S10'),
@@ -77,7 +80,7 @@ for i, t in enumerate(tow[0:nep]):
 
 if True:
 
-    tmax = 240
+    tmax = 300
 
     fig, ax = plt.subplots()
     plt.plot(tow-tow[0], nsat[:, 0], label='tracked')
@@ -104,7 +107,7 @@ if True:
     ax.set_xticks(np.arange(0, 300, 30))
     plt.legend()
     plt.ylim([0, 6])
-    plt.xlim([0, 240])
+    plt.xlim([0, tmax])
     plt.ylabel('status')
     plt.xlabel('time [s]')
     plt.savefig('osnma-{0:d}-status.png'.format(doy))

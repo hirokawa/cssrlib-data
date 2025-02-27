@@ -103,7 +103,7 @@ for k in range(nep):
 
 if True:
 
-    tmax = 500
+    tmax = 300
 
     fig, ax = plt.subplots()
     # plt.plot(tow_-tow_[0], nsat[:, 0], label='tracked')
