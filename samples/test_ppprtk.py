@@ -30,6 +30,7 @@ if l6_mode == 1:  # from archive
         l6file = '../data/doy2021-078/2021078M.l6'
 
     elif dataset == 2:
+
         ep = [2025, 2, 15, 17, 0, 0]
         xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
@@ -42,7 +43,7 @@ if l6_mode == 1:  # from archive
 
         navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
         obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
-        l6file = bdir+'{:04d}{:03d}{}.L6'.format(year, doy, let)
+        l6file = bdir+'{:04d}{:03d}{}.l6'.format(year, doy, let.upper())
 
 else:  # from receiver log
 
