@@ -13,14 +13,13 @@ from sys import exit as sys_exit
 
 from cssrlib.ephemeris import satpos
 from cssrlib.gnss import Nav, sat2prn, sys2str, sat2id
-from cssrlib.gnss import time2doy, epoch2time, time2epoch, time2str
+from cssrlib.gnss import time2doy, epoch2time, time2epoch
 from cssrlib.gnss import timeadd, timeget, gpst2time
 from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, peph_t, apc2com
 from cssrlib.cssrlib import sCSSRTYPE as sc
-#from cssrlib.cssrlib import cssr
 from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssr_has import cssr_has
 from cssrlib.cssr_mdc import cssr_mdc
@@ -120,15 +119,19 @@ if len(sys_argv) > 1:
 else:
     ssrfiles = ['../data/doy2025-046/046r_gale6.txt', ]
 
-# Start time
+# Start time and interval length
 #
 time = file2time(ssrfiles[0])
+itv = "{:02d}H".format(len(ssrfiles))
+if itv == "24H":
+    itv = "01D"
 
 ep = time2epoch(time)
 
 year = ep[0]
 hour = ep[3]
 doy = int(time2doy(time))
+dur = len(ssrfiles)
 
 if "qzsl6" in ssrfiles[0]:
 
@@ -150,8 +153,7 @@ elif "gale6" in ssrfiles[0]:
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
-    # NOTE: igs14 values seem to be yield better consistency with
-    #       CODE reference orbits
+    # NOTE: igs14 values yield better consistency with CODE MGEX reference orbits
     atxfile = baseDirName+'../data/antex/igs14.atx'
 
 elif "bdsb2b" in ssrfiles[0]:
@@ -172,10 +174,16 @@ else:
 
 # Output files
 #
-orbfile = '{}_{:4d}{:03d}{:02d}00_01D_{}_ORB.SP3'\
-    .format(name, year, doy, hour, step)
-bsxfile = '{}_{:4d}{:03d}{:02d}00_01D_00U_OSB.BIA'\
-    .format(name, year, doy, hour)
+orbfile = '{}_{:4d}{:03d}{:02d}00_{}_{}_ORB.SP3'\
+    .format(name, year, doy, hour, itv, step)
+bsxfile = '{}_{:4d}{:03d}{:02d}00_{}_00U_OSB.BIA'\
+    .format(name, year, doy, hour, itv)
+
+print("Processing SSR corrections")
+print("  SSR files: {}".format(" ".join([f for f in ssrfiles])))
+print("  Output SP3 file: {}".format(orbfile))
+print("  Output BIA file: {}".format(bsxfile))
+print()
 
 # Initialize objects
 #
@@ -200,7 +208,8 @@ for dt in (-1, 0, +1):
     if os.path.exists(navfile):
         navfiles.append(navfile)
     else:
-        print("WARNING: cannot find  {}".format(navfile))
+        #print("WARNING: cannot find  {}".format(navfile))
+        pass
 
 # Decode RINEX NAV data
 #
@@ -345,8 +354,6 @@ for vi in v:
     #
     if (cs.lc[0].cstat & 0xf) == 0xf and hasNew:
 
-        print(time2str(time))
-
         hasNew = False
 
         ns = len(cs.sat_n)
@@ -354,76 +361,6 @@ for vi in v:
         rs = np.ones((ns, 3))*np.nan
         vs = np.ones((ns, 3))*np.nan
         dts = np.ones((ns, 1))*np.nan
-
-        # Store in SP3 data set
-        #
-        peph = peph_t(time)
-
-        for j, sat in enumerate(cs.sat_n):
-
-            sys, _ = sat2prn(sat)
-
-            rs, vs, dts, svh = satpos(sat, time, nav, cs)
-
-            if cs.cssrmode == sc.QZS_MADOCA:
-
-                if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
-                elif sys == ug.GLO:
-                    sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
-                elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
-                elif sys == ug.QZS:
-                    sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
-                else:
-                    print("ERROR: invalid system {}".format(sys2str(sys)))
-                    continue
-
-            elif cs.cssrmode == sc.GAL_HAS_SIS:
-
-                if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
-                elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
-                else:
-                    print("ERROR: invalid system {}".format(sys2str(sys)))
-                    continue
-
-            elif cs.cssrmode == sc.BDS_PPP:
-
-                if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
-                elif sys == ug.BDS:
-                    sig0 = (rSigRnx("CC6I"),)
-                else:
-                    print("ERROR: invalid system {}".format(sys2str(sys)))
-                    continue
-
-            # Skip invalid positions
-            #
-            if np.isnan(rs[0, :]).any():
-                continue
-
-            # Convert to CoM using ANTEX PCO corrections
-            #
-            pco = apc2com(nav, sat, time, rs[0, :], sig0, k=0)
-            if pco is None:
-                continue
-
-            rs[0, :] += pco
-
-            for i in range(3):
-                peph.pos[sat-1, i] = rs[0, i]
-            peph.pos[sat-1, 3] = dts[0]
-
-            # Store satellite in set
-            #
-            if sat not in sats:
-                sats.add(sat)
-
-        # Save and store
-        #
-        nav.peph.append(peph)
 
         # Get SSR code and phase biases
         #
@@ -492,7 +429,7 @@ for vi in v:
 
             for sat_ in range(1, 33):
 
-                sigs = [rSigRnx('GC1C'), rSigRnx('GC2W')]
+                sigs = [rSigRnx('GC1C'), rSigRnx('GC1W'), rSigRnx('GC2W')]
                 for sig_ in sigs:
 
                     val_ = 0.0
@@ -515,6 +452,114 @@ for vi in v:
                     #
                     if biases[sat_][sig_][-1][2] != val_:
                         biases[sat_][sig_].append([time, time, val_])
+
+        # Store orbit and clock offset in SP3
+        #
+        peph = peph_t(time)
+
+        for j, sat in enumerate(cs.sat_n):
+
+            sys, _ = sat2prn(sat)
+
+            rs, vs, dts, svh = satpos(sat, time, nav, cs)
+
+            if cs.cssrmode == sc.QZS_MADOCA:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.GLO:
+                    sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
+                    continue
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+                elif sys == ug.QZS:
+                    sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
+                    continue
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.GAL_HAS_SIS:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.BDS_PPP:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.BDS:
+                    sig0 = (rSigRnx("CC6I"),)
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
+            # Skip invalid positions
+            #
+            if np.isnan(rs[0, :]).any():
+                continue
+
+            # Convert to CoM using ANTEX PCO corrections
+            #
+            pco = apc2com(nav, sat, time, rs[0, :], sig0, k=0)
+            if pco is None:
+                continue
+
+            # Clock reference signals for reference product
+            #
+            if sys == ug.GPS:
+                sigClk = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+            elif sys == ug.GLO:
+                sigClk = (rSigRnx("RC1C"), rSigRnx("RC2C"))
+            elif sys == ug.GAL:
+                sigClk = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+            elif sys == ug.BDS:
+                sigClk = (rSigRnx("CC2I"), rSigRnx("CC6I"))
+            elif sys == ug.QZS:
+                sigClk = (rSigRnx("JC1C"), rSigRnx("JC5Q"))
+            else:
+                print("ERROR: invalid system {}".format(sys2str(sys)))
+                continue
+
+            freq = [s.frequency() for s in sigClk]
+            facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
+                    -freq[1]**2/(freq[0]**2-freq[1]**2))
+
+            # Compute ionosphere-free combination of biases
+            #
+            bias = 0.0
+            if sat in biases.keys() and all(s in biases[sat] for s in sigClk):
+                bias = facs[0]*biases[sat][sigClk[0]][-1][2] + \
+                    facs[1]*biases[sat][sigClk[1]][-1][2]
+            else:
+                #print("ERROR: missing bias for {} {}".format(sat2id(sat), sigClk))
+                continue
+
+            # Adjust sign of biases
+            # - IS-QZSS-MDC-001 sec 5.5.3.3
+            # - HAS IDD ICD sec 3.3.4
+            if cs.cssrmode in [sc.GAL_HAS_SIS, sc.QZS_MADOCA]:
+                bias = -bias
+
+            # Adjust orbit and clock offset and store in SP3
+            #
+            for i in range(3):
+                peph.pos[sat-1, i] = rs[0, i] + pco[i]
+            peph.pos[sat-1, 3] = dts[0] - bias*1e-9
+
+            # Store satellite in set
+            #
+            if sat not in sats:
+                sats.add(sat)
+
+        # Save and store
+        #
+        nav.peph.append(peph)
 
 # Write results to output file
 #
