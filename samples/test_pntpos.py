@@ -70,7 +70,7 @@ if 'E' in gnss:
     sigs.extend([rSigRnx("EC1C"), rSigRnx("EL1C"), rSigRnx("ES1C")])
 if 'C' in gnss:
     sigs.extend([rSigRnx("CC2I"), rSigRnx("CL2I"), rSigRnx("CS2I")])
-if 'C' in gnss:
+if 'J' in gnss:
     sigs.extend([rSigRnx("JC1C"), rSigRnx("JL1C"), rSigRnx("JS1C")])
 
 rnx = rnxdec()
