@@ -79,7 +79,7 @@ bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
 
 # Define signals to be processed
 #
-gnss = "GE"
+gnss = "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -93,6 +93,10 @@ if 'C' in gnss:
     sigs.extend([rSigRnx("CC2I"), rSigRnx("CC6I"),
                  rSigRnx("CL2I"), rSigRnx("CL6I"),
                  rSigRnx("CS2I"), rSigRnx("CS6I")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC5Q"),
+                 rSigRnx("JL1C"), rSigRnx("JL5Q"),
+                 rSigRnx("JS1C"), rSigRnx("JS5Q")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
