@@ -305,7 +305,7 @@ fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
 fmt = '%H:%M'
-col_t = ['#d62728', '#1f77b4', '#2ca02c']  # tab:red, tab:blue, tab:green
+col_t = ['r', 'y', 'g']
 
 if fig_type == 1:
 

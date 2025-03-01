@@ -363,9 +363,21 @@ class ubx(rcvDec):
                 self.re.rnx_snav_body(seph, self.fh_rnxnav)
 
         if fh_ is not None and blen > 0:
-            fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
-                      format(self.week, int(self.tow+0.01), prn, type_, blen,
-                             hexlify(b[:blen]).decode()))
+
+            if sys == uGNSS.SBS:
+                bl = 8 if sigid == 0 else 4
+                msg = b[:blen]
+                mt = bs.unpack_from('u6', msg, bl)[0]
+                fh_.write("{:4d}{:7d}{:4d}{:3d} : ".
+                          format(self.week, int(self.tow), prn, mt))
+                for i in range(29):
+                    fh_.write("{:02X}".format(msg[i]))
+                fh_.write("\n")
+            else:
+                fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
+                          format(self.week, int(self.tow+0.01), prn, type_,
+                                 blen, hexlify(b[:blen]).decode()))
+
         if self.monlevel > 0:
             print(f"NAV gnss={gnss}:prn={svid:3d}({freqid:2d}):sig={sigid:2d}")
 
