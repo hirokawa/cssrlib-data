@@ -66,7 +66,7 @@ else:
     navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
     obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)
 
-ac = 'COD0MGXFIN'
+ac = 'COD0OPSFIN'
 
 orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -127,7 +127,7 @@ bsx.parse(bsxfile)
 #
 atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20.atx'
+    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20_2353.atx'
 elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
     atxfile += 'M20.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 else:
