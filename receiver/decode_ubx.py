@@ -365,14 +365,8 @@ class ubx(rcvDec):
         if fh_ is not None and blen > 0:
 
             if sys == uGNSS.SBS:
-                bl = 8 if sigid == 0 else 4
-                msg = b[:blen]
-                mt = bs.unpack_from('u6', msg, bl)[0]
-                fh_.write("{:4d}{:7d}{:4d}{:3d} : ".
-                          format(self.week, int(self.tow), prn, mt))
-                for i in range(29):
-                    fh_.write("{:02X}".format(msg[i]))
-                fh_.write("\n")
+                itype = 0 if sigid == 0 else 1
+                self.output_sbas(prn, b[:blen], fh_, itype)
             else:
                 fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
                           format(self.week, int(self.tow+0.01), prn, type_,

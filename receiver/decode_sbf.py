@@ -91,6 +91,8 @@ class sbf(rcvDec):
                  uTYP.D: rSigRnx('JD1Z'), uTYP.S: rSigRnx('JS1Z')},
             34: {uTYP.C: rSigRnx('CC7D'), uTYP.L: rSigRnx('CL7D'),
                  uTYP.D: rSigRnx('CD7D'), uTYP.S: rSigRnx('CS7D')},
+            37: {uTYP.C: rSigRnx('IC1P'), uTYP.L: rSigRnx('IL1P'),
+                 uTYP.D: rSigRnx('ID1P'), uTYP.S: rSigRnx('IS1P')},
             38: {uTYP.C: rSigRnx('JC1E'), uTYP.L: rSigRnx('JL1E'),
                  uTYP.D: rSigRnx('JD1E'), uTYP.S: rSigRnx('JS1E')},
             39: {uTYP.C: rSigRnx('JC5P'), uTYP.L: rSigRnx('JL5P'),
@@ -155,9 +157,13 @@ class sbf(rcvDec):
 
         return sys, prn
 
-    def decode_head(self, buff, k):
+    def decode_head(self, buff, k, sysref=None):
         tow, wn, svid = st.unpack_from('<LHB', buff, k)
-        sys, prn = self.svid2prn(svid)
+        if sysref is None:
+            sys, prn = self.svid2prn(svid)
+        else:
+            sys = sysref
+            prn = svid
         self.tow = tow*1e-3
         self.week = wn
         return sys, prn
@@ -448,7 +454,7 @@ class sbf(rcvDec):
         if self.monlevel > 1 and blk_num not in \
            (4002, 4004, 4006, 4007, 4017, 4018, 4019, 4020, 4021, 4022, 4023,
             4024, 4026, 4027, 4036, 4047, 4066, 4067, 4068, 4069, 4081, 4093,
-                4095, 4218, 4219, 4228, 4242, 4246, 5891, 5894, 5896):
+                4095, 4218, 4219, 4228, 4242, 4246, 4262, 5891, 5894, 5896):
             print("block_num = {:d} rev={:d} len={:d}".format(
                 blk_num, blk_rev, len_))
 
@@ -559,23 +565,16 @@ class sbf(rcvDec):
                 if prn < 120 or prn > 158:
                     return 0
 
+                if self.prn_ref > 0 and prn != self.prn_ref:
+                    return 0
+
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
 
-                bl = 8 if itype == 0 else 4
-
-                if self.prn_ref > 0 and prn != self.prn_ref:
-                    return 0
-
-                mt = bs.unpack_from('u6', msg, bl)[0]
-                self.fh_sbas.write("{:4d}{:7d}{:4d}{:3d} : ".
-                                   format(self.week, int(self.tow), prn, mt))
-                for i in range(29):
-                    self.fh_sbas.write("{:02X}".format(msg[i]))
-                self.fh_sbas.write("\n")
+                self.output_sbas(prn, msg, self.fh_sbas, itype)
 
                 sat = prn2sat(uGNSS.SBS, prn)
                 seph = None
@@ -925,19 +924,14 @@ class sbf(rcvDec):
                               "{:2d}".format(src))
                     return -1
 
-                fh_ = self.fh_sbas
-
-                blen = (250+7)//8
-                fh_.write("{:4d}\t{:6.1f}\t{:3d}\t{:2d}\t{:3d}\t".
-                          format(self.week, self.tow, prn, src_t[src], blen))
-
                 msg = bytearray(32)
                 for i in range(8):
                     d = st.unpack_from('<L', buff, k)[0]
-                    fh_.write("{:08x}".format(d))
                     st.pack_into('>L', msg, i*4, d)
                     k += 4
-                fh_.write("\n")
+
+                itype = src_t[src]
+                self.output_sbas(prn, msg, self.fh_sbas, itype)
 
         elif blk_num == 4242:  # BDSRawB2b
             sys, prn = self.decode_head(buff, k)
@@ -984,6 +978,31 @@ class sbf(rcvDec):
                     if eph is not None:
                         self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
+        elif blk_num == 4262:  # NAVICRawL1
+            sys, prn = self.decode_head(buff, k, sysref=uGNSS.IRN)
+            k += 7
+            crc_sf2, crc_sf3, src, _, ch = st.unpack_from('<BBBBB', buff, k)
+            k += 5
+            if self.flg_irnnav:
+                if crc_sf2 != 1 or crc_sf3 != 1:
+                    if self.monlevel > 0:
+                        print("crc error in NAVICRawL1 " +
+                              "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
+                              format(int(self.tow), prn, crc_sf2, crc_sf3,
+                                     src))
+                    return -1
+
+                msg = bytearray(228)
+                for i in range(57):
+                    d = st.unpack_from('<L', buff, k)[0]
+                    st.pack_into('>L', msg, i*4, d)
+                    k += 4
+
+                sat = prn2sat(sys, prn)
+                eph = self.rn.decode_irn_l1nav(self.week, self.tow, sat, msg)
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
+
         elif blk_num in (4095, 5891):  # GPS/QZS Decoded Message
             eph = self.decode_gpsnav(buff, k)
             if eph is not None:
@@ -1003,10 +1022,10 @@ if __name__ == "__main__":
     # bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/_sbf/')
     # fnames = 'sep3238a.sbf'
 
-    gnss_t = 'GERCJ'
+    gnss_t = 'GERCIJ'
 
     bdir = '../data/doy2025-046/'
-    fnames = 'sep3046q.sbf'
+    fnames = 'sept046r.sbf'
 
     opt = rcvOpt()
     opt.flg_qzsl6 = False
@@ -1016,8 +1035,8 @@ if __name__ == "__main__":
     opt.flg_gpscnav = True
     opt.flg_qzscnav2 = True
     opt.flg_gpscnav2 = True
-    opt.flg_qzsl1s = False
-    opt.flg_qzsl5s = False
+    opt.flg_qzsl1s = True
+    opt.flg_qzsl5s = True
     opt.flg_gale6 = True
     opt.flg_galinav = True
     opt.flg_galfnav = True
@@ -1026,7 +1045,7 @@ if __name__ == "__main__":
     opt.flg_bdsb2b = True
     opt.flg_bdsd12 = False
     opt.flg_gloca = True
-    opt.flg_irnnav = False
+    opt.flg_irnnav = True
     opt.flg_sbas = True
     opt.flg_rnxnav = True
     opt.flg_rnxobs = True
@@ -1060,6 +1079,7 @@ if __name__ == "__main__":
                     k += 1
                     continue
                 if not sbfdec.check_crc(msg, k):
+                    k += 1
                     continue
                 len_ = sbfdec.msg_len(msg, k)
                 if k+len_ >= maxlen:

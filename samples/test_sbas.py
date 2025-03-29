@@ -20,37 +20,27 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
-dataset = 1
+dataset = 2
 
 # Start epoch and number of epochs
 #
-if dataset == 0:  # MSAS, L1 SBAS
-    ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
-    obsfile = '../data/2023-doy223/SEPT223Y.23O'  # PolaRX5
-    file_sbas = '../data/2023-doy223/223v_sbas.txt'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
-    prn_ref = 137  # satellite PRN for SBAS correction
-    sbas_type = 0  # L1: 0, L5: 1
-    nf = 1
-
-elif dataset == 1:  # MSAS, L1 SBAS
+if dataset == 1:  # MSAS, L1 SBAS
     ep = [2025, 2, 15, 17, 0, 0]
     navfile = '../data/doy2025-046/046r_rnx.nav'
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # mosaic-X5
     file_sbas = '../data/doy2025-046/046r_sbas.txt'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
     prn_ref = 137  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
 
 elif dataset == 2:  # QZSS, L5 DFMC
-    ep = [2023, 8, 11, 21, 0, 0]
-    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
-    obsfile = '../data/2023-doy223/SEPT223Y.23O'  # PolaRX5
-    file_sbas = '../data/2023-doy223/223v_sbas.txt'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
-    prn_ref = 189  # satellite PRN for SBAS correction
+    ep = [2025, 2, 15, 17, 0, 0]
+    navfile = '../data/doy2025-046/046r_rnx.nav'
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # mosaic-X5
+    file_sbas = '../data/doy2025-046/046r_sbas.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    prn_ref = [193, 202]  # satellite PRN for SBAS correction
     sbas_type = 1  # L1: 0, L5: 1
     nf = 2
 
@@ -105,7 +95,7 @@ nav.pmode = 1
 nav = rnx.decode_nav(navfile, nav)
 
 cs = sbasDec('test_sbas_cs.log')
-cs.monlevel = 0
+cs.monlevel = 2
 
 # Load ANTEX data for satellites and stations
 #
@@ -210,23 +200,27 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+        if len(prn_ref) == 1:
+            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+        else:
+            vi = v[(v['tow'] == tow) & (v['prn'] >= prn_ref[0]) &
+                   (v['prn'] <= prn_ref[1])]
         if sbas_type == 0:  # L1
-            vi = vi[vi['type'] <= 30]
+            vi = vi[vi['type'] <= 28]
         else:  # DFMC L5
-            vi = vi[vi['type'] > 30]
+            vi = vi[(vi['type'] == 31) | (vi['type'] == 32) |
+                    ((vi['type'] >= 34) & (vi['type'] <= 37))]
 
-        #       & (v['type'] == sbas_type)]
         if len(vi) > 0:
-            buff = unhexlify(vi['nav'][0])
-            cs.decode_cssr(buff, 0, src=sbas_type, prn=prn_ref)
+            for vi_ in vi:
+                buff = unhexlify(vi_['nav'])
+                cs.decode_cssr(buff, 0, src=sbas_type, prn=vi_['prn'])
 
         # cs.check_validity(obs.t)
 
         # Call PPP module with PVS corrections
         #
         std.process(obs, cs=cs)
-        # std.process(obs)
 
         # Save output
         #
@@ -323,7 +317,7 @@ elif fig_type == 2:
     plt.legend()
     # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
-plotFileFormat = 'eps'
+plotFileFormat = 'png'
 plotFileName = '.'.join(('test_sbas', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
