@@ -20,7 +20,7 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
-dataset = 2
+dataset = 1
 
 # Start epoch and number of epochs
 #
@@ -30,7 +30,7 @@ if dataset == 1:  # MSAS, L1 SBAS
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # mosaic-X5
     file_sbas = '../data/doy2025-046/046r_sbas.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    prn_ref = 137  # satellite PRN for SBAS correction
+    prn_ref = [137]  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
 
