@@ -20,7 +20,7 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
-dataset = 1
+dataset = 2
 
 # Start epoch and number of epochs
 #
@@ -40,7 +40,8 @@ elif dataset == 2:  # QZSS, L5 DFMC
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # mosaic-X5
     file_sbas = '../data/doy2025-046/046r_sbas.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    prn_ref = [193, 202]  # satellite PRN for SBAS correction
+    # prn_ref = [193, 202]  # satellite PRN for SBAS correction
+    prn_ref = [199]
     sbas_type = 1  # L1: 0, L5: 1
     nf = 2
 
@@ -235,20 +236,22 @@ if rnx.decode_obsh(obsfile) >= 0:
         # nsat[ne] = std.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
-                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
+                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}, "
+                       "nsat {:1d}\n"
                        .format(time2str(obs.t),
                                sol[0], sol[1], sol[2],
                                enu[ne, 0], enu[ne, 1], enu[ne, 2],
                                np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                               smode[ne]))
+                               smode[ne], std.nsat))
 
         # Log to standard output
         #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
+        stdout.write("\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, "
+                     "mode {:1d}, nsat {:1d}"
                      .format(time2str(obs.t),
                              enu[ne, 0], enu[ne, 1], enu[ne, 2],
                              np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
+                             smode[ne], std.nsat))
 
         # Get new epoch, exit after last epoch
         #
@@ -270,8 +273,8 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim_h = 10.0
-ylim_v = 12.0
+ylim_h = 4.0
+ylim_v = 6.0
 
 idx2 = np.where(smode == 2)[0]
 idx1 = np.where(smode == 1)[0]
