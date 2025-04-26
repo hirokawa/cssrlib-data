@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
 from sys import stdout
-
+from sys import exit as sys_exit
 from cssrlib.gnss import ecef2pos, Nav, ecef2enu
 from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
 from cssrlib.gnss import rSigRnx, sys2str, uIonoModel
@@ -15,12 +15,12 @@ from cssrlib.peph import atxdec, searchpcv
 from cssrlib.pntpos import stdpos
 from cssrlib.sbas import sbasDec
 from cssrlib.rinex import rnxdec
-# from cssrlib.cssr_pvs import decode_sinca_line
+from cssrlib.cssr_pvs import decode_sinca_line
 
 
 # Select test case
 #
-dataset = 2
+dataset = 3
 
 # Start epoch and number of epochs
 #
@@ -44,6 +44,16 @@ elif dataset == 2:  # QZSS, L5 DFMC
     prn_ref = [199]
     sbas_type = 1  # L1: 0, L5: 1
     nf = 2
+
+elif dataset == 3:  # SouthPAN L5 DFMC
+    ep = [2025, 4, 20, 5, 0, 0]
+    # navfile = '../data/doy2025-110/ALIC00AUS0110f.nav'
+    navfile = '../data/doy2025-110/BRD400DLR_S_20251100000_01D_MN.rnx'
+    obsfile = '../data/doy2025-110/ALIC00AUS0110f.obs'
+    file_sbas = '../data/doy2025-110/DAS2025110f.txt'
+    xyz_ref = [-4052052.9320,  4212835.9496, -2545104.3074]
+    sbas_type = 1
+    nf = 1
 
 time = epoch2time(ep)
 year = ep[0]
@@ -80,6 +90,10 @@ else:  # dual frequency
         sigs.extend([rSigRnx("JC1C"), rSigRnx("JC5Q"),
                      rSigRnx("JL1C"), rSigRnx("JL5Q"),
                      rSigRnx("JS1C"), rSigRnx("JS5Q")])
+    if 'S' in gnss:
+        sigs.extend([rSigRnx("SC1C"), rSigRnx("SC5Q"),
+                     rSigRnx("SL1C"), rSigRnx("SL5Q"),
+                     rSigRnx("SS1C"), rSigRnx("SS5Q")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -180,9 +194,15 @@ if rnx.decode_obsh(obsfile) >= 0:
     while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
 
-    dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-             ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
-    v = np.genfromtxt(file_sbas, dtype=dtype)
+    if 'sbas' in file_sbas:  # SIS
+        dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
+                 ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
+        v = np.genfromtxt(file_sbas, dtype=dtype)
+    elif 'DAS' in file_sbas:  # DAS
+        fc = open(file_sbas, 'rt')
+    else:
+        print("ERROR: unknown file format for correction data")
+        sys_exit(1)
 
     # Loop over number of epoch from file start
     #
@@ -201,21 +221,29 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        if len(prn_ref) == 1:
-            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
-        else:
-            vi = v[(v['tow'] == tow) & (v['prn'] >= prn_ref[0]) &
-                   (v['prn'] <= prn_ref[1])]
-        if sbas_type == 0:  # L1
-            vi = vi[vi['type'] <= 28]
-        else:  # DFMC L5
-            vi = vi[(vi['type'] == 31) | (vi['type'] == 32) |
-                    ((vi['type'] >= 34) & (vi['type'] <= 37))]
+        if 'sbas' in file_sbas:  # SIS
 
-        if len(vi) > 0:
-            for vi_ in vi:
-                buff = unhexlify(vi_['nav'])
-                cs.decode_cssr(buff, 0, src=sbas_type, prn=vi_['prn'])
+            if len(prn_ref) == 1:
+                vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+            else:
+                vi = v[(v['tow'] == tow) & (v['prn'] >= prn_ref[0]) &
+                       (v['prn'] <= prn_ref[1])]
+            if sbas_type == 0:  # L1
+                vi = vi[vi['type'] <= 28]
+            else:  # DFMC L5
+                vi = vi[(vi['type'] == 31) | (vi['type'] == 32) |
+                        ((vi['type'] >= 34) & (vi['type'] <= 37))]
+            if len(vi) > 0:
+                for vi_ in vi:
+                    buff = unhexlify(vi_['nav'])
+                    cs.decode_cssr(buff, 0, src=sbas_type, prn=vi_['prn'])
+
+        else:  # DAS
+            for line in fc:
+                tc, buff = decode_sinca_line(line)
+                cs.decode_cssr(buff, 0, src=sbas_type)
+                if timediff(obs.t, tc) >= 0.0:
+                    break
 
         # cs.check_validity(obs.t)
 
