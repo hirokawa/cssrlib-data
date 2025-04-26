@@ -566,7 +566,7 @@ class jps(rcvDec):
         elif head == 'id':  # NavIC Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
             sat = prn2sat(uGNSS.IRN, prn)
-            # type 0 - L5, 1 - S, 2 - L1
+            # type 0 - L5, 1 - S, 2 - reserved(L1), 3 - L1
             msg = st.unpack_from('>'+len_*'L', buff, 12)
             b = bytes(np.array(msg, dtype='uint32'))
 
@@ -574,7 +574,7 @@ class jps(rcvDec):
                 eph = None
                 if type_ == 0:
                     eph = self.rn.decode_irn_lnav(self.week, time_, sat, b)
-                elif type_ == 2:
+                elif type_ == 2 or type_ == 3:
                     # for L1
                     # data[0] – subframe 1 (toi)
                     # data[1…19] – subframe 2
@@ -897,7 +897,7 @@ class jps(rcvDec):
             # [PG] Geodetic Position
             # [IE] IRNSS Ephemeris
             # [UO] GPS UTC Time Parameters
-            None
+            pass
         else:
             print("[{:s}] undef".format(head))
         return 0
