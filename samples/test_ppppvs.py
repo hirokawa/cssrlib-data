@@ -37,11 +37,11 @@ if dataset == 0:  # SIS
 
 elif dataset == 1:  # DAS
 
-    ep = [2023, 12, 13, 12, 0, 0]
-    navfile = '../data/doy2023-347/STR1347m.nav'
-    obsfile = '../data/doy2023-347/STR1347m.obs'  # STR100, Septentrio PolaRX5
-    file_pvs = '../data/doy2023-347/DAS2023347m.txt'
-    xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
+    ep = [2025, 4, 20, 5, 0, 0]
+    navfile = '../data/doy2025-110/BRD400DLR_S_20251100000_01D_MN.rnx'
+    obsfile = '../data/doy2025-110/ALIC00AUS0110f.obs'
+    file_pvs = '../data/doy2025-110/DAS2025110f.txt'
+    xyz_ref = [-4052052.9320,  4212835.9496, -2545104.3074]
 
 elif dataset == 2:  # SIS
 
