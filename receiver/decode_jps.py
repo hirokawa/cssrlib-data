@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Javad Receiver GREIS messages decoder
 
@@ -7,16 +9,20 @@ Javad Receiver GREIS messages decoder
 @author: Rui Hirokawa
 """
 
-import os
-import numpy as np
-import struct as st
+import argparse
+from binascii import hexlify
 import bitstruct.c as bs
+from enum import IntEnum
+from glob import glob
+import multiprocessing as mp
+import numpy as np
+import os
+from pathlib import Path
+import struct as st
+
 from cssrlib.gnss import epoch2time, time2gpst, prn2sat, uGNSS, uTYP, rSigRnx
 from cssrlib.gnss import Obs, rCST, gpst2time, uSIG, copy_buff
 from cssrlib.rawnav import rcvDec, rcvOpt
-from glob import glob
-from enum import IntEnum
-from binascii import hexlify
 
 
 def istxt(c):
@@ -96,6 +102,8 @@ class jps(rcvDec):
     nsat = 0
     nmax = 96
     nsigmax = 7
+    prn_ref = -1
+    sbs_ref = -1
 
     pr = []
     cp = []
@@ -509,7 +517,7 @@ class jps(rcvDec):
                       format(prn, time_, type_, len_))
             if self.week >= 0:
                 if self.flg_qzsl6:
-                    if prn_ref > 0 and prn != prn_ref:
+                    if self.prn_ref > 0 and prn != self.prn_ref:
                         return
                     msg_l6 = buff[12:12+len_]
                     self.fh_qzsl6.write(
@@ -706,7 +714,7 @@ class jps(rcvDec):
                     self.re.rnx_snav_body(seph, self.fh_rnxnav)
 
             if self.flg_sbas and self.week >= 0:
-                if sbs_ref > 0 and prn != sbs_ref:
+                if self.sbs_ref > 0 and prn != self.sbs_ref:
                     return
                 self.fh_sbas.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
                                    format(self.week, time_, prn, type_, len_,
@@ -903,63 +911,95 @@ class jps(rcvDec):
         return 0
 
 
-if __name__ == "__main__":
 
-    # locl mode
-    # turn off tracking of all GPS SVs but SVs #8
-    # set,/par/lock/sat/qzss,n
-    # set,/par/lock/sat/qzss/193,y
+def decode(f, opt, args):
 
-    # turn off GALILEO E6 signal tracking for all SVs
-    # set,/par/lock/sig/qzss/l6,n
-    # set,/par/lock/sig/qzss/l6/193,y
-    gnss_t = 'GERCJ'
+    print("Decoding {}".format(f))
 
-    year = 2023
+    bdir, fname = os.path.split(f)
 
-    bdir = '../data/doy2025-046/'
-    fnames = 'jav3046r.jps'
+    prefix = fname[4:].removesuffix('.jps')+'_'
+    prefix = str(Path(bdir) / prefix) if bdir else prefix
+    jpsdec = jps(opt=opt, prefix=prefix, gnss_t=args.gnss)
+    jpsdec.monlevel = 1
+
+    # jpsdec.prn_ref = 199
+    jpsdec.prn_ref = -1
+    jpsdec.sbs_ref = -1
+
+    if fname.startswith('jav3'):
+        jpsdec.re.anttype = "JAVRINGANT_DM   JVDM"
+        jpsdec.re.rectype = "JAVAD DELTA-3"
+    else:
+        jpsdec.re.anttype = args.antenna
+        jpsdec.re.rectype = args.receiver
+
+    path = str(Path(bdir) / fname) if bdir else fname
+    blen = os.path.getsize(path)
+    with open(path, 'rb') as f:
+        msg = f.read(blen)
+        maxlen = len(msg)-5
+        # maxlen = 400000
+        for k in range(maxlen):
+            stat = jpsdec.sync(msg, k)
+            if not stat:
+                continue
+            k += 1
+            len_ = int(msg[k+2:k+5], 16)+5
+            jpsdec.decode(msg[k:k+len_], len_)
+            k += len_
+
+    jpsdec.file_close()
+
+def main():
+
+    # Parse command line arguments
+    #
+    parser = argparse.ArgumentParser(description="JAVAD JPS converter")
+
+    # Input file and folder
+    #
+    parser.add_argument("inpFileName",  help="Input JPS file(s) (wildcards allowed)")
+
+    parser.add_argument("--receiver", default='unknown',
+                        help="Receiver type [unknown]")
+    parser.add_argument("--antenna", default='unknown',
+                        help="Antenna type [unknown]")
+
+    parser.add_argument("-g","--gnss",default='GRECIJ',
+                        help="GNSS [GRECIJ]")
+
+    parser.add_argument("-j","--jobs",default=int(mp.cpu_count() / 2),
+                        type=int, help='Max. number of parallel processes')
+
+    # Retrieve all command line arguments
+    #
+    args = parser.parse_args()
 
     opt = rcvOpt()
-    opt.flg_qzsl6 = True
+
+    opt.flg_rnxobs = True
+    opt.flg_rnxnav = True
+
     opt.flg_gale6 = True
     opt.flg_galinav = True
     opt.flg_galfnav = True
-    opt.flg_bdsb2b = True
+
+    opt.flg_qzsl6 = True
+
     opt.flg_bdsb1c = True
+    opt.flg_bdsb2b = True
+
     opt.flg_sbas = False
-    opt.flg_rnxnav = True
-    opt.flg_rnxobs = False
 
-    # prn_ref = 199
-    prn_ref = -1
-    sbs_ref = -1
+    opt.flg_gpslnav = True
 
-    for f in glob(bdir+fnames):
+    # Start processing pool
+    #
+    with mp.Pool(processes=args.jobs) as pool:
+        pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
 
-        print("Decoding {}".format(f))
-        bdir, fname = os.path.split(f)
-        bdir += '/'
-
-        prefix = bdir+fname[4:].removesuffix('.jps')+'_'
-        jpsdec = jps(opt=opt, prefix=prefix, gnss_t=gnss_t)
-        jpsdec.monlevel = 1
-
-        jpsdec.re.anttype = "JAVRINGANT_DM   JVDM"
-        jpsdec.re.rectype = "JAVAD DELTA-3"
-
-        blen = os.path.getsize(bdir+fname)
-        with open(bdir+fname, 'rb') as f:
-            msg = f.read(blen)
-            maxlen = len(msg)-5
-            # maxlen = 400000
-            for k in range(maxlen):
-                stat = jpsdec.sync(msg, k)
-                if not stat:
-                    continue
-                k += 1
-                len_ = int(msg[k+2:k+5], 16)+5
-                jpsdec.decode(msg[k:k+len_], len_)
-                k += len_
-
-        jpsdec.file_close()
+# Call main function
+#
+if __name__ == "__main__":
+    main()

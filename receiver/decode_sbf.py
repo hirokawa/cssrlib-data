@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Septentrio Receiver SBF messages decoder
 
@@ -10,16 +12,19 @@ Septentrio Receiver SBF messages decoder
 @author Rui Hirokawa
 """
 
+import argparse
 from glob import glob
 import numpy as np
-import os
 import struct as st
+import bitstruct.c as bs
+import multiprocessing as mp
+import os
+from pathlib import Path
 
 from cssrlib.gnss import uGNSS, uTYP, prn2sat, Eph, Obs, rSigRnx, gpst2time
 from cssrlib.gnss import rCST, pos2ecef
 from cssrlib.rawnav import rcvDec, rcvOpt
 from crccheck.crc import Crc16Xmodem
-import bitstruct.c as bs
 
 
 class sbf(rcvDec):
@@ -920,7 +925,7 @@ class sbf(rcvDec):
 
                 if src not in src_t.keys():
                     if self.monlevel > 0:
-                        print("src not recgonised in QZSRawL1S/QZSRawL5S " +
+                        print("src not recognized in QZSRawL1S/QZSRawL5S " +
                               "{:2d}".format(src))
                     return -1
 
@@ -1016,80 +1021,119 @@ class sbf(rcvDec):
 
         return 0
 
+def decode(f, opt, args):
 
-if __name__ == "__main__":
+    print("Decoding {}".format(f))
 
-    # bdir = os.path.expanduser('~/Projects/CSSRlib/sbf/_sbf/')
-    # fnames = 'sep3238a.sbf'
+    bdir, fname = os.path.split(f)
 
-    gnss_t = 'GERCIJ'
+    prefix = fname[4:].removesuffix('.sbf')+'_'
+    prefix = str(Path(bdir) / prefix) if bdir else prefix
+    sbfdec = sbf(opt, prefix=prefix, gnss_t=args.gnss)
+    sbfdec.monlevel = 1
+    nep = 0
+    nep_max = 0
 
-    bdir = '../data/doy2025-046/'
-    fnames = 'sept046r.sbf'
+    if fname.startswith('sept'):
+        sbfdec.re.anttype = "JAVRINGANT_DM   JVDM"
+        sbfdec.re.rectype = "SEPT MOSAIC-X5      "
+    elif fname.startswith('sep3'):
+        sbfdec.re.anttype = "JAVRINGANT_DM   JVDM"
+        sbfdec.re.rectype = "SEPT POLARX5        "
+    else:
+        sbfdec.re.anttype = args.antenna
+        sbfdec.re.rectype = args.receiver
+
+    path = str(Path(bdir) / fname) if bdir else fname
+    blen = os.path.getsize(path)
+    with open(path, 'rb') as f:
+        msg = f.read(blen)
+        maxlen = len(msg)-5
+        # maxlen = 400000
+        k = 0
+        while k < maxlen:
+            stat = sbfdec.sync(msg, k)
+            if not stat:
+                k += 1
+                continue
+            if not sbfdec.check_crc(msg, k):
+                k += 1
+                continue
+            len_ = sbfdec.msg_len(msg, k)
+            if k+len_ >= maxlen:
+                break
+
+            sbfdec.decode(msg[k:k+len_], len_)
+            k += len_
+
+            nep += 1
+            if nep_max > 0 and nep >= nep_max:
+                break
+
+    sbfdec.file_close()
+
+
+def main():
+
+    # Parse command line arguments
+    #
+    parser = argparse.ArgumentParser(description="Septentrio SBF converter")
+
+    # Input file and folder
+    #
+    parser.add_argument("inpFileName",  help="Input SBF file(s) (wildcards allowed)")
+
+    parser.add_argument("--receiver", default='unknown',
+                        help="Receiver type [unknown]")
+    parser.add_argument("--antenna", default='unknown',
+                        help="Antenna type [unknown]")
+
+    parser.add_argument("-g","--gnss",default='GRECIJ',
+                        help="GNSS [GRECIJ]")
+
+    parser.add_argument("-j","--jobs",default=int(mp.cpu_count() / 2),
+                        type=int, help='Max. number of parallel processes')
+
+    # Retrieve all command line arguments
+    #
+    args = parser.parse_args()
 
     opt = rcvOpt()
+
+    opt.flg_rnxobs = True
+    opt.flg_rnxnav = True
+
+    opt.flg_gpslnav = True
+    opt.flg_gpscnav = True
+    opt.flg_gpscnav2 = True
+
     opt.flg_qzsl6 = False
     opt.flg_qzslnav = True
-    opt.flg_gpslnav = True
     opt.flg_qzscnav = True
-    opt.flg_gpscnav = True
     opt.flg_qzscnav2 = True
-    opt.flg_gpscnav2 = True
     opt.flg_qzsl1s = True
     opt.flg_qzsl5s = True
+
     opt.flg_gale6 = True
     opt.flg_galinav = True
     opt.flg_galfnav = True
+
     opt.flg_bdsb1c = True
     opt.flg_bdsb2a = True
     opt.flg_bdsb2b = True
     opt.flg_bdsd12 = False
+
     opt.flg_gloca = True
+
     opt.flg_irnnav = True
     opt.flg_sbas = True
-    opt.flg_rnxnav = True
-    opt.flg_rnxobs = True
 
-    for f in glob(bdir+fnames):
+    # Start processing pool
+    #
+    with mp.Pool(processes=args.jobs) as pool:
+        pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
 
-        print("Decoding {}".format(f))
-
-        bdir, fname = os.path.split(f)
-        bdir += '/'
-
-        prefix = bdir+fname[4:].removesuffix('.sbf')+'_'
-        sbfdec = sbf(opt, prefix=prefix, gnss_t=gnss_t)
-        sbfdec.monlevel = 1
-        nep = 0
-        nep_max = 0
-
-        sbfdec.re.anttype = "JAVRINGANT_DM   JVDM"
-        # sbfdec.re.rectype = "SEPT POLARX5        "
-        sbfdec.re.rectype = "SEPT MOSAIC-X5      "
-
-        blen = os.path.getsize(bdir+fname)
-        with open(bdir+fname, 'rb') as f:
-            msg = f.read(blen)
-            maxlen = len(msg)-5
-            # maxlen = 400000
-            k = 0
-            while k < maxlen:
-                stat = sbfdec.sync(msg, k)
-                if not stat:
-                    k += 1
-                    continue
-                if not sbfdec.check_crc(msg, k):
-                    k += 1
-                    continue
-                len_ = sbfdec.msg_len(msg, k)
-                if k+len_ >= maxlen:
-                    break
-
-                sbfdec.decode(msg[k:k+len_], len_)
-                k += len_
-
-                nep += 1
-                if nep_max > 0 and nep >= nep_max:
-                    break
-
-        sbfdec.file_close()
+# Call main function
+#
+if __name__ == "__main__":
+    main()

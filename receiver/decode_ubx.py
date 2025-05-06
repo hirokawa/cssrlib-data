@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 u-blox Receiver UBX messages decoder
 
@@ -7,14 +9,18 @@ u-blox Receiver UBX messages decoder
 @author Rui Hirokawa
 """
 
+import argparse
+from binascii import hexlify
+import bitstruct.c as bs
 from glob import glob
+import multiprocessing as mp
 import numpy as np
 import os
+from pathlib import Path
 import struct as st
-import bitstruct.c as bs
+
 from cssrlib.gnss import uGNSS, uTYP, prn2sat, Obs, rSigRnx, gpst2time, uSIG
 from cssrlib.rawnav import rcvDec, rcvOpt
-from binascii import hexlify
 
 CPSTD_VALID = 0.2           # stdev threshold of valid carrier-phase
 
@@ -419,74 +425,113 @@ class ubx(rcvDec):
                 self.decode_l6msg(buff)
         return 0
 
+def decode(f,opt,args):
 
-if __name__ == "__main__":
+    print("Decoding {}".format(f))
 
-    bdir = '../data/doy2025-004/'
-    fnames = 'ubf9004c.ubx'
+    bdir, fname = os.path.split(f)
 
-    gnss_t = 'GERCJ'
+    prefix = fname[4:].removesuffix('.ubx')+'_'
+    prefix = str(Path(bdir) / prefix) if bdir else prefix
+    ubxdec = ubx(opt, prefix=prefix, gnss_t=args.gnss)
+    ubxdec.monlevel = 1
+    nep = 0
+    nep_max = 0
 
+    if fname.startswith('ubf9'):
+        ubxdec.re.anttype = "JAVRINGANT_DM   JVDM"
+        ubxdec.re.rectype = "UBLOX F9P           "
+    else:
+        ubxdec.re.anttype = args.antenna
+        ubxdec.re.rectype = args.receiver
+
+    path = str(Path(bdir) / fname) if bdir else fname
+    blen = os.path.getsize(path)
+    with open(path, 'rb') as f:
+        msg = f.read(blen)
+        maxlen = len(msg)-8
+        # maxlen = 7000000+10000
+        k = 0
+        while k < maxlen:
+            stat = ubxdec.sync(msg, k)
+            if not stat:
+                k += 1
+                continue
+            len_ = ubxdec.msg_len(msg, k)
+            if k+len_ >= maxlen:
+                break
+
+            if not ubxdec.check_crc(msg, k):
+                k += 1
+                continue
+
+            ubxdec.decode(msg[k:k+len_], len_)
+            k += len_
+
+            nep += 1
+            if nep_max > 0 and nep >= nep_max:
+                break
+
+    ubxdec.file_close()
+
+def main():
+
+    # Parse command line arguments
+    #
+    parser = argparse.ArgumentParser(description="u-blox UBX converter")
+
+    # Input file and folder
+    #
+    parser.add_argument("inpFileName",  help="Input UBX file(s) (wildcards allowed)")
+
+    parser.add_argument("--receiver", default='unknown',
+                        help="Receiver type [unknown]")
+    parser.add_argument("--antenna", default='unknown',
+                        help="Antenna type [unknown]")
+
+    parser.add_argument("-g","--gnss",default='GRECIJ',
+                        help="GNSS [GRECIJ]")
+
+    parser.add_argument("-j","--jobs",default=int(mp.cpu_count() / 2),
+                        type=int, help='Max. number of parallel processes')
+
+    # Retrieve all command line arguments
+    #
+    args = parser.parse_args()
+    
     opt = rcvOpt()
+
+    opt.flg_rnxobs = True
+    opt.flg_rnxnav = True
+
+    opt.flg_gpslnav = True
+    opt.flg_gpscnav = True
+
     opt.flg_qzsl6 = False
     opt.flg_qzslnav = True
-    opt.flg_gpslnav = True
     opt.flg_qzscnav = True
-    opt.flg_gpscnav = True
     opt.flg_qzsl1s = False
+
     opt.flg_gale6 = True
     opt.flg_galinav = True
     opt.flg_galfnav = True
+
     opt.flg_bdsb1c = True
     opt.flg_bdsb2a = False
     opt.flg_bdsb2b = False
     opt.flg_bdsd12 = True
+
     opt.flg_gloca = True
+
     opt.flg_irnnav = False
     opt.flg_sbas = True
-    opt.flg_rnxnav = True
-    opt.flg_rnxobs = True
 
-    for f in glob(bdir+fnames):
+    # Start processing pool
+    #
+    with mp.Pool(processes=args.jobs) as pool:
+        pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
 
-        print("Decoding {}".format(f))
-
-        bdir, fname = os.path.split(f)
-        bdir += '/'
-
-        prefix = bdir+fname[4:].removesuffix('.ubx')+'_'
-        ubxdec = ubx(opt, prefix=prefix, gnss_t=gnss_t)
-        ubxdec.monlevel = 1
-        nep = 0
-        nep_max = 0
-
-        ubxdec.re.anttype = "JAVRINGANT_DM   JVDM"
-        ubxdec.re.rectype = "UBLOX F9P           "
-
-        blen = os.path.getsize(bdir+fname)
-        with open(bdir+fname, 'rb') as f:
-            msg = f.read(blen)
-            maxlen = len(msg)-8
-            # maxlen = 7000000+10000
-            k = 0
-            while k < maxlen:
-                stat = ubxdec.sync(msg, k)
-                if not stat:
-                    k += 1
-                    continue
-                len_ = ubxdec.msg_len(msg, k)
-                if k+len_ >= maxlen:
-                    break
-
-                if not ubxdec.check_crc(msg, k):
-                    k += 1
-                    continue
-
-                ubxdec.decode(msg[k:k+len_], len_)
-                k += len_
-
-                nep += 1
-                if nep_max > 0 and nep >= nep_max:
-                    break
-
-        ubxdec.file_close()
+# Call main function
+#
+if __name__ == "__main__":
+    main()
