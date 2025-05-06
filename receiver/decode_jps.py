@@ -337,6 +337,8 @@ class jps(rcvDec):
             sys = self.sys_t[self.sys[k]]
             if sys not in self.sig_tab.keys():
                 continue
+            if sys == uGNSS.GLO and prn == 255:
+                continue
             if sys == uGNSS.SBS and self.prn[k] > 156:
                 continue
             sat = prn2sat(sys, prn)
