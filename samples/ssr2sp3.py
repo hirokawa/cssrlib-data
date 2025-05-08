@@ -96,11 +96,13 @@ def write_bsx(bsxfile, ac, data):
 
 def file2time(fileName):
     """
-    Convert hourly SBF filename to epoch
+    Convert hourly filename to epoch
+    NOTE: file path must include "doyYYYY_DOY" folder!
     """
-
-    year = int(os.path.dirname(fileName).split('/')[-1][3:7])
-    doy = int(os.path.dirname(fileName).split('/')[-1][8:11])
+    folder = next((s for s in
+                   os.path.dirname(fileName).split('/') if "doy" in s), None)
+    year = int(folder[3:7])
+    doy = int(folder[8:11])
     hour = ord(os.path.basename(fileName)[3])-ord('a')
     time = epoch2time([year, 1, 1, hour, 0, 0])
 
