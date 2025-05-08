@@ -1,7 +1,6 @@
 antex https://files.igs.org/pub/station/general/igs20.atx
-antex https://files.igs.org/pub/station/general/igs14.atx
-
 antex https://files.igs.org/pub/station/general/pcv_archive/igs20_2353.atx
+antex https://www.gsc-europa.eu/sites/default/files/sites/all/files/has14_2345.atx
 
 antex http://ftp.aiub.unibe.ch/CODE_MGEX/CODE/I20.ATX
 antex http://ftp.aiub.unibe.ch/CODE_MGEX/CODE/M20.ATX
