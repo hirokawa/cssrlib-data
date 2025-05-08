@@ -97,7 +97,6 @@ def write_bsx(bsxfile, ac, data):
 def file2time(fileName):
     """
     Convert hourly filename to epoch
-    NOTE: file path must include "doyYYYY_DOY" folder!
     """
     folder = next((s for s in
                    os.path.dirname(fileName).split('/') if "doy" in s), None)
