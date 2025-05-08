@@ -8,15 +8,27 @@ from sys import exit as sys_exit
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
 
-from cssrlib.gnss import rSigRnx
+from cssrlib.gnss import rSigRnx, time2doy, epoch2time
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkpos
 
-atxfile = '../data/antex/igs14.atx'
-bdir = '../data/doy2021-265/'
-navfile = bdir+'SEPT2650.21P'
-obsfile = bdir+'SEPT265G.21O'
-basefile = bdir+'3034265G.21O'
+ep = [2021, 9, 22, 6, 30, 0]
+
+time = epoch2time(ep)
+year = ep[0]
+doy = int(time2doy(time))
+let = chr(ord('A')+ep[3])
+
+atxfile = '../data/antex/'
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile += 'igs20.atx'
+else:
+    atxfile += 'igs14.atx'
+
+bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+navfile = bdir+'SEPT{:03d}{}.{:02d}P'.format(doy, '0', year % 2000)
+obsfile = bdir+'SEPT{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
+basefile = bdir+'3034{:03d}{}.{:02d}O'.format(doy, let, year % 2000)
 
 xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)
 
@@ -140,7 +152,7 @@ plotFileName = '.'.join(('test_rtk2_1', plotFileFormat))
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 # plt.show()
 
-# East-north trajetory plot
+# East-north trajectory plot
 #
 fig = plt.figure(figsize=(6, 10))
 plt.plot(enu[:, 0], enu[:, 1], '-', color='gray')

@@ -76,7 +76,11 @@ else:  # from receiver log
 
 time = epoch2time(ep)
 
-atxfile = '../data/antex/igs14.atx'
+atxfile = '../data/antex/'
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile += 'igs20.atx'
+else:
+    atxfile += 'igs14.atx'
 griddef = '../data/clas_grid.def'
 
 pos_ref = ecef2pos(xyz_ref)
