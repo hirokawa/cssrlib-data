@@ -910,8 +910,6 @@ class jps(rcvDec):
             print("[{:s}] undef".format(head))
         return 0
 
-
-
 def decode(f, opt, args):
 
     print("Decoding {}".format(f))
@@ -959,17 +957,18 @@ def main():
 
     # Input file and folder
     #
-    parser.add_argument("inpFileName",  help="Input JPS file(s) (wildcards allowed)")
+    parser.add_argument("inpFileName",
+                        help="Input JPS file(s) (wildcards allowed)")
 
     parser.add_argument("--receiver", default='unknown',
                         help="Receiver type [unknown]")
     parser.add_argument("--antenna", default='unknown',
                         help="Antenna type [unknown]")
 
-    parser.add_argument("-g","--gnss",default='GRECIJ',
+    parser.add_argument("-g", "--gnss", default='GRECIJ',
                         help="GNSS [GRECIJ]")
 
-    parser.add_argument("-j","--jobs",default=int(mp.cpu_count() / 2),
+    parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
                         type=int, help='Max. number of parallel processes')
 
     # Retrieve all command line arguments
@@ -987,10 +986,10 @@ def main():
 
     opt.flg_qzsl6 = True
 
-    opt.flg_bdsb1c = True
+    opt.flg_bdsb1c = False
     opt.flg_bdsb2b = True
 
-    opt.flg_sbas = False
+    opt.flg_sbas = True
 
     opt.flg_gpslnav = True
 
