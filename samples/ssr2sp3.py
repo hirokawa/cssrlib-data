@@ -212,7 +212,7 @@ for dt in (-1, 0, +1):
     if os.path.exists(navfile):
         navfiles.append(navfile)
     else:
-        #print("WARNING: cannot find  {}".format(navfile))
+        print("WARNING: cannot find  {}".format(navfile))
         pass
 
 # Decode RINEX NAV data
