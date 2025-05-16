@@ -13,7 +13,7 @@ from sys import exit as sys_exit
 
 from cssrlib.ephemeris import satpos
 from cssrlib.gnss import Nav, sat2prn, sys2str, sat2id
-from cssrlib.gnss import time2doy, epoch2time, time2epoch
+from cssrlib.gnss import time2doy, epoch2time, time2epoch,time2str
 from cssrlib.gnss import timeadd, timeget, gpst2time
 from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
@@ -23,6 +23,7 @@ from cssrlib.cssrlib import sCSSRTYPE as sc
 from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssr_has import cssr_has
 from cssrlib.cssr_mdc import cssr_mdc
+from cssrlib.cssr_pvs import cssr_pvs
 from cssrlib.rinex import rnxdec
 
 
@@ -159,7 +160,6 @@ elif "gale6" in ssrfiles[0]:
     else:
         atxfile = baseDirName+'../data/antex/has14_2345.atx'
 
-
 elif "bdsb2b" in ssrfiles[0]:
 
     name = 'BDS0PPPOPS'
@@ -168,7 +168,18 @@ elif "bdsb2b" in ssrfiles[0]:
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
-    prn_ref = 59  # satellite PRN to receive BDS PPP collection
+    prn_ref = 59  # satellite PRN to receive BDS PPP correction
+    atxfile = baseDirName+'../data/antex/igs20.atx'
+
+elif "sbas" in ssrfiles[0]:
+
+    name = 'PVS0PPPOPS'
+    step = "10S"
+
+    dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
+             ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
+
+    prn_ref = 122  # satellite PRN to receive PVS PPP correction
     atxfile = baseDirName+'../data/antex/igs20.atx'
 
 else:
@@ -230,6 +241,8 @@ elif 'qzsl6' in ssrfiles[0]:
     cs = cssr_mdc()
 elif "bdsb2b" in ssrfiles[0]:
     cs = cssr_bds()
+elif "sbas" in ssrfiles[0]:
+    cs = cssr_pvs()
 else:
     print("ERROR: unknown SSR format for {}!".format(ssrfiles[0]))
     sys_exit(1)
@@ -283,6 +296,7 @@ for vi in v:
     time = gpst2time(week, tow)
     cs.week = week
     cs.tow0 = tow//3600*3600
+    cs.time0 = time
 
     hasNew = False
 
@@ -328,6 +342,8 @@ for vi in v:
                 rec = []
                 mid_ = -1
 
+        hasNew = (hasNew and (cs.lc[0].cstat & 0xf) == 0xf)
+
     elif cs.cssrmode == sc.QZS_MADOCA:
 
         if vi['type'] != l6_ch or vi['prn'] != prn_ref:
@@ -338,8 +354,9 @@ for vi in v:
 
         if cs.fcnt == 5:  # end of sub-frame
             cs.decode_cssr(bytes(cs.buff), 0)
-            hasNew = True
             time = cs.time
+
+        hasNew = (cs.lc[0].cstat & 0xf) == 0xf
 
     elif cs.cssrmode == sc.BDS_PPP:
 
@@ -348,7 +365,17 @@ for vi in v:
 
         buff = unhexlify(vi['nav'])
         cs.decode_cssr(buff, 0)
-        hasNew = (tow % 10 == 0)
+        hasNew = (tow % 10 == 0 and (cs.lc[0].cstat & 0xf) == 0xf)
+
+    elif cs.cssrmode == sc.PVS_PPP:
+
+        if vi['prn'] != prn_ref or vi['type'] != 32:
+            continue
+
+        buff = unhexlify(vi['nav'])
+        cs.decode_cssr(buff, 0)
+        #time = cs.time
+        hasNew = (tow % 30 == 0 and (cs.lc[0].cstat & 0x6) == 0x6)
 
     else:
 
@@ -356,9 +383,11 @@ for vi in v:
 
     # Convert SSR corrections
     #
-    if (cs.lc[0].cstat & 0xf) == 0xf and hasNew:
+    if hasNew:
 
         hasNew = False
+
+        #print(cs.lc[0].cstat,time2str(time),time2str(cs.time))
 
         ns = len(cs.sat_n)
 
@@ -503,6 +532,16 @@ for vi in v:
                     print("ERROR: invalid system {}".format(sys2str(sys)))
                     continue
 
+            elif cs.cssrmode == sc.PVS_PPP:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC5Q"))
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
             # Skip invalid positions
             #
             if np.isnan(rs[0, :]).any():
@@ -537,12 +576,13 @@ for vi in v:
             # Compute ionosphere-free combination of biases
             #
             bias = 0.0
-            if sat in biases.keys() and all(s in biases[sat] for s in sigClk):
-                bias = facs[0]*biases[sat][sigClk[0]][-1][2] + \
-                    facs[1]*biases[sat][sigClk[1]][-1][2]
-            else:
-                #print("ERROR: missing bias for {} {}".format(sat2id(sat), sigClk))
-                continue
+            if cs.cssrmode != sc.PVS_PPP:
+                if sat in biases.keys() and all(s in biases[sat] for s in sigClk):
+                    bias = facs[0]*biases[sat][sigClk[0]][-1][2] + \
+                        facs[1]*biases[sat][sigClk[1]][-1][2]
+                else:
+                    print("ERROR: missing bias for {} {}".format(sat2id(sat), sigClk))
+                    continue
 
             # Adjust sign of biases
             # - IS-QZSS-MDC-001 sec 5.5.3.3
@@ -571,4 +611,5 @@ orb.write_sp3(orbfile, nav, sats)
 
 # Write biases to Bias-SINEX
 #
-write_bsx(bsxfile, name[0:3], biases)
+if len(biases) > 0:
+    write_bsx(bsxfile, name[0:3], biases)
