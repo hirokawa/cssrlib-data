@@ -138,7 +138,7 @@ dur = len(ssrfiles)
 if "qzsl6" in ssrfiles[0]:
 
     name = 'QZS0MDCOPS'
-    step = "10S"
+    step = 10
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
@@ -163,7 +163,7 @@ elif "gale6" in ssrfiles[0]:
 elif "bdsb2b" in ssrfiles[0]:
 
     name = 'BDS0PPPOPS'
-    step = "10S"
+    step = 10
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
@@ -174,7 +174,7 @@ elif "bdsb2b" in ssrfiles[0]:
 elif "sbas" in ssrfiles[0]:
 
     name = 'PVS0PPPOPS'
-    step = "10S"
+    step = 30
 
     dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
              ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
@@ -189,7 +189,7 @@ else:
 
 # Output files
 #
-orbfile = '{}_{:4d}{:03d}{:02d}00_{}_{}_ORB.SP3'\
+orbfile = '{}_{:4d}{:03d}{:02d}00_{}_{:02d}S_ORB.SP3'\
     .format(name, year, doy, hour, itv, step)
 bsxfile = '{}_{:4d}{:03d}{:02d}00_{}_00U_OSB.BIA'\
     .format(name, year, doy, hour, itv)
@@ -365,7 +365,7 @@ for vi in v:
 
         buff = unhexlify(vi['nav'])
         cs.decode_cssr(buff, 0)
-        hasNew = (tow % 10 == 0 and (cs.lc[0].cstat & 0xf) == 0xf)
+        hasNew = (tow % step == 0 and (cs.lc[0].cstat & 0xf) == 0xf)
 
     elif cs.cssrmode == sc.PVS_PPP:
 
@@ -375,7 +375,7 @@ for vi in v:
         buff = unhexlify(vi['nav'])
         cs.decode_cssr(buff, 0)
         #time = cs.time
-        hasNew = (tow % 30 == 0 and (cs.lc[0].cstat & 0x6) == 0x6)
+        hasNew = (tow % step == 0 and (cs.lc[0].cstat & 0x6) == 0x6)
 
     else:
 
