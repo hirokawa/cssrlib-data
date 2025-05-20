@@ -150,7 +150,7 @@ if "qzsl6" in ssrfiles[0]:
 elif "gale6" in ssrfiles[0]:
 
     name = 'ESA0HASOPS'
-    step = "10S"
+    step = 10
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
