@@ -159,8 +159,9 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_pppigs.log')
-    nav.ephopt = 4  # IGS
-    nav.armode = 3  # 1: continuous, 3: fix-and-hold
+    nav.ephopt  = 4  # IGS
+    nav.armode  = 3  # 1: continuous, 3: fix-and-hold
+    nav.parmode = 1  # 1: normal, 2: partial ambiguity resolution
     nav.thresar = 2.0
 
     nav.elmin = np.deg2rad(10.0)
