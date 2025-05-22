@@ -4,6 +4,7 @@ SSR correction conversion to SP3 file format
 
 from binascii import unhexlify
 import bitstruct as bs
+from copy import deepcopy
 from itertools import chain
 import numpy as np
 import os
@@ -13,17 +14,17 @@ from sys import exit as sys_exit
 
 from cssrlib.ephemeris import satpos
 from cssrlib.gnss import Nav, sat2prn, sys2str, sat2id
-from cssrlib.gnss import time2doy, epoch2time, time2epoch, time2str
+from cssrlib.gnss import time2doy, epoch2time, time2epoch, time2str, timediff
 from cssrlib.gnss import timeadd, timeget, gpst2time
 from cssrlib.gnss import uGNSS as ug, rSigRnx
 from cssrlib.gnss import rCST
 from cssrlib.peph import atxdec
 from cssrlib.peph import peph, peph_t, apc2com
 from cssrlib.cssrlib import sCSSRTYPE as sc
-#from cssrlib.cssrlib import cssr
 from cssrlib.cssr_bds import cssr_bds
 from cssrlib.cssr_has import cssr_has
 from cssrlib.cssr_mdc import cssr_mdc
+from cssrlib.cssr_pvs import cssr_pvs
 from cssrlib.rinex import rnxdec
 
 
@@ -97,11 +98,12 @@ def write_bsx(bsxfile, ac, data):
 
 def file2time(fileName):
     """
-    Convert hourly SBF filename to epoch
+    Convert hourly filename to epoch
     """
-
-    year = int(os.path.dirname(fileName).split('/')[-1][3:7])
-    doy = int(os.path.dirname(fileName).split('/')[-1][8:11])
+    folder = next((s for s in
+                   os.path.dirname(fileName).split('/') if "doy" in s), None)
+    year = int(folder[3:7])
+    doy = int(folder[8:11])
     hour = ord(os.path.basename(fileName)[3])-ord('a')
     time = epoch2time([year, 1, 1, hour, 0, 0])
 
@@ -120,20 +122,24 @@ if len(sys_argv) > 1:
 else:
     ssrfiles = ['../data/doy2025-046/046r_gale6.txt', ]
 
-# Start time
+# Start time and interval length
 #
 time = file2time(ssrfiles[0])
+itv = "{:02d}H".format(len(ssrfiles))
+if itv == "24H":
+    itv = "01D"
 
 ep = time2epoch(time)
 
 year = ep[0]
 hour = ep[3]
 doy = int(time2doy(time))
+dur = len(ssrfiles)
 
 if "qzsl6" in ssrfiles[0]:
 
-    name = 'QZS0MDCOPS'
-    step = "10S"
+    name = 'QZS0OPSMDC'
+    step = 10
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
@@ -144,25 +150,37 @@ if "qzsl6" in ssrfiles[0]:
 
 elif "gale6" in ssrfiles[0]:
 
-    name = 'ESA0HASOPS'
-    step = "10S"
+    name = 'ESA0OPSHAS'
+    step = 10
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
-    # NOTE: igs14 values seem to be yield better consistency with
-    #       CODE reference orbits
-    atxfile = baseDirName+'../data/antex/igs14.atx'
+    if time > epoch2time([2025, 5, 18, 0, 0, 0]):
+        atxfile = baseDirName+'../data/antex/igs20.atx'
+    else:
+        atxfile = baseDirName+'../data/antex/has14_2345.atx'
 
 elif "bdsb2b" in ssrfiles[0]:
 
-    name = 'BDS0PPPOPS'
-    step = "10S"
+    name = 'BDS0OPSPPP'
+    step = 10
 
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
-    prn_ref = 59  # satellite PRN to receive BDS PPP collection
+    prn_ref = 59  # satellite PRN to receive BDS PPP correction
+    atxfile = baseDirName+'../data/antex/igs20.atx'
+
+elif "sbas" in ssrfiles[0]:
+
+    name = 'PVS0OPSPPP'
+    step = 32
+
+    dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
+             ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
+
+    prn_ref = 122  # satellite PRN to receive PVS PPP correction
     atxfile = baseDirName+'../data/antex/igs20.atx'
 
 else:
@@ -172,10 +190,16 @@ else:
 
 # Output files
 #
-orbfile = '{}_{:4d}{:03d}{:02d}00_01D_{}_ORB.SP3'\
-    .format(name, year, doy, hour, step)
-bsxfile = '{}_{:4d}{:03d}{:02d}00_01D_00U_OSB.BIA'\
-    .format(name, year, doy, hour)
+orbfile = '{}_{:4d}{:03d}{:02d}00_{}_{:02d}S_ORB.SP3'\
+    .format(name, year, doy, hour, itv, step)
+bsxfile = '{}_{:4d}{:03d}{:02d}00_{}_00U_OSB.BIA'\
+    .format(name, year, doy, hour, itv)
+
+print("Processing SSR corrections")
+print("  SSR files: {}".format(" ".join([f for f in ssrfiles])))
+print("  Output SP3 file: {}".format(orbfile))
+print("  Output BIA file: {}".format(bsxfile))
+print()
 
 # Initialize objects
 #
@@ -201,6 +225,7 @@ for dt in (-1, 0, +1):
         navfiles.append(navfile)
     else:
         print("WARNING: cannot find  {}".format(navfile))
+        pass
 
 # Decode RINEX NAV data
 #
@@ -217,6 +242,8 @@ elif 'qzsl6' in ssrfiles[0]:
     cs = cssr_mdc()
 elif "bdsb2b" in ssrfiles[0]:
     cs = cssr_bds()
+elif "sbas" in ssrfiles[0]:
+    cs = cssr_pvs()
 else:
     print("ERROR: unknown SSR format for {}!".format(ssrfiles[0]))
     sys_exit(1)
@@ -240,7 +267,7 @@ nav.sat_ant = atx.pcvs
 
 # Initialize data structures for results
 #
-t0 = None
+time_ = None
 biases = {}
 sats = set()
 
@@ -268,12 +295,13 @@ for vi in v:
 
     week, tow = vi['wn'], vi['tow']
     time = gpst2time(week, tow)
-    cs.week = week
-    cs.tow0 = tow//3600*3600
 
     hasNew = False
 
     if cs.cssrmode == sc.GAL_HAS_SIS:
+
+        cs.week = week
+        cs.tow0 = tow//86400*86400
 
         buff = unhexlify(vi['nav'])
         i = 14
@@ -315,27 +343,57 @@ for vi in v:
                 rec = []
                 mid_ = -1
 
+        hasNew = (hasNew and (cs.lc[0].cstat & 0xf) == 0xf)
+
     elif cs.cssrmode == sc.QZS_MADOCA:
 
         if vi['type'] != l6_ch or vi['prn'] != prn_ref:
             continue
+
+        cs.week = week
+        cs.tow0 = tow//3600*3600
 
         msg = unhexlify(vi['nav'])
         cs.decode_l6msg(msg, 0)
 
         if cs.fcnt == 5:  # end of sub-frame
             cs.decode_cssr(bytes(cs.buff), 0)
-            hasNew = True
             time = cs.time
+
+        hasNew = (cs.lc[0].cstat & 0xf) == 0xf
 
     elif cs.cssrmode == sc.BDS_PPP:
 
         if vi['prn'] != prn_ref:
             continue
 
+        cs.week = week
+        cs.tow0 = tow//86400*86400
+
         buff = unhexlify(vi['nav'])
         cs.decode_cssr(buff, 0)
-        hasNew = (tow % 10 == 0)
+        hasNew = (tow % step == 0 and (cs.lc[0].cstat & 0xf) == 0xf)
+
+    elif cs.cssrmode == sc.PVS_PPP:
+
+        if vi['prn'] != prn_ref or vi['type'] != 32:
+            continue
+
+        cs.week = week
+        cs.tow0 = tow//86400*86400
+        cs.time0 = time
+
+        buff = unhexlify(vi['nav'])
+        cs.decode_cssr(buff, 0)
+        if (cs.lc[0].cstat & 0x6) != 0x6:
+            continue
+
+        if not time_:
+            time_ = deepcopy(cs.time)
+
+        hasNew = timediff(cs.time, time_) > 0
+        if hasNew:
+            time_ = deepcopy(cs.time)
 
     else:
 
@@ -343,87 +401,17 @@ for vi in v:
 
     # Convert SSR corrections
     #
-    if (cs.lc[0].cstat & 0xf) == 0xf and hasNew:
-
-        print(time2str(time))
+    if hasNew:
 
         hasNew = False
+
+        #print("{}".format(time2str(time),time2str(cs.time)))
 
         ns = len(cs.sat_n)
 
         rs = np.ones((ns, 3))*np.nan
         vs = np.ones((ns, 3))*np.nan
         dts = np.ones((ns, 1))*np.nan
-
-        # Store in SP3 data set
-        #
-        peph = peph_t(time)
-
-        for j, sat in enumerate(cs.sat_n):
-
-            sys, _ = sat2prn(sat)
-
-            rs, vs, dts, svh = satpos(sat, time, nav, cs)
-
-            if cs.cssrmode == sc.QZS_MADOCA:
-
-                if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
-                elif sys == ug.GLO:
-                    sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
-                elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
-                elif sys == ug.QZS:
-                    sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
-                else:
-                    print("ERROR: invalid system {}".format(sys2str(sys)))
-                    continue
-
-            elif cs.cssrmode == sc.GAL_HAS_SIS:
-
-                if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
-                elif sys == ug.GAL:
-                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
-                else:
-                    print("ERROR: invalid system {}".format(sys2str(sys)))
-                    continue
-
-            elif cs.cssrmode == sc.BDS_PPP:
-
-                if sys == ug.GPS:
-                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
-                elif sys == ug.BDS:
-                    sig0 = (rSigRnx("CC6I"),)
-                else:
-                    print("ERROR: invalid system {}".format(sys2str(sys)))
-                    continue
-
-            # Skip invalid positions
-            #
-            if np.isnan(rs[0, :]).any():
-                continue
-
-            # Convert to CoM using ANTEX PCO corrections
-            #
-            pco = apc2com(nav, sat, time, rs[0, :], sig0, k=0)
-            if pco is None:
-                continue
-
-            rs[0, :] += pco
-
-            for i in range(3):
-                peph.pos[sat-1, i] = rs[0, i]
-            peph.pos[sat-1, 3] = dts[0]
-
-            # Store satellite in set
-            #
-            if sat not in sats:
-                sats.add(sat)
-
-        # Save and store
-        #
-        nav.peph.append(peph)
 
         # Get SSR code and phase biases
         #
@@ -492,7 +480,7 @@ for vi in v:
 
             for sat_ in range(1, 33):
 
-                sigs = [rSigRnx('GC1C'), rSigRnx('GC2W')]
+                sigs = [rSigRnx('GC1C'), rSigRnx('GC1W'), rSigRnx('GC2W')]
                 for sig_ in sigs:
 
                     val_ = 0.0
@@ -516,10 +504,129 @@ for vi in v:
                     if biases[sat_][sig_][-1][2] != val_:
                         biases[sat_][sig_].append([time, time, val_])
 
+        # Store orbit and clock offset in SP3
+        #
+        peph = peph_t(cs.time)
+
+        for j, sat in enumerate(cs.sat_n):
+
+            sys, _ = sat2prn(sat)
+
+            rs, vs, dts, svh = satpos(sat, cs.time, nav, cs)
+
+            if cs.cssrmode == sc.QZS_MADOCA:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.GLO:
+                    sig0 = (rSigRnx("RC1C"), rSigRnx("RC2C"))
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+                elif sys == ug.QZS:
+                    sig0 = (rSigRnx("JC1C"), rSigRnx("JC2S"))
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.GAL_HAS_SIS:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC7Q"))
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.BDS_PPP:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC2W"))
+                elif sys == ug.BDS:
+                    sig0 = (rSigRnx("CC6I"),)
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
+            elif cs.cssrmode == sc.PVS_PPP:
+
+                if sys == ug.GPS:
+                    sig0 = (rSigRnx("GC1C"), rSigRnx("GC5Q"))
+                elif sys == ug.GAL:
+                    sig0 = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+                else:
+                    print("ERROR: invalid system {}".format(sys2str(sys)))
+                    continue
+
+            # Skip invalid positions
+            #
+            if np.isnan(rs[0, :]).any():
+                continue
+
+            # Convert to CoM using ANTEX PCO corrections
+            #
+            pco = apc2com(nav, sat, time, rs[0, :], sig0, k=0)
+            if pco is None:
+                continue
+
+            # Clock reference signals for reference product
+            #
+            if sys == ug.GPS:
+                sigClk = (rSigRnx("GC1W"), rSigRnx("GC2W"))
+            elif sys == ug.GLO:
+                sigClk = (rSigRnx("RC1C"), rSigRnx("RC2C"))
+            elif sys == ug.GAL:
+                sigClk = (rSigRnx("EC1C"), rSigRnx("EC5Q"))
+            elif sys == ug.BDS:
+                sigClk = (rSigRnx("CC2I"), rSigRnx("CC6I"))
+            elif sys == ug.QZS:
+                sigClk = (rSigRnx("JC1C"), rSigRnx("JC5Q"))
+            else:
+                print("ERROR: invalid system {}".format(sys2str(sys)))
+                continue
+
+            freq = [s.frequency() for s in sigClk]
+            facs = (+freq[0]**2/(freq[0]**2-freq[1]**2),
+                    -freq[1]**2/(freq[0]**2-freq[1]**2))
+
+            # Compute ionosphere-free combination of biases
+            #
+            bias = 0.0
+            if cs.cssrmode != sc.PVS_PPP:
+                if sat in biases.keys() and all(s in biases[sat] for s in sigClk):
+                    bias = facs[0]*biases[sat][sigClk[0]][-1][2] + \
+                        facs[1]*biases[sat][sigClk[1]][-1][2]
+                else:
+                    print("ERROR: {} missing bias for {} {}".format(ssrfile, sat2id(sat), sigClk))
+                    continue
+
+            # Adjust sign of biases
+            # - IS-QZSS-MDC-001 sec 5.5.3.3
+            # - HAS IDD ICD sec 3.3.4
+            if cs.cssrmode in [sc.GAL_HAS_SIS, sc.QZS_MADOCA]:
+                bias = -bias
+
+            # Adjust orbit and clock offset and store in SP3
+            #
+            for i in range(3):
+                peph.pos[sat-1, i] = rs[0, i] + pco[i]
+            peph.pos[sat-1, 3] = dts[0] - bias*1e-9
+
+            # Store satellite in set
+            #
+            if sat not in sats:
+                sats.add(sat)
+
+        # Save and store
+        #
+        nav.peph.append(peph)
+
 # Write results to output file
 #
-orb.write_sp3(orbfile, nav, sats)
+if len(nav.peph) > 0:
+    orb.write_sp3(orbfile, nav, sats)
 
 # Write biases to Bias-SINEX
 #
-write_bsx(bsxfile, name[0:3], biases)
+if len(biases) > 0:
+    write_bsx(bsxfile, name[0:3], biases)

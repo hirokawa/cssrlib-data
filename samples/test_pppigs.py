@@ -66,7 +66,7 @@ else:
     navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
     obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)
 
-ac = 'COD0MGXFIN'
+ac = 'COD0OPSFIN'
 
 orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
@@ -79,7 +79,7 @@ bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
 
 # Define signals to be processed
 #
-gnss = "GE"
+gnss = "GEJ"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -93,6 +93,10 @@ if 'C' in gnss:
     sigs.extend([rSigRnx("CC2I"), rSigRnx("CC6I"),
                  rSigRnx("CL2I"), rSigRnx("CL6I"),
                  rSigRnx("CS2I"), rSigRnx("CS6I")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC5Q"),
+                 rSigRnx("JL1C"), rSigRnx("JL5Q"),
+                 rSigRnx("JS1C"), rSigRnx("JS5Q")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -123,7 +127,7 @@ bsx.parse(bsxfile)
 #
 atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20.atx'
+    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20_2353.atx'
 elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
     atxfile += 'M20.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 else:
@@ -155,8 +159,9 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_pppigs.log')
-    nav.ephopt = 4  # IGS
-    nav.armode = 3  # 1: continuous, 3: fix-and-hold
+    nav.ephopt  = 4  # IGS
+    nav.armode  = 3  # 1: continuous, 3: fix-and-hold
+    nav.parmode = 1  # 1: normal, 2: partial ambiguity resolution
     nav.thresar = 2.0
 
     nav.elmin = np.deg2rad(10.0)

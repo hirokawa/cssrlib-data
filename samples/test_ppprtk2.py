@@ -8,14 +8,19 @@ from sys import exit as sys_exit
 from cssrlib.cssrlib import cssr
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
-from cssrlib.gnss import rSigRnx, time2str, sys2str
+from cssrlib.gnss import rSigRnx, time2str, sys2str, epoch2time
 from cssrlib.ppprtk import ppprtkpos
 from cssrlib.peph import atxdec, searchpcv
 
 ep = [2021, 9, 22, 6, 30, 0]
 time = gn.epoch2time(ep)
 
-atxfile = '../data/antex/igs14.atx'
+atxfile = '../data/antex/'
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile += 'igs20.atx'
+else:
+    atxfile += 'igs14.atx'
+
 navfile = '../data/doy2021-265/SEPT2650.21P'
 obsfile = '../data/doy2021-265/SEPT265G.21O'
 l6file = '../data/doy2021-265/2021265G.l6'

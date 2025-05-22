@@ -10,13 +10,7 @@ Pre-installation of **CSSRlib** is required. Install the [officially released pa
 pip install cssrlib
 ```
 
-Additional python packages are required as prerequisites and can be installed via the following command
-
-```bash
-pip install -r requirements.txt
-```
-
-It is recommended to use a virtual environment to avoid version conflicts with the system-wide python installation.
+It is recommended to use a virtual environment to avoid version conflicts of required modules with the system-wide python installation.
 
 ## Installation in Virtual Environment
 

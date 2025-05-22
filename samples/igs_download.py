@@ -136,7 +136,13 @@ def download_ftp(ftp, filename, local_filename):
 def download_http(url, filename, local_filename):
     """Download a file via HTTP/HTTPS."""
     try:
-        response = requests.get(url, stream=True)
+        # Set a user-agent to avoid blocking by some servers
+        if 'www.gsc-europa.eu' in url:
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+            response = requests.get(url, stream=True, headers=headers)
+        else:
+            response = requests.get(url, stream=True)
         response.raise_for_status()  # Raise an error for bad status codes
 
         total_size = int(response.headers.get('content-length', 0))
