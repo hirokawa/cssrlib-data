@@ -301,7 +301,7 @@ for vi in v:
     if cs.cssrmode == sc.GAL_HAS_SIS:
 
         cs.week = week
-        cs.tow0 = tow//86400*86400
+        cs.tow0 = tow//3600*3600
 
         buff = unhexlify(vi['nav'])
         i = 14
@@ -328,8 +328,9 @@ for vi in v:
         if len(rec) >= ms_:
             HASmsg = cs.decode_has_page(rec, has_pages, gMat, ms_)
             cs.decode_cssr(HASmsg)
-            hasNew = (ms_ == 2)  # only clock messages
-            time = cs.time
+            if ms_ == 2: # only clock messages
+                hasNew = (cs.lc[0].cstat & 0xf) == 0xf
+                time = cs.time
 
             rec = []
             mid_decoded += [mid_]
@@ -342,8 +343,6 @@ for vi in v:
                 icnt = 0
                 rec = []
                 mid_ = -1
-
-        hasNew = (hasNew and (cs.lc[0].cstat & 0xf) == 0xf)
 
     elif cs.cssrmode == sc.QZS_MADOCA:
 
@@ -360,7 +359,7 @@ for vi in v:
             cs.decode_cssr(bytes(cs.buff), 0)
             time = cs.time
 
-        hasNew = (cs.lc[0].cstat & 0xf) == 0xf
+        hasNew = (tow % step == 0) and (cs.lc[0].cstat & 0xf) == 0xf
 
     elif cs.cssrmode == sc.BDS_PPP:
 
@@ -372,7 +371,8 @@ for vi in v:
 
         buff = unhexlify(vi['nav'])
         cs.decode_cssr(buff, 0)
-        hasNew = (tow % step == 0 and (cs.lc[0].cstat & 0xf) == 0xf)
+
+        hasNew = (tow % step == 0) and (cs.lc[0].cstat & 0xf) == 0xf
 
     elif cs.cssrmode == sc.PVS_PPP:
 
@@ -394,6 +394,7 @@ for vi in v:
         hasNew = timediff(cs.time, time_) > 0
         if hasNew:
             time_ = deepcopy(cs.time)
+            time = cs.time
 
     else:
 
@@ -404,9 +405,12 @@ for vi in v:
     if hasNew:
 
         hasNew = False
-
-        #print("{}".format(time2str(time),time2str(cs.time)))
-
+        
+        """
+        print("{} {} cs {}"
+              .format(name,time2str(time),time2str(cs.time)))
+        """
+        
         ns = len(cs.sat_n)
 
         rs = np.ones((ns, 3))*np.nan
@@ -452,7 +456,9 @@ for vi in v:
                 #
                 if cs.cssrmode == sc.QZS_MADOCA and extClasBiases:
 
-                    if rSigRnx('EC1X') == sig_ or rSigRnx('EL1X') == sig_:
+                    if rSigRnx('GC5X') == sig_ or rSigRnx('GL5X') == sig_:
+                        sig_ = sig_.toAtt('Q')
+                    elif rSigRnx('EC1X') == sig_ or rSigRnx('EL1X') == sig_:
                         sig_ = sig_.toAtt('C')
                     elif rSigRnx('EC5X') == sig_ or rSigRnx('EL5X') == sig_:
                         sig_ = sig_.toAtt('Q')
@@ -504,15 +510,27 @@ for vi in v:
                     if biases[sat_][sig_][-1][2] != val_:
                         biases[sat_][sig_].append([time, time, val_])
 
+        # Add missing epochs
+        #
+        if len(nav.peph) > 0:
+            while timediff(time, nav.peph[-1].time) > step:
+                print("WARNING: {} missing epoch in SP3 file {}"
+                      .format(name,time2str(timeadd(nav.peph[-1].time,step))))
+                peph = peph_t(timeadd(nav.peph[-1].time,step))
+                nav.peph.append(peph)
+
         # Store orbit and clock offset in SP3
         #
-        peph = peph_t(cs.time)
+        peph = peph_t(time)
 
         for j, sat in enumerate(cs.sat_n):
 
             sys, _ = sat2prn(sat)
 
-            rs, vs, dts, svh = satpos(sat, cs.time, nav, cs)
+            if sys == ug.GLO or sys == ug.QZS:
+                continue
+
+            rs, vs, dts, svh = satpos(sat, time, nav, cs)
 
             if cs.cssrmode == sc.QZS_MADOCA:
 
@@ -597,7 +615,9 @@ for vi in v:
                     bias = facs[0]*biases[sat][sigClk[0]][-1][2] + \
                         facs[1]*biases[sat][sigClk[1]][-1][2]
                 else:
-                    print("ERROR: {} missing bias for {} {}".format(ssrfile, sat2id(sat), sigClk))
+                    print("ERROR: {} {} missing bias for {} {}"
+                          .format(name, time2str(cs.time),
+                                  sat2id(sat), sigClk))
                     continue
 
             # Adjust sign of biases
