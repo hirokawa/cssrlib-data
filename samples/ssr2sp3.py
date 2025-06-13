@@ -155,7 +155,7 @@ elif "gale6" in ssrfiles[0]:
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
-    if time > epoch2time([2025, 5, 18, 0, 0, 0]):
+    if time > epoch2time([2025, 5, 15, 17, 18, 0]):
         atxfile = baseDirName+'../data/antex/igs20.atx'
     else:
         atxfile = baseDirName+'../data/antex/has14_2345.atx'
