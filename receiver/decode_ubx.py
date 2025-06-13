@@ -3,8 +3,8 @@
 """
 u-blox Receiver UBX messages decoder
 
- [1] u-blox F9 HPG 1.51, u-blox F9 high precision GNSS receiver
-     Interface description, 2024
+ [1] u-blox 20 HPG 2.00, High precision GNSS receiver
+     Interface description, UBXDOC-304424225-19888, R01, May, 2025
 
 @author Rui Hirokawa
 """
@@ -44,7 +44,7 @@ class ubx(rcvDec):
                         4: uSIG.L6I, 10: uSIG.L6I, 5: uSIG.L1P, 6: uSIG.L1D,
                         7: uSIG.L5P, 8: uSIG.L5D},
             uGNSS.QZS: {0: uSIG.L1C, 1: uSIG.L1Z, 4: uSIG.L2S, 5: uSIG.L2L,
-                        8: uSIG.L5I, 9: uSIG.L5Q},
+                        8: uSIG.L5I, 9: uSIG.L5Q, 12: uSIG.L1E},
             uGNSS.GLO: {0: uSIG.L1C, 2: uSIG.L2C},
             uGNSS.IRN: {0: uSIG.L5A}
         }
@@ -347,7 +347,7 @@ class ubx(rcvDec):
                 type_ = 0
                 seph = self.rn.decode_sbs_l1(self.week, self.tow, sat, b)
         elif sys == uGNSS.QZS:
-            if sigid == 0 and self.flg_qzslnav:  # L1C/A
+            if sigid in [0, 12] and self.flg_qzslnav:  # L1C/A or L1C/B
                 fh_ = self.fh_qzslnav
                 type_ = 0
                 eph = self.rn.decode_gps_lnav(self.week, self.tow, sat, b)
@@ -389,7 +389,7 @@ class ubx(rcvDec):
         print(f"L6 {svid}:{ch}")
         if self.flg_qzsl6:
             self.fh_qzsl6.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
-                                format(self.week, self.tow, svid, ch, len_*4,
+                                format(self.week, self.tow, svid, ch, 250,
                                        hexlify(b).decode()))
 
     def decode_timegps(self, buff, k=6):
@@ -425,7 +425,8 @@ class ubx(rcvDec):
                 self.decode_l6msg(buff)
         return 0
 
-def decode(f,opt,args):
+
+def decode(f, opt, args):
 
     print("Decoding {}".format(f))
 
@@ -474,6 +475,7 @@ def decode(f,opt,args):
 
     ubxdec.file_close()
 
+
 def main():
 
     # Parse command line arguments
@@ -482,23 +484,24 @@ def main():
 
     # Input file and folder
     #
-    parser.add_argument("inpFileName",  help="Input UBX file(s) (wildcards allowed)")
+    parser.add_argument(
+        "inpFileName",  help="Input UBX file(s) (wildcards allowed)")
 
     parser.add_argument("--receiver", default='unknown',
                         help="Receiver type [unknown]")
     parser.add_argument("--antenna", default='unknown',
                         help="Antenna type [unknown]")
 
-    parser.add_argument("-g","--gnss",default='GRECIJ',
+    parser.add_argument("-g", "--gnss", default='GRECIJ',
                         help="GNSS [GRECIJ]")
 
-    parser.add_argument("-j","--jobs",default=int(mp.cpu_count() / 2),
+    parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
                         type=int, help='Max. number of parallel processes')
 
     # Retrieve all command line arguments
     #
     args = parser.parse_args()
-    
+
     opt = rcvOpt()
 
     opt.flg_rnxobs = True
@@ -530,6 +533,7 @@ def main():
     #
     with mp.Pool(processes=args.jobs) as pool:
         pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
+
 
 # Call main function
 #

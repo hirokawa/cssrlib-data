@@ -6,8 +6,8 @@ Septentrio Receiver SBF messages decoder
  [1] mosaic-X5 Reference Guide, Applicable to version 4.14.10.1
      of the Firmware, 2024
 
- [1] PolaRX5 Reference Guide, Applicable to version 5.5.0
-     of the Firmware, 2023
+ [1] PolaRX5 Reference Guide, Applicable to version 5.6.0
+     of the Firmware, 2025
 
 @author Rui Hirokawa
 """
@@ -84,6 +84,8 @@ class sbf(rcvDec):
                  uTYP.D: rSigRnx('SD5I'), uTYP.S: rSigRnx('SS5I')},
             26: {uTYP.C: rSigRnx('JC5Q'), uTYP.L: rSigRnx('JL5Q'),
                  uTYP.D: rSigRnx('JD5Q'), uTYP.S: rSigRnx('JS5Q')},
+            27: {uTYP.C: rSigRnx('JC6Z'), uTYP.L: rSigRnx('JL6Z'),
+                 uTYP.D: rSigRnx('JD6Z'), uTYP.S: rSigRnx('JS6Z')},
             28: {uTYP.C: rSigRnx('CC2I'), uTYP.L: rSigRnx('CL2I'),
                  uTYP.D: rSigRnx('CD2I'), uTYP.S: rSigRnx('CS2I')},
             29: {uTYP.C: rSigRnx('CC7I'), uTYP.L: rSigRnx('CL7I'),
@@ -122,43 +124,49 @@ class sbf(rcvDec):
     def svid2prn(self, svid):
         if svid == 0:
             sys = uGNSS.NONE
-            return 0
-        elif svid <= 37:
+            prn = 0
+        elif svid <= 37:  # G1-G37
             sys = uGNSS.GPS
             prn = svid
-        elif svid <= 61:
+        elif svid <= 61:  # R1-R24
             sys = uGNSS.GLO
             prn = svid-37
-        elif svid <= 62:
+        elif svid <= 62:  # GLONASS, unknown slot
             sys = uGNSS.GLO
             prn = 0
-        elif svid <= 68:
+        elif svid <= 68:  # R25-R30
             sys = uGNSS.GLO
             prn = svid-38
-        elif svid >= 71 and svid <= 106:
+        elif svid >= 71 and svid <= 106:  # E1-E36
             sys = uGNSS.GAL
             prn = svid-70
-        elif svid >= 120 and svid <= 140:
+        elif svid >= 71 and svid <= 119:  # L-Band(MSS)
+            sys = uGNSS.NONE
+            prn = 0
+        elif svid >= 120 and svid <= 140:  # S120-S140
             sys = uGNSS.SBS
             prn = svid
-        elif svid >= 141 and svid <= 180:
+        elif svid >= 141 and svid <= 180:  # C1-C40
             sys = uGNSS.BDS
             prn = svid-140
-        elif svid >= 181 and svid <= 190:
+        elif svid >= 181 and svid <= 190:  # J1-J10
             sys = uGNSS.QZS
             prn = svid-180+192
-        elif svid >= 191 and svid <= 197:
+        elif svid >= 191 and svid <= 197:  # I1-I7
             sys = uGNSS.IRN
             prn = svid-190
-        elif svid >= 198 and svid <= 215:
+        elif svid >= 198 and svid <= 215:  # S141-S158
             sys = uGNSS.SBS
             prn = svid-57
-        elif svid >= 216 and svid <= 222:
+        elif svid >= 216 and svid <= 222:  # I8-I14
             sys = uGNSS.IRN
             prn = svid-208
-        elif svid >= 223 and svid <= 245:
+        elif svid >= 223 and svid <= 245:  # C41-C63
             sys = uGNSS.BDS
             prn = svid-182
+        else:  # reserved (246-255)
+            sys = uGNSS.NONE
+            prn = 0
 
         return sys, prn
 
@@ -1014,12 +1022,13 @@ class sbf(rcvDec):
                 self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif blk_num == 5894:  # GPS UTC Decoded Message
-            None
+            pass
 
         elif blk_num == 5896:  # SBAS L1 Decoded Message
-            None
+            pass
 
         return 0
+
 
 def decode(f, opt, args):
 
@@ -1081,17 +1090,18 @@ def main():
 
     # Input file and folder
     #
-    parser.add_argument("inpFileName",  help="Input SBF file(s) (wildcards allowed)")
+    parser.add_argument(
+        "inpFileName",  help="Input SBF file(s) (wildcards allowed)")
 
     parser.add_argument("--receiver", default='unknown',
                         help="Receiver type [unknown]")
     parser.add_argument("--antenna", default='unknown',
                         help="Antenna type [unknown]")
 
-    parser.add_argument("-g","--gnss",default='GRECIJ',
+    parser.add_argument("-g", "--gnss", default='GRECIJ',
                         help="GNSS [GRECIJ]")
 
-    parser.add_argument("-j","--jobs",default=int(mp.cpu_count() / 2),
+    parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
                         type=int, help='Max. number of parallel processes')
 
     # Retrieve all command line arguments
@@ -1132,6 +1142,7 @@ def main():
     #
     with mp.Pool(processes=args.jobs) as pool:
         pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
+
 
 # Call main function
 #
