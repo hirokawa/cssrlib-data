@@ -156,7 +156,7 @@ elif "gale6" in ssrfiles[0]:
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
 
-    if time > epoch2time([2025, 5, 18, 0, 0, 0]):
+    if time > epoch2time([2025, 5, 15, 17, 18, 0]):
         atxfile = baseDirName+'../data/antex/igs20.atx'
     else:
         atxfile = baseDirName+'../data/antex/has14_2345.atx'
@@ -218,8 +218,9 @@ for dt in (-1, 0, +1):
     hour = ep[3]
     doy = int(time2doy(t))
 
-    navfile = baseDirName+'../data/brdc/BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
-        .format(year, doy, year, doy)
+    navDirName = baseDirName + '../data/brdc/'
+    navfile = navDirName + 'BRD400DLR_S_{:4d}{:03d}0000_01D_MN.rnx'\
+        .format(year, doy)
 
     if os.path.exists(navfile):
         navfiles.append(navfile)

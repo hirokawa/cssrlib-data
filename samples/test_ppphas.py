@@ -121,7 +121,7 @@ gMat = np.genfromtxt(file_gm, dtype="u1", delimiter=",")
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()
-if time > epoch2time([2025, 5, 18, 0, 0, 0]):
+if time > epoch2time([2025, 5, 15, 17, 18, 0]):
     atx.readpcv('../data/antex/igs20.atx')
 else:
     atx.readpcv('../data/antex/has14_2345.atx')
