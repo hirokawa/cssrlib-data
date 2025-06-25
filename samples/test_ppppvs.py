@@ -125,7 +125,9 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_ppppvs.log')
-    nav.elmin = np.deg2rad(5.0)
+    nav.elmin = np.deg2rad(10.0)
+
+    nav.q[0:3] = 0.0 # use zero process noise on position
 
     # Get equipment information
     #
@@ -184,13 +186,9 @@ if rnx.decode_obsh(obsfile) >= 0:
         obs = rnx.decode_obs()
 
     if 'sbas' in file_pvs:  # SIS
-        # dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-        #         ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
-
         dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
                  ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
         v = np.genfromtxt(file_pvs, dtype=dtype)
-
     elif 'DAS' in file_pvs:  # DAS
         fc = open(file_pvs, 'rt')
     else:
@@ -215,8 +213,6 @@ if rnx.decode_obsh(obsfile) >= 0:
             nav.time_p = t0
 
         if 'sbas' in file_pvs:  # SIS
-            # vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
-            #       & (v['type'] == sbas_type)]
 
             vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
             if sbas_type == 0:  # L1
