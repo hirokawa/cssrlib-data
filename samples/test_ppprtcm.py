@@ -19,11 +19,12 @@ from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtcm import rtcm
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
+from cssrlib.cssrlib import sCType
 
 
 # Select test case
 #
-icase = 2
+icase = 3
 
 # Start epoch and number of epochs
 #
@@ -36,6 +37,8 @@ if icase == 1:  # Galileo HAS IDD
     xyz_ref = [4186704.2262, 834903.7677, 4723664.9337]
     file_rtcm = '../data/doy2023-229/idd2023229c.rtc'
     file_rtcm_log = '../data/doy2023-229/idd2023229c.log'
+    gnss = "GE"
+    cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT | 1 << sCType.CBIAS
 
 elif icase == 2:  # JPL GDGPS  Mosaic-X5
 
@@ -46,12 +49,28 @@ elif icase == 2:  # JPL GDGPS  Mosaic-X5
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     file_rtcm = '../data/doy2024-043/JPL32T2043h.rtcm3'
     file_rtcm_log = '../data/doy2024-043/JPL32T2043h.log'
+    gnss = "GE"
+    cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT | 1 << sCType.CBIAS
+
+elif icase == 3:  # JPL GDGPS (w/o code bias) JAVAD DELTA-3S
+
+    ep = [2025, 6, 27, 0, 0, 0]
+    navfile = '../data/doy2025-178/178a_rnx.nav'
+    # navfile = '../data/doy2025-178/BRD400DLR_S_20251780000_01D_MN.rnx'
+    obsfile = '../data/doy2025-178/178a_rnx.obs'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    # SSRA11JPL0 GPS+GAL orbit+clock corrs
+    file_rtcm = '../data/doy2025-178/JPL11178a.rtcm3'
+    file_rtcm_log = '../data/doy2025-178/JPL32T178a.log'
+    gnss = "GE"
+    cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
 nep = 900*4
+# nep = 300
 
 
 # Set user reference position
@@ -61,10 +80,10 @@ pos_ref = ecef2pos(xyz_ref)
 # Define signals to be processed
 #
 
-if icase == 1:
+sigs = []
 
-    gnss = "GE"
-    sigs = []
+if icase in [1, 2]:
+
     if 'G' in gnss:
         sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
                      rSigRnx("GL1C"), rSigRnx("GL2W"),
@@ -74,19 +93,16 @@ if icase == 1:
                      rSigRnx("EL1C"), rSigRnx("EL7Q"),
                      rSigRnx("ES1C"), rSigRnx("ES7Q")])
 
-elif icase == 2:
+elif icase == 3:
 
-    gnss = "GE"
-    sigs = []
     if 'G' in gnss:
-        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
-                     rSigRnx("GL1C"), rSigRnx("GL2W"),
-                     rSigRnx("GS1C"), rSigRnx("GS2W")])
+        sigs.extend([rSigRnx("GC1W"), rSigRnx("GC2W"),
+                     rSigRnx("GL1W"), rSigRnx("GL2W"),
+                     rSigRnx("GS1W"), rSigRnx("GS2W")])
     if 'E' in gnss:
         sigs.extend([rSigRnx("EC1C"), rSigRnx("EC7Q"),
                      rSigRnx("EL1C"), rSigRnx("EL7Q"),
                      rSigRnx("ES1C"), rSigRnx("ES7Q")])
-
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -107,7 +123,7 @@ cs.monlevel = 1
 cs.cssrmode = sCSSRTYPE.RTCM3_SSR
 cs.inet = 0
 
-if icase == 2:  # mask phase-bias for JPL GDGPS
+if icase in [2, 3]:  # mask phase-bias for JPL GDGPS
     cs.mask_pbias = True
 
 if True:
@@ -245,7 +261,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
         # Call PPP module with HAS corrections
         #
-        if (cs.lc[0].cstat & 0xe) == 0xe:
+        if (cs.lc[0].cstat & cs_mask) == cs_mask:
             ppp.process(obs, cs=cs)
 
         # Save output
