@@ -290,8 +290,8 @@ class ubx(rcvDec):
                 type_ = 2
                 eph = self.rn.decode_gal_inav(
                     self.week, self.tow, sat, type_, b)
-            elif sigid == 8 and self.flg_galcnav:  # E6B
-                fh_ = self.fh_galcnav
+            elif sigid == 8 and self.flg_gale6:  # E6B
+                fh_ = self.fh_gale6
                 type_ = 6
         elif sys == uGNSS.BDS:
             if sigid == 0 and self.flg_bdsd12:  # B1I D1
@@ -378,7 +378,7 @@ class ubx(rcvDec):
                           format(self.week, int(self.tow+0.01), prn, type_,
                                  blen, hexlify(b[:blen]).decode()))
 
-        if self.monlevel > 0:
+        if self.monlevel > 1:
             print(f"NAV gnss={gnss}:prn={svid:3d}({freqid:2d}):sig={sigid:2d}")
 
     def decode_l6msg(self, buff, k=6):
