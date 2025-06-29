@@ -49,6 +49,17 @@ elif dataset == 2:
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
     file_has = '../data/doy2025-046/046r_gale6.txt'
     excl_sat = [prn2sat(uGNSS.GAL, 29)]  # E29
+elif dataset == 3:
+    ep = [2025, 6, 27, 0, 0, 0]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    # ublox X20P
+    # navfile = '../data/doy2025-178/u178a_rnx.nav'
+    # obsfile = '../data/doy2025-178/u178a_rnx.obs'
+    # file_has = '../data/doy2025-178/u178a_gale6.txt'
+    # Javad DELTA-3S
+    navfile = '../data/doy2025-178/178a_rnx.nav'
+    obsfile = '../data/doy2025-178/178a_rnx.obs'
+    file_has = '../data/doy2025-178/178a_gale6.txt'
 
 # Convert epoch and user reference position
 #
@@ -83,13 +94,18 @@ else:
 gnss = "GE"
 sigs = []
 if 'G' in gnss:
-    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
-                 rSigRnx("GL1C"), rSigRnx("GL2W"),
-                 rSigRnx("GS1C"), rSigRnx("GS2W")])
+    if dataset == 3:
+        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2L"),
+                     rSigRnx("GL1C"), rSigRnx("GL2L"),
+                     rSigRnx("GS1C"), rSigRnx("GS2L")])
+    else:
+        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
+                     rSigRnx("GL1C"), rSigRnx("GL2W"),
+                     rSigRnx("GS1C"), rSigRnx("GS2W")])
 if 'E' in gnss:
-    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC7Q"),
-                 rSigRnx("EL1C"), rSigRnx("EL7Q"),
-                 rSigRnx("ES1C"), rSigRnx("ES7Q")])
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
+                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
+                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)
@@ -125,7 +141,7 @@ if time > epoch2time([2025, 5, 15, 17, 18, 0]):
     atx.readpcv('../data/antex/igs20.atx')
 else:
     atx.readpcv('../data/antex/has14_2345.atx')
-atx.readpcv('../data/antex/igs20.atx',onlyReceiver=True)
+atx.readpcv('../data/antex/igs20.atx', onlyReceiver=True)
 
 # Initialize data structures for results
 #
@@ -220,6 +236,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     for ne in range(nep):
 
         week, tow = time2gpst(obs.t)
+        tow = (tow+0.05)//1
         cs.week = week
         cs.tow0 = tow//3600*3600
 
