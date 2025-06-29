@@ -155,8 +155,10 @@ class jps(rcvDec):
         self.tod = -1
         self.freqn = None
 
-        self.sig_tab = {
-            uGNSS.GPS: {
+        self.sig_tab = {}
+
+        if 'G' in gnss_t:
+            self.sig_tab[uGNSS.GPS] = {
                 uTYP.C: [rSigRnx('GC1C'), rSigRnx('GC1W'), rSigRnx('GC2W'),
                          rSigRnx('GC2X'), rSigRnx('GC5X')],
                 uTYP.L: [rSigRnx('GL1C'), rSigRnx('GL1W'), rSigRnx('GL2W'),
@@ -165,8 +167,9 @@ class jps(rcvDec):
                          rSigRnx('GD2X'), rSigRnx('GD5X')],
                 uTYP.S: [rSigRnx('GS1C'), rSigRnx('GS1W'), rSigRnx('GS2W'),
                          rSigRnx('GS2X'), rSigRnx('GS5X')],
-            },
-            uGNSS.GLO: {
+            }
+        if 'R' in gnss_t:
+            self.sig_tab[uGNSS.GLO] = {
                 uTYP.C: [rSigRnx('RC1C'), rSigRnx('RC1P'), rSigRnx('RC2C'),
                          rSigRnx('RC2P'), rSigRnx('RC3X')],
                 uTYP.L: [rSigRnx('RL1C'), rSigRnx('RL1P'), rSigRnx('RL2C'),
@@ -175,8 +178,9 @@ class jps(rcvDec):
                          rSigRnx('RD2P'), rSigRnx('RD3X')],
                 uTYP.S: [rSigRnx('RS1C'), rSigRnx('RS1P'), rSigRnx('RS2C'),
                          rSigRnx('RS2P'), rSigRnx('RS3X')],
-            },
-            uGNSS.GAL: {
+            }
+        if 'E' in gnss_t:
+            self.sig_tab[uGNSS.GAL] = {
                 uTYP.C: [rSigRnx('EC1X'), rSigRnx('EC5X'), rSigRnx('EC7X'),
                          rSigRnx('EC8X'), rSigRnx('EC6X')],
                 uTYP.L: [rSigRnx('EL1X'), rSigRnx('EL5X'), rSigRnx('EL7X'),
@@ -185,8 +189,9 @@ class jps(rcvDec):
                          rSigRnx('ED8X'), rSigRnx('ED6X')],
                 uTYP.S: [rSigRnx('ES1X'), rSigRnx('ES5X'), rSigRnx('GS7X'),
                          rSigRnx('ES8X'), rSigRnx('ES6X')],
-            },
-            uGNSS.BDS: {
+            }
+        if 'C' in gnss_t:
+            self.sig_tab[uGNSS.BDS] = {
                 uTYP.C: [rSigRnx('CC1X'), rSigRnx('CC2I'), rSigRnx('CC5X'),
                          rSigRnx('CC6I'), rSigRnx('CC8X'), rSigRnx('CC7I')],
                 uTYP.L: [rSigRnx('CL1X'), rSigRnx('CL2I'), rSigRnx('CL5X'),
@@ -195,8 +200,9 @@ class jps(rcvDec):
                          rSigRnx('CD6I'), rSigRnx('CD8X'), rSigRnx('CD7I')],
                 uTYP.S: [rSigRnx('CS1X'), rSigRnx('CS2I'), rSigRnx('CS5X'),
                          rSigRnx('CS6I'), rSigRnx('CS8X'), rSigRnx('CS7I')],
-            },
-            uGNSS.QZS: {
+            }
+        if 'J' in gnss_t:
+            self.sig_tab[uGNSS.QZS] = {
                 uTYP.C: [rSigRnx('JC1C'), rSigRnx('JC1X'), rSigRnx('JC2X'),
                          rSigRnx('JC5X'), rSigRnx('JC6X')],
                 uTYP.L: [rSigRnx('JL1C'), rSigRnx('JL1X'), rSigRnx('JL2X'),
@@ -205,20 +211,21 @@ class jps(rcvDec):
                          rSigRnx('JD5X'), rSigRnx('JD6X')],
                 uTYP.S: [rSigRnx('JS1C'), rSigRnx('JS1X'), rSigRnx('JS2X'),
                          rSigRnx('JS5X'), rSigRnx('JS6X')],
-            },
-            uGNSS.SBS: {
+            }
+        if 'S' in gnss_t:
+            self.sig_tab[uGNSS.SBS] = {
                 uTYP.C: [rSigRnx('SC1C'), rSigRnx('SC5X')],
                 uTYP.L: [rSigRnx('SL1C'), rSigRnx('SL5X')],
                 uTYP.D: [rSigRnx('SD1C'), rSigRnx('SD5X')],
                 uTYP.S: [rSigRnx('SS1C'), rSigRnx('SS5X')],
-            },
-            uGNSS.IRN: {
+            }
+        if 'I' in gnss_t:
+            self.sig_tab[uGNSS.IRN] = {
                 uTYP.C: [rSigRnx('IC5A'), rSigRnx('IC1X')],
                 uTYP.L: [rSigRnx('IL5A'), rSigRnx('IL1X')],
                 uTYP.D: [rSigRnx('ID5A'), rSigRnx('ID1X')],
                 uTYP.S: [rSigRnx('IS5A'), rSigRnx('IS1X')],
-            },
-        }
+            }
 
         if opt is not None:
             self.init_param(opt=opt, prefix=prefix)
@@ -912,6 +919,7 @@ class jps(rcvDec):
             print("[{:s}] undef".format(head))
         return 0
 
+
 def decode(f, opt, args):
 
     print("Decoding {}".format(f))
@@ -950,6 +958,7 @@ def decode(f, opt, args):
             k += len_
 
     jpsdec.file_close()
+
 
 def main():
 
@@ -999,6 +1008,7 @@ def main():
     #
     with mp.Pool(processes=args.jobs) as pool:
         pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
+
 
 # Call main function
 #
