@@ -638,8 +638,7 @@ def main():
     # Input file and folder
     #
     parser.add_argument(
-        "-inpFileName",  default='../data/doy2025-187/nov187a.nvr',
-        help="Input OEM file(s) (wildcards allowed)")
+        "inpFileName", help="Input OEM file(s) (wildcards allowed)")
 
     parser.add_argument("--receiver", default='unknown',
                         help="Receiver type [unknown]")
