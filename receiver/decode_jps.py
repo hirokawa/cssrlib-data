@@ -154,6 +154,9 @@ class jps(rcvDec):
         self.qzl6_time_p = -1
         self.tod = -1
         self.freqn = None
+        # QZS PRN broadcasting L1C/B
+        # self.prn_l1cb = [196, 197, 200, 201] # QZS 1R/5/6/7
+        self.prn_l1cb = [197, 200, 201]  # QZS 5/6/7
 
         self.sig_tab = {}
 
@@ -204,13 +207,13 @@ class jps(rcvDec):
         if 'J' in gnss_t:
             self.sig_tab[uGNSS.QZS] = {
                 uTYP.C: [rSigRnx('JC1C'), rSigRnx('JC1X'), rSigRnx('JC2X'),
-                         rSigRnx('JC5X'), rSigRnx('JC6X')],
+                         rSigRnx('JC5X'), rSigRnx('JC6X'), rSigRnx('JC1E')],
                 uTYP.L: [rSigRnx('JL1C'), rSigRnx('JL1X'), rSigRnx('JL2X'),
-                         rSigRnx('JL5X'), rSigRnx('JL6X')],
+                         rSigRnx('JL5X'), rSigRnx('JL6X'), rSigRnx('JL1E')],
                 uTYP.D: [rSigRnx('JD1C'), rSigRnx('JD1X'), rSigRnx('JD2X'),
-                         rSigRnx('JD5X'), rSigRnx('JD6X')],
+                         rSigRnx('JD5X'), rSigRnx('JD6X'), rSigRnx('JD1E')],
                 uTYP.S: [rSigRnx('JS1C'), rSigRnx('JS1X'), rSigRnx('JS2X'),
-                         rSigRnx('JS5X'), rSigRnx('JS6X')],
+                         rSigRnx('JS5X'), rSigRnx('JS6X'), rSigRnx('JS1E')],
             }
         if 'S' in gnss_t:
             self.sig_tab[uGNSS.SBS] = {
@@ -226,6 +229,12 @@ class jps(rcvDec):
                 uTYP.D: [rSigRnx('ID5A'), rSigRnx('ID1X')],
                 uTYP.S: [rSigRnx('IS5A'), rSigRnx('IS1X')],
             }
+
+        self.sidx_l1cb = -1
+        if uGNSS.QZS in self.sig_tab.keys():  # record index for L1C/B
+            for k, sig_ in enumerate(self.sig_tab[uGNSS.QZS][uTYP.L]):
+                if sig_.sig == uSIG.L1E:
+                    self.sidx_l1cb = k
 
         if opt is not None:
             self.init_param(opt=opt, prefix=prefix)
@@ -356,13 +365,20 @@ class jps(rcvDec):
 
             for kk, sig_ in enumerate(self.sig_tab[sys][uTYP.L]):
                 if sig_.sig in self.types[self.sys[k]-1]:
+                    # L1C/A -> L1C/B for QZS in prn_l1cb
+                    if sys == uGNSS.QZS and prn in self.prn_l1cb and \
+                            self.sidx_l1cb > 0 and sig_.sig == uSIG.L1C:
+                        kk_ = self.sidx_l1cb
+                    else:
+                        kk_ = kk
+
                     idx = self.types[self.sys[k]-1].index(sig_.sig)
-                    obs.P[jn][kk] = self.pr[k][idx]*rCST.CLIGHT
-                    obs.L[jn][kk] = self.cp[k][idx]
-                    obs.D[jn][kk] = self.dp[k][idx]
-                    obs.S[jn][kk] = self.CNO[k][idx]
+                    obs.P[jn][kk_] = self.pr[k][idx]*rCST.CLIGHT
+                    obs.L[jn][kk_] = self.cp[k][idx]
+                    obs.D[jn][kk_] = self.dp[k][idx]
+                    obs.S[jn][kk_] = self.CNO[k][idx]
                     if self.code[k][idx] & 0x0020:
-                        obs.lli[jn][kk] += 1
+                        obs.lli[jn][kk_] += 1
 
             if sat not in obs.sat:
                 obs.sat += [sat]
