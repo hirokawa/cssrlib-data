@@ -253,7 +253,7 @@ if rnx.decode_obsh(obsfile) >= 0:
             if (tc is not False) and timediff(tc, obs.t) > 0:
                 break
 
-            _, _, eph = cs.decode(msg[k:k+cs.len+3])
+            _, _, eph, geph, seph = cs.decode(msg[k:k+cs.len+3])
             k += cs.dlen
 
             if cs.msgtype in cs.eph_t.values():
