@@ -155,8 +155,10 @@ class jps(rcvDec):
         self.tod = -1
         self.freqn = None
         # QZS PRN broadcasting L1C/B
-        # self.prn_l1cb = [196, 197, 200, 201] # QZS 1R/5/6/7
-        self.prn_l1cb = [197, 200, 201]  # QZS 5/6/7
+        self.prn_l1cb = [196, 197, 200, 201]  # QZS 1R/5/6/7 since 2025/8/11
+        # self.prn_l1cb = [197, 200, 201]  # QZS 5/6/7
+
+        self.navic_work_around = True  # v4.6.0 has incorrect NavIC obs.
 
         self.sig_tab = {}
 
@@ -853,13 +855,22 @@ class jps(rcvDec):
         elif head[0] == 'R' and head[1].lower() in self.ch_t.keys():  # PR
             ch = self.ch_t[head[1].lower()]
             nsat = (len_-6)//8
-            self.pr[:nsat, ch] = st.unpack_from('d'*nsat, buff, 5)
+            pr_ = np.array(st.unpack_from('d'*nsat, buff, 5))
+            if self.navic_work_around:
+                pr_[pr_ < 0 & (np.array(self.sys) == GNSS.IRN)] = np.nan
+            if head[1] == 'X':  # [RX]
+                self.PR_REF[:nsat] = pr_
+            else:
+                self.pr[:nsat, ch] = pr_
 
         elif head[0] == 'P' and head[1].lower() in self.ch_t.keys():
             # Carrier-Phase
             ch = self.ch_t[head[1].lower()]
             nsat = (len_-6)//8
-            self.cp[:nsat, ch] = st.unpack_from('d'*nsat, buff, 5)
+            cp_ = np.array(st.unpack_from('d'*nsat, buff, 5))
+            if self.navic_work_around:
+                cp_[cp_ < 0 & (np.array(self.sys) == GNSS.IRN)] = np.nan
+            self.cp[:nsat, ch] = cp_
 
         elif head[0] == 'c' and head[1] in self.ch_t.keys():
             # smoothing corrections
