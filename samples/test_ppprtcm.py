@@ -24,7 +24,7 @@ from cssrlib.cssrlib import sCType
 
 # Select test case
 #
-icase = 3
+icase = 4
 
 # Start epoch and number of epochs
 #
@@ -65,6 +65,19 @@ elif icase == 3:  # JPL GDGPS (w/o code bias) JAVAD DELTA-3S
     gnss = "GE"
     cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT
 
+elif icase == 4:  # JPL GDGPS (w/o code bias) JAVAD DELTA-3S
+
+    ep = [2025, 8, 21, 7, 0, 0]
+    # navfile = '../data/doy2025-233/233a_rnx.nav'
+    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    obsfile = '../data/doy2025-233/233h_rnx.obs'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+    # SSRA11JPL0 GPS+GAL orbit+clock corrs
+    file_rtcm = '../data/doy2025-233/jpl233h.rtcm3'
+    file_rtcm_log = '../data/doy2025-233/jpl233h.log'
+    gnss = "GE"
+    cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT
+
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
@@ -93,7 +106,7 @@ if icase in [1, 2]:
                      rSigRnx("EL1C"), rSigRnx("EL7Q"),
                      rSigRnx("ES1C"), rSigRnx("ES7Q")])
 
-elif icase == 3:
+elif icase in [3, 4]:
 
     if 'G' in gnss:
         sigs.extend([rSigRnx("GC1W"), rSigRnx("GC2W"),
@@ -149,6 +162,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 # Logging level
 #
@@ -274,6 +288,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[ppp.IT(nav.na)] \
             if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"

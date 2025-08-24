@@ -23,7 +23,7 @@ from cssrlib.cssr_pvs import decode_sinca_line
 
 # Select test case
 #
-dataset = 1
+dataset = 3
 
 # Start epoch and input files
 #
@@ -51,12 +51,30 @@ elif dataset == 2:  # SIS
     file_pvs = '../data/doy2025-046/046r_sbas.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
+elif dataset == 3:  # SIS
+
+    ep = [2025, 8, 21, 7, 0, 0]
+    # navfile = '../data/doy2025-233/233a_rnx.nav'
+    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
+    file_pvs = '../data/doy2025-233/233h_sbas.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
+
+elif dataset == 4:  # SIS
+
+    ep = [2025, 8, 21, 7, 0, 0]
+    # navfile = '../data/doy2025-233/alby233a_rnx.nav'
+    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    obsfile = '../data/doy2025-233/alby233h_rnx.obs'  # SEPT POLARX5
+    file_pvs = '../data/doy2025-233/233h_sbas.txt'
+    xyz_ref = [-2441715.2741, 4629128.6896, -3633362.5218]  # Albany, AUSTRALIA
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
 nep = 900*4
+
 
 prn_ref = 122  # satellite PRN for PRN122
 sbas_type = 1  # L1: 0, L5: 1
@@ -90,12 +108,10 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr_pvs()
-cs.monlevel = 0
-"""
+# cs = cssr_pvs()
+# cs.monlevel = 0
 cs = cssr_pvs('test_ppppvs_ssr.log')
 cs.monlevel = 2
-"""
 
 # Load ANTEX data for satellites and stations
 #
@@ -109,6 +125,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 # Logging level
 #
@@ -127,7 +144,7 @@ if rnx.decode_obsh(obsfile) >= 0:
     ppp = pppos(nav, rnx.pos, 'test_ppppvs.log')
     nav.elmin = np.deg2rad(10.0)
 
-    nav.q[0:3] = 0.0 # use zero process noise on position
+    # nav.q[0:3] = 0.0  # use zero process noise on position
 
     # Get equipment information
     #
@@ -247,6 +264,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[ppp.IT(nav.na)] \
             if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"

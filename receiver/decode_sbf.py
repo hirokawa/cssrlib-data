@@ -505,7 +505,7 @@ class sbf(rcvDec):
             if (sys == uGNSS.GPS and self.flg_gpslnav) or \
                (sys == uGNSS.QZS and self.flg_qzslnav):
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GPSRawCA/QZSRawCA " +
                               "{:6d}\t{:2d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, src))
@@ -537,7 +537,7 @@ class sbf(rcvDec):
             if (sys == uGNSS.GPS and self.flg_gpscnav) or \
                (sys == uGNSS.QZS and self.flg_qzscnav):
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GPSRawL2C/L5, QZSRawL2C/L5 " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
@@ -570,7 +570,7 @@ class sbf(rcvDec):
             if self.flg_sbas:
                 itype = src-24  # 0:L1, 1:L5
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GEORawL1/5 " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
@@ -609,7 +609,7 @@ class sbf(rcvDec):
                     return -1
 
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GALRawFNAV " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt,
@@ -647,7 +647,7 @@ class sbf(rcvDec):
                     return -1
 
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GALRawINAV " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt,
@@ -694,7 +694,7 @@ class sbf(rcvDec):
                     return -1
 
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GALRawCNAV " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
@@ -718,7 +718,7 @@ class sbf(rcvDec):
             freq -= 8
             if self.flg_gloca:
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GLORawCA " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
@@ -750,7 +750,7 @@ class sbf(rcvDec):
             k += 5
             if self.flg_bdsd12 and src == 28:  # only D1 is supported
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in BDSRaw " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
@@ -781,7 +781,7 @@ class sbf(rcvDec):
             parity, rscnt, src, res, ch = st.unpack_from('<BBBBB', buff, k)
             k += 5
             if parity == 0:
-                if self.monlevel > 0:
+                if self.monlevel > 2:
                     print("crc error in QZSRawL6 " +
                           "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                           format(int(self.tow), prn, parity, rscnt, src))
@@ -803,7 +803,7 @@ class sbf(rcvDec):
             k += 5
             if self.flg_irnnav:
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in NAVICRaw " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
@@ -866,7 +866,7 @@ class sbf(rcvDec):
             k += 5
             if self.flg_bdsb2a:
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in BDSRawB2a " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, cnt, src))
@@ -891,7 +891,7 @@ class sbf(rcvDec):
             if (sys == uGNSS.GPS and self.flg_gpscnav2) or \
                (sys == uGNSS.QZS and self.flg_qzscnav2):
                 if crcsf2 != 1 or crcsf3 != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in GPSRawL1C, QZSRawL1C " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn,
@@ -925,7 +925,7 @@ class sbf(rcvDec):
             k += 5
             if sys == uGNSS.QZS and (self.flg_qzsl1s or self.flg_qzsl5s):
                 if crc != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in QZSRawL1S, QZSRawL5S " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crc, cnt, src))
@@ -956,7 +956,7 @@ class sbf(rcvDec):
                 flg_bdsppp = True if prn >= 59 else False
 
                 if crcpass != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in BDSRawB2b " +
                               "{:6d}\t{:2d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crcpass, src))
@@ -998,7 +998,7 @@ class sbf(rcvDec):
             k += 5
             if self.flg_irnnav:
                 if crc_sf2 != 1 or crc_sf3 != 1:
-                    if self.monlevel > 0:
+                    if self.monlevel > 2:
                         print("crc error in NAVICRawL1 " +
                               "{:6d}\t{:2d}\t{:1d}\t{:1d}\t{:2d}".
                               format(int(self.tow), prn, crc_sf2, crc_sf3,

@@ -57,7 +57,8 @@ else:  # from receiver log
 
     elif dataset == 2:
 
-        ep = [2025, 2, 15, 17, 0, 0]
+        # ep = [2025, 2, 15, 17, 0, 0]
+        ep = [2025, 8, 21, 7, 0, 0]
         xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
         time = epoch2time(ep)
@@ -70,6 +71,9 @@ else:  # from receiver log
         navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
         obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
         file_l6 = bdir+'{:03d}{}_qzsl6.txt'.format(doy, let)
+
+        # obsfile = bdir+'ux2233h_rnx.obs'
+        navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
 
     prn_ref = 199  # QZSS PRN
     l6_ch = 0  # 0:L6D, 1:L6E
@@ -123,6 +127,7 @@ t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 if rnx.decode_obsh(obsfile) >= 0:
 
@@ -239,6 +244,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"

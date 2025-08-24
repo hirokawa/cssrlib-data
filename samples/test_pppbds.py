@@ -22,7 +22,7 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
-dataset = 2
+dataset = 3
 
 # Start epoch and number of epochs
 #
@@ -46,6 +46,14 @@ elif dataset == 2:
     navfile = '../data/doy2025-046/046r_rnx.nav'
     obsfile = '../data/doy2025-046/046r_rnx.obs'  # SEPT MOSAIC-X5
     file_bds = '../data/doy2025-046/046r_bdsb2b.txt'
+
+elif dataset == 3:
+    ep = [2025, 8, 21, 7, 0, 0]
+    # navfile = '../data/doy2025-233/233a_rnx.nav'
+    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
+    file_bds = '../data/doy2025-233/233h_bdsb2b.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
 
 time = epoch2time(ep)
 year = ep[0]
@@ -113,6 +121,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 # Logging level
 #
@@ -224,6 +233,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[ppp.IT(nav.na)] \
             if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"

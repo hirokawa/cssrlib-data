@@ -24,7 +24,7 @@ from cssrlib.rinex import rnxdec
 # Select test case
 #
 l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
-dataset = 2
+dataset = 3
 
 # Start epoch and number of epochs
 #
@@ -51,6 +51,13 @@ elif dataset == 2:
         file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
     elif l6_mode == 1:
         file_l6 = '../data/doy2025-046/2025046R.l6'
+elif dataset == 3:
+    ep = [2025, 8, 21, 7, 0, 0]
+    # navfile = '../data/doy2025-233/233a_rnx.nav'
+    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
+    file_l6 = '../data/doy2025-233/233h_qzsl6.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
 
 time = epoch2time(ep)
 year = ep[0]
@@ -71,12 +78,15 @@ else:
 prn_ref = 199  # QZSS PRN
 l6_ch = 1  # 0:L6D, 1:L6E
 
+prn_ref_ext = 200  # QZSS PRN for iono-correction
+l6_ch_ext = 0  # L6D
+
 pos_ref = ecef2pos(xyz_ref)
 
 # Define signals to be processed
 #
-gnss = "GE"
-# gnss = "GEJR"
+# gnss = "GE"
+gnss = "GEJRC"
 sigs = []
 if 'G' in gnss:
     sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
@@ -96,6 +106,11 @@ if 'R' in gnss:
                  rSigRnx("RL1C"), rSigRnx("RL2C"),
                  rSigRnx("RS1C"), rSigRnx("RS2C")])
 
+if 'C' in gnss:
+    sigs.extend([rSigRnx("CC2I"), rSigRnx("CC5P"),
+                 rSigRnx("CL2I"), rSigRnx("CL5P"),
+                 rSigRnx("CS2I"), rSigRnx("CS5P")])
+
 rnx = rnxdec()
 rnx.setSignals(sigs)
 
@@ -112,11 +127,15 @@ nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_mdc()
 cs.monlevel = 0
+
+cs_ = cssr_mdc()
+cs_.monlevel = 0
+
 """
 cs = cssr('../data/madoca_cssr.log')
 cs.monlevel = 2
 """
-cs.cssrmode = sc.QZS_MADOCA
+
 
 # Load ANTEX data for satellites and stations
 #
@@ -136,6 +155,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 # Logging level
 #
@@ -244,6 +264,13 @@ if rnx.decode_obsh(obsfile) >= 0:
                 if cs.fcnt == 5:  # end of sub-frame
                     cs.decode_cssr(bytes(cs.buff), 0)
 
+            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch_ext)
+                   & (v['prn'] == prn_ref_ext)]
+            if len(vi) > 0:
+                cs_.decode_l6msg(unhexlify(vi['nav'][0]), 0)
+                if cs_.fcnt == 3:  # end of sub-frame
+                    cs_.decode_cssr(bytes(cs_.buff), 0)
+
         # Call PPP module
         #
         if (cs.lc[0].cstat & 0xf) == 0xf:
@@ -259,6 +286,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[ppp.IT(nav.na)] \
             if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"

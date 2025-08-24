@@ -24,7 +24,7 @@ from cssrlib.rinex import rnxdec
 
 # Select test case
 #
-dataset = 2
+dataset = 3
 excl_sat = []
 # Start epoch and number of epochs
 #
@@ -50,16 +50,13 @@ elif dataset == 2:
     file_has = '../data/doy2025-046/046r_gale6.txt'
     excl_sat = [prn2sat(uGNSS.GAL, 29)]  # E29
 elif dataset == 3:
-    ep = [2025, 6, 27, 0, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    # ublox X20P
-    # navfile = '../data/doy2025-178/u178a_rnx.nav'
-    # obsfile = '../data/doy2025-178/u178a_rnx.obs'
-    # file_has = '../data/doy2025-178/u178a_gale6.txt'
-    # Javad DELTA-3S
-    navfile = '../data/doy2025-178/178a_rnx.nav'
-    obsfile = '../data/doy2025-178/178a_rnx.obs'
-    file_has = '../data/doy2025-178/178a_gale6.txt'
+    ep = [2025, 8, 21, 7, 0, 0]
+    # navfile = '../data/doy2025-233/233a_rnx.nav'
+    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
+    file_has = '../data/doy2025-233/233h_gale6.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
+
 
 # Convert epoch and user reference position
 #
@@ -150,6 +147,7 @@ enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 # Logging level
 #
@@ -310,6 +308,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[ppp.IT(nav.na)] \
             if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
