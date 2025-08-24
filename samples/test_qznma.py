@@ -35,8 +35,8 @@ msg_nav_t = {uNavId.GPS_LNAV: 'LNAV', uNavId.GPS_CNAV: 'CNAV',
 prn_ref = 199
 navmode = uNavId.GPS_LNAV  # 1:LNAV, 2:CNAV, 3:CNAV2
 year = 2025
-doy = 46
-session = 'r'
+doy = 233
+session = 'h'
 flg_gnss = True
 
 qz = qznma()

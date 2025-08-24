@@ -33,8 +33,8 @@ nma = om.osnma(mt_file)
 nma.flg_slowmac = False
 
 year = 2025
-doy = 46
-session = 'r'
+doy = 233
+session = 'h'
 
 file_galinav = f'../data/doy{year}-{doy:03d}/{doy:03d}{session}_galinav.txt'
 
