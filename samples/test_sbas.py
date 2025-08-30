@@ -20,7 +20,7 @@ from cssrlib.cssr_pvs import decode_sinca_line
 
 # Select test case
 #
-dataset = 3
+dataset = 4
 
 # Start epoch and number of epochs
 #
@@ -45,7 +45,7 @@ elif dataset == 2:  # QZSS, L5 DFMC
     sbas_type = 1  # L1: 0, L5: 1
     nf = 2
 
-elif dataset == 3:  # SouthPAN L5 DFMC
+elif dataset == 3:  # SouthPAN L5 DFMC (DAS)
     ep = [2025, 4, 20, 5, 0, 0]
     # navfile = '../data/doy2025-110/ALIC00AUS0110f.nav'
     navfile = '../data/doy2025-110/BRD400DLR_S_20251100000_01D_MN.rnx'
@@ -53,7 +53,18 @@ elif dataset == 3:  # SouthPAN L5 DFMC
     file_sbas = '../data/doy2025-110/DAS2025110f.txt'
     xyz_ref = [-4052052.9320,  4212835.9496, -2545104.3074]
     sbas_type = 1
-    nf = 1
+    nf = 2
+
+elif dataset == 4:  # SouthPAN L5 DFMC (SIS)
+
+    ep = [2025, 8, 21, 7, 0, 0]
+    navfile = '../data/doy2025-233/233h_rnx.nav'
+    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
+    file_sbas = '../data/doy2025-233/233h_sbas.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
+    prn_ref = [122]
+    sbas_type = 1  # L1: 0, L5: 1
+    nf = 2
 
 time = epoch2time(ep)
 year = ep[0]
@@ -301,8 +312,8 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.close()
 
 fig_type = 1
-ylim_h = 4.0
-ylim_v = 6.0
+ylim_h = 2.0
+ylim_v = 3.0
 
 idx2 = np.where(smode == 2)[0]
 idx1 = np.where(smode == 1)[0]

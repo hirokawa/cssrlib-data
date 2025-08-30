@@ -102,21 +102,23 @@ for k in range(nep):
     nsat[k, 1:] = np.array([qz.nsat[d] for d in qz.nsat])
 
 if True:
+    fsz = 11
 
     tmax = 300
+    t = tow_-tow_[0]
 
     fig, ax = plt.subplots()
     # plt.plot(tow_-tow_[0], nsat[:, 0], label='tracked')
-    plt.plot(tow_-tow_[0], nsat[:, 1], label='GPS ' +
+    plt.plot(t, nsat[:, 1], '.-', label='GPS ' +
              msg_nav_t[qz.navmode[uGNSS.GPS]])
-    plt.plot(tow_-tow_[0], nsat[:, 2], label='GAL ' +
+    plt.plot(t, nsat[:, 2], '.-', label='GAL ' +
              msg_nav_t[qz.navmode[uGNSS.GAL]])
-    plt.plot(tow_-tow_[0], nsat[:, 3], label='QZS '+msg_nav_t[navmode])
+    plt.plot(t, nsat[:, 3], '.-', label='QZS '+msg_nav_t[navmode])
     plt.grid()
     plt.legend()
     plt.xlim([0, tmax])
     # ax.set_xticks(np.arange(0, 300, 30))
-    plt.ylabel('number of satellites')
-    plt.xlabel('time [s]')
+    plt.ylabel('number of satellites', fontsize=fsz)
+    plt.xlabel('time [s]', fontsize=fsz)
     plt.savefig('qznma-{0:d}-nsat-{1:d}.png'.format(doy, tmax))
     plt.show()

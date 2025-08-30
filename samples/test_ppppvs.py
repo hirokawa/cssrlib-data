@@ -23,7 +23,7 @@ from cssrlib.cssr_pvs import decode_sinca_line
 
 # Select test case
 #
-dataset = 3
+dataset = 4
 
 # Start epoch and input files
 #
@@ -54,8 +54,7 @@ elif dataset == 2:  # SIS
 elif dataset == 3:  # SIS
 
     ep = [2025, 8, 21, 7, 0, 0]
-    # navfile = '../data/doy2025-233/233a_rnx.nav'
-    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    navfile = '../data/doy2025-233/233h_rnx.nav'
     obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
     file_pvs = '../data/doy2025-233/233h_sbas.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
@@ -63,8 +62,7 @@ elif dataset == 3:  # SIS
 elif dataset == 4:  # SIS
 
     ep = [2025, 8, 21, 7, 0, 0]
-    # navfile = '../data/doy2025-233/alby233a_rnx.nav'
-    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    navfile = '../data/doy2025-233/alby233h_rnx.nav'
     obsfile = '../data/doy2025-233/alby233h_rnx.obs'  # SEPT POLARX5
     file_pvs = '../data/doy2025-233/233h_sbas.txt'
     xyz_ref = [-2441715.2741, 4629128.6896, -3633362.5218]  # Albany, AUSTRALIA

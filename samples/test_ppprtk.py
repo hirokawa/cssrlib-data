@@ -72,8 +72,8 @@ else:  # from receiver log
         obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
         file_l6 = bdir+'{:03d}{}_qzsl6.txt'.format(doy, let)
 
-        # obsfile = bdir+'ux2233h_rnx.obs'
-        navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+        # obsfile = bdir+'ux2233h_rnx.obs' # u-blox X20P
+        # navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
 
     prn_ref = 199  # QZSS PRN
     l6_ch = 0  # 0:L6D, 1:L6E

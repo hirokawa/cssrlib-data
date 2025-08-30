@@ -24,7 +24,7 @@ from cssrlib.cssrlib import sCType
 
 # Select test case
 #
-icase = 4
+icase = 3
 
 # Start epoch and number of epochs
 #
@@ -54,22 +54,8 @@ elif icase == 2:  # JPL GDGPS  Mosaic-X5
 
 elif icase == 3:  # JPL GDGPS (w/o code bias) JAVAD DELTA-3S
 
-    ep = [2025, 6, 27, 0, 0, 0]
-    navfile = '../data/doy2025-178/178a_rnx.nav'
-    # navfile = '../data/doy2025-178/BRD400DLR_S_20251780000_01D_MN.rnx'
-    obsfile = '../data/doy2025-178/178a_rnx.obs'
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    # SSRA11JPL0 GPS+GAL orbit+clock corrs
-    file_rtcm = '../data/doy2025-178/JPL11178a.rtcm3'
-    file_rtcm_log = '../data/doy2025-178/JPL32T178a.log'
-    gnss = "GE"
-    cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT
-
-elif icase == 4:  # JPL GDGPS (w/o code bias) JAVAD DELTA-3S
-
     ep = [2025, 8, 21, 7, 0, 0]
-    # navfile = '../data/doy2025-233/233a_rnx.nav'
-    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    navfile = '../data/doy2025-233/233h_rnx.nav'
     obsfile = '../data/doy2025-233/233h_rnx.obs'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
     # SSRA11JPL0 GPS+GAL orbit+clock corrs
@@ -83,7 +69,6 @@ year = ep[0]
 doy = int(time2doy(time))
 
 nep = 900*4
-# nep = 300
 
 
 # Set user reference position

@@ -51,9 +51,12 @@ elif dataset == 2:
     excl_sat = [prn2sat(uGNSS.GAL, 29)]  # E29
 elif dataset == 3:
     ep = [2025, 8, 21, 7, 0, 0]
-    # navfile = '../data/doy2025-233/233a_rnx.nav'
-    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    navfile = '../data/doy2025-233/233h_rnx.nav'
+    # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
     obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
+    # obsfile = '../data/doy2025-233/sept233h_rnx.obs'  # SEPT POLARX5
+    # obsfile = '../data/doy2025-233/ux2233h_rnx.obs'  # u-blox X20P
+    # obsfile = '../data/doy2025-233/jav3233h_rnx.obs'  # javad DELTA-3S
     file_has = '../data/doy2025-233/233h_gale6.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
 
@@ -123,6 +126,7 @@ nav = rnx.decode_nav(navfile, nav)
 
 cs = cssr_has()
 cs.monlevel = 0
+
 """
 cs = cssr_has('has.log')
 cs.monlevel = 2

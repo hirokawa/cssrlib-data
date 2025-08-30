@@ -79,19 +79,19 @@ for i, t in enumerate(tow[0:nep]):
 
 
 if True:
-
+    fsz = 11
     tmax = 300
 
     fig, ax = plt.subplots()
-    plt.plot(tow-tow[0], nsat[:, 0], label='tracked')
-    plt.plot(tow-tow[0], nsat[:, 1], label='connected')
-    plt.plot(tow-tow[0], nsat[:, 2], label='authenticated')
+    plt.plot(tow-tow[0], nsat[:, 0], '.-', label='tracked')
+    plt.plot(tow-tow[0], nsat[:, 1], '.-', label='connected')
+    plt.plot(tow-tow[0], nsat[:, 2], '.-', label='authenticated')
     plt.grid()
     plt.legend()
     plt.xlim([0, tmax])
     ax.set_xticks(np.arange(0, 300, 30))
-    plt.ylabel('number of satellites')
-    plt.xlabel('time [s]')
+    plt.ylabel('number of satellites', fontsize=fsz)
+    plt.xlabel('time [s]', fontsize=fsz)
     plt.savefig('osnma-{0:d}-nsat-{1:d}.png'.format(doy, tmax))
     plt.show()
 
@@ -108,7 +108,7 @@ if True:
     plt.legend()
     plt.ylim([0, 6])
     plt.xlim([0, tmax])
-    plt.ylabel('status')
-    plt.xlabel('time [s]')
+    plt.ylabel('status', fontsize=fsz)
+    plt.xlabel('time [s]', fontsize=fsz)
     plt.savefig('osnma-{0:d}-status.png'.format(doy))
     plt.show()

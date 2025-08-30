@@ -53,8 +53,8 @@ elif dataset == 2:
         file_l6 = '../data/doy2025-046/2025046R.l6'
 elif dataset == 3:
     ep = [2025, 8, 21, 7, 0, 0]
-    # navfile = '../data/doy2025-233/233a_rnx.nav'
-    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    navfile = '../data/doy2025-233/233h_rnx.nav'
+    # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
     obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
     file_l6 = '../data/doy2025-233/233h_qzsl6.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
@@ -132,10 +132,9 @@ cs_ = cssr_mdc()
 cs_.monlevel = 0
 
 """
-cs = cssr('../data/madoca_cssr.log')
+cs = cssr_mdc('../data/madoca_cssr.log')
 cs.monlevel = 2
 """
-
 
 # Load ANTEX data for satellites and stations
 #

@@ -49,8 +49,8 @@ elif dataset == 2:
 
 elif dataset == 3:
     ep = [2025, 8, 21, 7, 0, 0]
-    # navfile = '../data/doy2025-233/233a_rnx.nav'
-    navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+    navfile = '../data/doy2025-233/233h_rnx.nav'
+    # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
     obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
     file_bds = '../data/doy2025-233/233h_bdsb2b.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura

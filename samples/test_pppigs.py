@@ -20,7 +20,7 @@ from cssrlib.rinex import rnxdec
 
 # Start epoch and number of epochs
 #
-dataset = 3
+dataset = 4
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -34,6 +34,9 @@ elif dataset == 2:  # SETP223Z.23O
 elif dataset == 3:  # 046r_rnx.obs
     ep = [2025, 2, 15, 17, 0, 0]
     xyz_ref = [-3962108.6819, 3381309.5707, 3668678.6750]
+elif dataset == 4:  # 046r_rnx.obs
+    ep = [2025, 8, 21, 7, 0, 0]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
 else:
     print("ERROR: no RINEX data set selected!")
     exit(1)
@@ -167,8 +170,8 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_pppigs.log')
-    nav.ephopt  = 4  # IGS
-    nav.armode  = 3  # 1: continuous, 3: fix-and-hold
+    nav.ephopt = 4  # IGS
+    nav.armode = 3  # 1: continuous, 3: fix-and-hold
     nav.parmode = 1  # 1: normal, 2: partial ambiguity resolution
     nav.thresar = 2.0
 
