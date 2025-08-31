@@ -57,7 +57,6 @@ else:  # from receiver log
 
     elif dataset == 2:
 
-        # ep = [2025, 2, 15, 17, 0, 0]
         ep = [2025, 8, 21, 7, 0, 0]
         xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
@@ -73,9 +72,11 @@ else:  # from receiver log
         file_l6 = bdir+'{:03d}{}_qzsl6.txt'.format(doy, let)
 
         # obsfile = bdir+'ux2233h_rnx.obs' # u-blox X20P
-        # navfile = '../data/doy2025-233/BRD400DLR_S_20252330000_01D_MN.rnx'
+        # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
 
-    prn_ref = 199  # QZSS PRN
+    # from Tab 4.1.1-1 of IS-QZSS-L6
+    prn_p1 = 199  # QZSS PRN pattern 1 (195, 197, 199)
+    prn_p2 = 194  # QZSS PRN pattern 2 (194, 196)
     l6_ch = 0  # 0:L6D, 1:L6E
 
 time = epoch2time(ep)
@@ -93,6 +94,11 @@ cs = cssr()
 cs.monlevel = 1
 cs.week = time2gpst(time)[0]
 cs.read_griddef(griddef)
+
+cs_ = cssr()
+cs_.monlevel = 1
+cs_.week = cs.week
+cs_.read_griddef(griddef)
 
 # Define signals to be processed
 #
@@ -221,12 +227,17 @@ if rnx.decode_obsh(obsfile) >= 0:
                 cs.week = week
                 cs.decode_cssr(cs.buff, 0)
         else:
-            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
-                   & (v['prn'] == prn_ref)]
-            if len(vi) > 0:
-                cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
+            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)]
+            vi_p1 = vi[vi['prn'] == prn_p1]
+            vi_p2 = vi[vi['prn'] == prn_p2]
+            if len(vi_p1) > 0:
+                cs.decode_l6msg(unhexlify(vi_p1['nav'][0]), 0)
                 if cs.fcnt == 5:  # end of sub-frame
                     cs.decode_cssr(bytes(cs.buff), 0)
+            if len(vi_p2) > 0:
+                cs_.decode_l6msg(unhexlify(vi_p2['nav'][0]), 0)
+                if cs_.fcnt == 5:  # end of sub-frame
+                    cs_.decode_cssr(bytes(cs_.buff), 0)
 
         if ne == 0:
             nav.t = deepcopy(obs.t)

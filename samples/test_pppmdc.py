@@ -78,8 +78,11 @@ else:
 prn_ref = 199  # QZSS PRN
 l6_ch = 1  # 0:L6D, 1:L6E
 
-prn_ref_ext = 200  # QZSS PRN for iono-correction
-l6_ch_ext = 0  # L6D
+prn_ref_ext = -1
+# prn_ref_ext = 200  # QZSS PRN for iono-correction
+l6_ch_ext = 0  # 0:L6D,1:L6E
+
+iono_opt = 2 if prn_ref_ext > 0 else 1
 
 pos_ref = ecef2pos(xyz_ref)
 
@@ -128,12 +131,17 @@ nav = rnx.decode_nav(navfile, nav)
 cs = cssr_mdc()
 cs.monlevel = 0
 
-cs_ = cssr_mdc()
-cs_.monlevel = 0
+if prn_ref_ext > 0:
+    cs_ = cssr_mdc()
+    cs_.monlevel = 0
+else:
+    cs_ = None
 
 """
 cs = cssr_mdc('../data/madoca_cssr.log')
 cs.monlevel = 2
+cs_ = cssr_mdc('../data/madoca_cssr_ex.log')
+cs_.monlevel = 2
 """
 
 # Load ANTEX data for satellites and stations
@@ -170,7 +178,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    ppp = pppos(nav, rnx.pos, 'test_pppmdc.log')
+    ppp = pppos(nav, rnx.pos, 'test_pppmdc.log', iono_opt=iono_opt)
     # nav.armode = 3
     # nav.thresar = 2.0
 
@@ -255,20 +263,23 @@ if rnx.decode_obsh(obsfile) >= 0:
             if cs.fcnt == 5:  # end of sub-frame
                 cs.week = week
                 cs.decode_cssr(cs.buff, 0)
-        else:
-            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
-                   & (v['prn'] == prn_ref)]
+        else:  # multi-channel mode
+            vi_ = v[v['tow'] == tow]
+
+            vi = vi_[(vi_['type'] == l6_ch) & (vi_['prn'] == prn_ref)]
             if len(vi) > 0:
                 cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
                 if cs.fcnt == 5:  # end of sub-frame
                     cs.decode_cssr(bytes(cs.buff), 0)
 
-            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch_ext)
-                   & (v['prn'] == prn_ref_ext)]
-            if len(vi) > 0:
-                cs_.decode_l6msg(unhexlify(vi['nav'][0]), 0)
-                if cs_.fcnt == 3:  # end of sub-frame
-                    cs_.decode_cssr(bytes(cs_.buff), 0)
+            # load regional STEC info (experimental)
+            if prn_ref_ext > 0:
+                vi = vi_[(vi_['type'] == l6_ch_ext) &
+                         (vi_['prn'] == prn_ref_ext)]
+                if len(vi) > 0:
+                    cs_.decode_l6msg(unhexlify(vi['nav'][0]), 0)
+                    if cs_.sid == 1:  # end of sub-frame
+                        cs.decode_cssr(bytes(cs_.buff_p), 0)
 
         # Call PPP module
         #
@@ -378,5 +389,6 @@ elif fig_type == 2:
 plotFileFormat = 'eps'
 plotFileName = '.'.join(('test_pppmdc', plotFileFormat))
 
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
+plt.savefig(plotFileName, format=plotFileFormat,
+            bbox_inches='tight', dpi=300)
 # plt.show()
