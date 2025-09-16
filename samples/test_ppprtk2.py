@@ -3,27 +3,32 @@
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import exit as sys_exit
 
 from cssrlib.cssrlib import cssr
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
-from cssrlib.gnss import rSigRnx, time2str, sys2str
+from cssrlib.gnss import rSigRnx, time2str, sys2str, epoch2time
 from cssrlib.ppprtk import ppprtkpos
 from cssrlib.peph import atxdec, searchpcv
 
 ep = [2021, 9, 22, 6, 30, 0]
 time = gn.epoch2time(ep)
 
-atxfile = '../data/igs14.atx'
-navfile = '../data/SEPT2650.21P'
-obsfile = '../data/SEPT265G.21O'
-l6file = '../data/2021265G.l6'
+atxfile = '../data/antex/'
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile += 'igs20.atx'
+else:
+    atxfile += 'igs14.atx'
+
+navfile = '../data/doy2021-265/SEPT2650.21P'
+obsfile = '../data/doy2021-265/SEPT265G.21O'
+l6file = '../data/doy2021-265/2021265G.l6'
 griddef = '../data/clas_grid.def'
 
 xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)
 
-# Intial position guess
+# Initial position guess
 #
 rr0 = xyz_ref  # from pntpos
 
@@ -93,15 +98,28 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
+    # Set satellite PCO/PCV information
+    #
+    nav.sat_ant = atx.pcvs
+
+    # Set receiver PCO/PCV information, check antenna name and exit if unknown
+    #
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
+    #       receiver antenna corrections!
+    #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
+        sys_exit(1)
+    else:
+        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+        if nav.rcv_ant is None:
+            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                           .format(rnx.ant))
+            sys_exit(1)
 
-    # Set PCO/PCV information
-    #
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
+        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
+        nav.fout.write("\n")
 
     # Print available signals
     #
@@ -125,9 +143,9 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     fc = open(l6file, 'rb')
     if not fc:
-        nav.fout.write("ERROR: cannot open L6 messsage file {}!"
+        nav.fout.write("ERROR: cannot open L6 message file {}!"
                        .format(l6file))
-        sys.exit(-1)
+        sys_exit(-1)
 
     # t_obs 06:29:30
     fc.seek(250*(29*60+30))  # seek to 06:29:30

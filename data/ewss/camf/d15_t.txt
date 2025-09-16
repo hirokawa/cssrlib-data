@@ -1,0 +1,19 @@
+01100	240 < daily snow depth ≤ 260
+01101	260 < daily snow depth ≤ 280
+01110	280 < daily snow depth ≤ 300
+01111	300 < daily snow depth ≤ 320
+10000	320 < daily snow depth ≤ 340
+10001	340 < daily snow depth ≤ 360
+10010	360 < daily snow depth ≤ 380
+10011	380 < daily snow depth ≤ 400
+10100	400 < daily snow depth ≤ 420
+10101	420 < daily snow depth ≤ 440
+10110	440 < daily snow depth ≤ 460
+10111	460 < daily snow depth ≤ 480
+11000	480 < daily snow depth ≤ 500
+11001	500 < daily snow depth ≤ 520
+11010	520 < daily snow depth ≤ 540
+11011	540 < daily snow depth ≤ 560
+11100	560 < daily snow depth ≤ 580
+11101	580 < daily snow depth ≤ 600
+11110	daily snow depth > 600

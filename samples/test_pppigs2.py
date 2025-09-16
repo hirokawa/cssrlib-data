@@ -5,7 +5,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
-from os.path import exists
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -33,27 +33,20 @@ nep = 360
 
 pos_ref = ecef2pos(xyz_ref)
 
-navfile = '../data/SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
-obsfile = '../data/SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
+bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+navfile = bdir+'SEPT{:03d}0.{:02d}P'.format(doy, year % 2000)
+obsfile = bdir+'SEPT{:03d}G.{:02d}O'.format(doy, year % 2000)
 
-# ac = 'COD0OPSFIN'
 ac = 'COD0MGXFIN'
 
-orbfile = '../data/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
+orbfile = '../data/igs/{}_{:4d}{:03d}0000_01D_05M_ORB.SP3'\
     .format(ac, year, doy)
 
-clkfile = '../data/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
+clkfile = '../data/igs/{}_{:4d}{:03d}0000_01D_30S_CLK.CLK'\
     .format(ac, year, doy)
 
-bsxfile = '../data/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
+bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
     .format(ac, year, doy)
-
-if not exists(clkfile):
-    orbfile = orbfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-    clkfile = clkfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-    bsxfile = bsxfile.replace('COD0OPSFIN', 'COD0OPSRAP')
-if not exists(orbfile):
-    orbfile = orbfile.replace('_05M_', '_15M_')
 
 # Define signals to be processed
 #
@@ -99,17 +92,18 @@ bsx.parse(bsxfile)
 
 # Load ANTEX data for satellites and stations
 #
+atxfile = '../data/antex/'
 if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile = '../data/I20.ATX' if 'COD0MGXFIN' in ac else '../data/igs20.atx'
+    atxfile += 'I20.ATX' if 'COD0MGXFIN' in ac else 'igs20.atx'
 elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
-    atxfile = '../data/M20.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M20.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 else:
-    atxfile = '../data/M14.ATX' if 'COD0MGXFIN' in ac else '../data/igs14.atx'
+    atxfile += 'M14.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 
 atx = atxdec()
 atx.readpcv(atxfile)
 
-# Intialize data structures for results
+# Initialize data structures for results
 #
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
@@ -144,16 +138,28 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-
-    # Set PCO/PCV information
+    # Set satellite PCO/PCV information
     #
     nav.sat_ant = atx.pcvs
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+
+    # Set receiver PCO/PCV information, check antenna name and exit if unknown
+    #
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
+    #       receiver antenna corrections!
+    #
+    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
+        sys_exit(1)
+    else:
+        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+        if nav.rcv_ant is None:
+            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                           .format(rnx.ant))
+            sys_exit(1)
+
     if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
+        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
+        nav.fout.write("\n")
 
     # Print available signals
     #
@@ -256,9 +262,9 @@ if fig_type == 1:
 
     for k in range(3):
         plt.subplot(4, 1, k+1)
-        plt.plot_date(t[idx0], enu[idx0, k], 'r.')
-        plt.plot_date(t[idx5], enu[idx5, k], 'y.')
-        plt.plot_date(t[idx4], enu[idx4, k], 'g.')
+        plt.plot(t[idx0], enu[idx0, k], 'r.')
+        plt.plot(t[idx5], enu[idx5, k], 'y.')
+        plt.plot(t[idx4], enu[idx4, k], 'g.')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
@@ -266,9 +272,9 @@ if fig_type == 1:
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
 
     plt.subplot(4, 1, 4)
-    plt.plot_date(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot_date(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot_date(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
+    plt.plot(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
+    plt.plot(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
+    plt.plot(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
     plt.ylabel('ZTD [cm]')
     plt.grid()
     plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))

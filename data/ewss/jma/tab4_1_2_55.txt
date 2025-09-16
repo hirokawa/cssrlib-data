@@ -1,0 +1,34 @@
+1	Cabinet Secretariat
+2	Cabinet Office (Disaster Prevention)
+3	Cabinet Office (Space Strategy)
+4	National Police Agency
+5	Financial Services Agency
+6	Consumer Affairs Agency
+7	Ministry of Internal Affairs and Communications
+8	Fire and Disaster Management Agency
+9	Ministry of Justice
+10	Public Security Intelligence Agency
+11	Ministry of Foreign Affairs
+12	Ministry of Finance
+13	National Tax Agency
+14	Ministry of Education, Culture, Sports, Science and Technology
+15	Agency for Cultural Affairs
+16	Ministry of Health, Labour and Welfare
+17	Ministry of Agriculture, Forestry, and Fisheries
+18	Forestry Agency
+19	Fisheries Agency
+20	Ministry of Economy, Trade and Industry
+21	Agency for Natural Resources and Energy
+22	Small and Medium Enterprise Agency
+23	Ministry of Land, Infrastructure, Transport and Tourism (Disaster Prevention)
+24	Ministry of Land, Infrastructure, Transport, and Tourism (Crisis Management)
+25	Geospatial Information Authority of Japan
+26	Japan Tourism Agency
+27	Japan Coast Guard
+28	Ministry of the Environment
+29	Nuclear Regulation Authority
+30	Ministry of Defense
+51	Prefecture
+52	Municipality
+53	Public agency
+60	Foreign country

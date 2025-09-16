@@ -1,5 +1,5 @@
 """
- kinematic test for standalone positioning
+ kinematic test for stand-alone positioning
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,14 +15,21 @@ nep = 360
 
 E = xyz2enu(pos_ref)
 
-navfile = '../data/SEPT2650.21P'
-obsfile = '../data/SEPT265G.21O'
+navfile = '../data/doy2021-265/SEPT2650.21P'
+obsfile = '../data/doy2021-265/SEPT265G.21O'
 
 # Define signals to be processed
 #
-sigs = [rSigRnx("GC1C"), rSigRnx("EC1C"),
-        rSigRnx("GL1C"), rSigRnx("EL1C"),
-        rSigRnx("GS1C"), rSigRnx("ES1C")]
+gnss = "GE"
+sigs = []
+if 'G' in gnss:
+    sigs.extend([rSigRnx("GC1C"), rSigRnx("GL1C"), rSigRnx("GS1C")])
+if 'E' in gnss:
+    sigs.extend([rSigRnx("EC1C"), rSigRnx("EL1C"), rSigRnx("ES1C")])
+if 'C' in gnss:
+    sigs.extend([rSigRnx("CC2I"), rSigRnx("CL2I"), rSigRnx("CS2I")])
+if 'J' in gnss:
+    sigs.extend([rSigRnx("JC1C"), rSigRnx("JL1C"), rSigRnx("JS1C")])
 
 rnx = rnxdec()
 rnx.setSignals(sigs)

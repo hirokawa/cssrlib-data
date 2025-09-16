@@ -6,6 +6,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
 import numpy as np
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
@@ -19,30 +20,59 @@ from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 from cssrlib.cssr_pvs import decode_sinca_line
 
-icase = 1  # 1: SIS, 2: DAS
 
-# Start epoch and number of epochs
+# Select test case
 #
-if icase == 1:
+dataset = 4
+
+# Start epoch and input files
+#
+if dataset == 0:  # SIS
+
     ep = [2023, 11, 4, 2, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
-    navfile = '../data/doy308/BRD400DLR_S_20233080000_01D_MN.rnx'
-    obsfile = '../data/doy308/308c_rnx.obs'  # Mosaic-X5
-    file_pvs = '../data/doy308/308c_sbas.txt'
+    navfile = '../data/brdc/BRD400DLR_S_20233080000_01D_MN.rnx'
+    obsfile = '../data/doy2023-308/308c_rnx.obs'  # Mosaic-X5
+    file_pvs = '../data/doy2023-308/308c_sbas.txt'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-elif icase == 2:
-    ep = [2023, 12, 13, 12, 0, 0]
-    # navfile = '../data/doy308/308c_rnx.nav'
-    navfile = '../data/doy347/STR1347m.nav'
-    obsfile = '../data/doy347/STR1347m.obs'  # STR100, Septentrio PolaRX5
-    file_pvs = '../data/doy347/DAS2023347m.txt'
-    xyz_ref = [-4467103.3279, 2683039.4802, -3666948.5807]  # AUS22807.SNX
+
+elif dataset == 1:  # DAS
+
+    ep = [2025, 4, 20, 5, 0, 0]
+    navfile = '../data/doy2025-110/BRD400DLR_S_20251100000_01D_MN.rnx'
+    obsfile = '../data/doy2025-110/ALIC00AUS0110f.obs'
+    file_pvs = '../data/doy2025-110/DAS2025110f.txt'
+    xyz_ref = [-4052052.9320,  4212835.9496, -2545104.3074]
+
+elif dataset == 2:  # SIS
+
+    ep = [2025, 2, 15, 17, 0, 0]
+    navfile = '../data/doy2025-046/046r_rnx.nav'
+    obsfile = '../data/doy2025-046/046r_rnx.obs'  # SEPT MOSAIC-X5
+    file_pvs = '../data/doy2025-046/046r_sbas.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+
+elif dataset == 3:  # SIS
+
+    ep = [2025, 8, 21, 7, 0, 0]
+    navfile = '../data/doy2025-233/233h_rnx.nav'
+    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
+    file_pvs = '../data/doy2025-233/233h_sbas.txt'
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
+
+elif dataset == 4:  # SIS
+
+    ep = [2025, 8, 21, 7, 0, 0]
+    navfile = '../data/doy2025-233/alby233h_rnx.nav'
+    obsfile = '../data/doy2025-233/alby233h_rnx.obs'  # SEPT POLARX5
+    file_pvs = '../data/doy2025-233/233h_sbas.txt'
+    xyz_ref = [-2441715.2741, 4629128.6896, -3633362.5218]  # Albany, AUSTRALIA
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
 
 nep = 900*4
+
 
 prn_ref = 122  # satellite PRN for PRN122
 sbas_type = 1  # L1: 0, L5: 1
@@ -76,25 +106,24 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = cssr_pvs()
-cs.monlevel = 0
-"""
+# cs = cssr_pvs()
+# cs.monlevel = 0
 cs = cssr_pvs('test_ppppvs_ssr.log')
 cs.monlevel = 2
-"""
 
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()
-atx.readpcv('../data/igs20.atx')
+atx.readpcv('../data/antex/igs20.atx')
 
-# Intialize data structures for results
+# Initialize data structures for results
 #
 t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 ztd = np.zeros((nep, 1))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 # Logging level
 #
@@ -111,7 +140,9 @@ if rnx.decode_obsh(obsfile) >= 0:
     # Initialize position
     #
     ppp = pppos(nav, rnx.pos, 'test_ppppvs.log')
-    nav.elmin = np.deg2rad(5.0)
+    nav.elmin = np.deg2rad(10.0)
+
+    # nav.q[0:3] = 0.0  # use zero process noise on position
 
     # Get equipment information
     #
@@ -123,16 +154,28 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-
-    # Set PCO/PCV information
+    # Set satellite PCO/PCV information
     #
     nav.sat_ant = atx.pcvs
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+
+    # Set receiver PCO/PCV information, check antenna name and exit if unknown
+    #
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
+    #       receiver antenna corrections!
+    #
+    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
+        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
+        sys_exit(1)
+    else:
+        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+        if nav.rcv_ant is None:
+            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                           .format(rnx.ant))
+            sys_exit(1)
+
     if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
+        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
+        nav.fout.write("\n")
 
     # Print available signals
     #
@@ -157,12 +200,15 @@ if rnx.decode_obsh(obsfile) >= 0:
     while time > obs.t and obs.t.time != 0:
         obs = rnx.decode_obs()
 
-    if icase == 1:  # SIS
+    if 'sbas' in file_pvs:  # SIS
         dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-                 ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
+                 ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
         v = np.genfromtxt(file_pvs, dtype=dtype)
-    else:  # DAS
+    elif 'DAS' in file_pvs:  # DAS
         fc = open(file_pvs, 'rt')
+    else:
+        print("ERROR: unknown file format for correction data")
+        sys_exit(1)
 
     # Loop over number of epoch from file start
     #
@@ -181,9 +227,14 @@ if rnx.decode_obsh(obsfile) >= 0:
             t0.time = t0.time//30*30
             nav.time_p = t0
 
-        if icase == 1:  # SIS
-            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
-                   & (v['type'] == sbas_type)]
+        if 'sbas' in file_pvs:  # SIS
+
+            vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+            if sbas_type == 0:  # L1
+                vi = vi[vi['type'] <= 30]
+            else:  # DFMC L5
+                vi = vi[vi['type'] > 30]
+
             if len(vi) > 0:
                 buff = unhexlify(vi['nav'][0])
                 cs.decode_cssr(buff, 0)
@@ -211,6 +262,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         ztd[ne] = nav.xa[ppp.IT(nav.na)] \
             if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
@@ -258,40 +310,56 @@ fig = plt.figure(figsize=[7, 9])
 fig.set_rasterized(True)
 
 fmt = '%H:%M'
+col_t = ['#d62728', '#1f77b4', '#2ca02c']  # tab:red, tab:blue, tab:green
 
 if fig_type == 1:
 
     lbl_t = ['East [m]', 'North [m]', 'Up [m]']
+    # nm = 4
+    nm = 3
 
     for k in range(3):
-        plt.subplot(4, 1, k+1)
-        plt.plot_date(t[idx0], enu[idx0, k], 'r.')
-        plt.plot_date(t[idx5], enu[idx5, k], 'y.')
-        plt.plot_date(t[idx4], enu[idx4, k], 'g.')
+        plt.subplot(nm, 1, k+1)
+        plt.plot(t[idx0], enu[idx0, k], color=col_t[0],
+                 marker='.', label=None if nm > 3 else 'none')
+        plt.plot(t[idx5], enu[idx5, k], color=col_t[1],
+                 marker='.', label=None if nm > 3 else 'float')
+        plt.plot(t[idx4], enu[idx4, k], color=col_t[2],
+                 marker='.', label=None if nm > 3 else 'fix')
 
         plt.ylabel(lbl_t[k])
         plt.grid()
         plt.ylim([-ylim, ylim])
         plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        if nm < 4:
+            plt.legend()
 
-    plt.subplot(4, 1, 4)
-    plt.plot_date(t[idx0], ztd[idx0]*1e2, 'r.', markersize=8, label='none')
-    plt.plot_date(t[idx5], ztd[idx5]*1e2, 'y.', markersize=8, label='float')
-    plt.plot_date(t[idx4], ztd[idx4]*1e2, 'g.', markersize=8, label='fix')
-    plt.ylabel('ZTD [cm]')
-    plt.grid()
-    plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+    if nm > 3:
+        plt.subplot(nm, 1, 4)
+        plt.plot(t[idx0], ztd[idx0]*1e2, color=col_t[0],
+                 marker='.', markersize=8, label='none')
+        plt.plot(t[idx5], ztd[idx5]*1e2, color=col_t[1],
+                 marker='.', markersize=8, label='float')
+        plt.plot(t[idx4], ztd[idx4]*1e2, color=col_t[2],
+                 marker='.', markersize=8, label='fix')
+        plt.ylabel('ZTD [cm]')
+        plt.grid()
+        plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
+        plt.legend()
 
     plt.xlabel('Time [HH:MM]')
-    plt.legend()
+
 
 elif fig_type == 2:
 
     ax = fig.add_subplot(111)
 
-    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='none')
-    plt.plot(enu[idx5, 0], enu[idx5, 1], 'y.', label='float')
-    plt.plot(enu[idx4, 0], enu[idx4, 1], 'g.', label='fix')
+    plt.plot(enu[idx0, 0], enu[idx0, 1],
+             color=col_t[0], marker='.', label='none')
+    plt.plot(enu[idx5, 0], enu[idx5, 1],
+             color=col_t[1], marker='.', label='float')
+    plt.plot(enu[idx4, 0], enu[idx4, 1],
+             color=col_t[2], marker='.', label='fix')
 
     plt.xlabel('Easting [m]')
     plt.ylabel('Northing [m]')
@@ -300,7 +368,7 @@ elif fig_type == 2:
     plt.legend()
     # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
 
-plotFileFormat = 'eps'
+plotFileFormat = 'png'
 plotFileName = '.'.join(('test_ppppvs', plotFileFormat))
 
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)

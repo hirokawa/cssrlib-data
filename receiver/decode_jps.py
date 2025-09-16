@@ -1,21 +1,28 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Javad Receiver GREIS messages decoder
 
-[1] GREIS: GNSS Receiver External Interface Specification for 4.3.00,
-     June, 2023
+[1] GREIS: GNSS Receiver External Interface Specification for 4.5.00,
+     October, 2024
 
 @author: Rui Hirokawa
 """
 
-import os
-import numpy as np
-import struct as st
-import bitstruct.c as bs
-from cssrlib.gnss import epoch2time, time2gpst, prn2sat, uGNSS, uTYP, rSigRnx
-from cssrlib.rawnav import rcvDec, rcvOpt
-from glob import glob
-from enum import IntEnum
+import argparse
 from binascii import hexlify
+import bitstruct.c as bs
+from enum import IntEnum
+from glob import glob
+import multiprocessing as mp
+import numpy as np
+import os
+from pathlib import Path
+import struct as st
+
+from cssrlib.gnss import epoch2time, time2gpst, prn2sat, uGNSS, uTYP, rSigRnx
+from cssrlib.gnss import Obs, rCST, gpst2time, uSIG, copy_buff
+from cssrlib.rawnav import rcvDec, rcvOpt
 
 
 def istxt(c):
@@ -60,9 +67,12 @@ class CODE(IntEnum):
     L7X = 29
     L6X = 33
     L8X = 39
+    L2I = 40
     L6I = 42
     L3X = 46
     L1I = 47
+    L5A = 49
+    L9A = 52
 
 
 # from Table 3-8 in [1]
@@ -92,6 +102,8 @@ class jps(rcvDec):
     nsat = 0
     nmax = 96
     nsigmax = 7
+    prn_ref = -1
+    sbs_ref = -1
 
     pr = []
     cp = []
@@ -102,22 +114,30 @@ class jps(rcvDec):
     data_L6D = bytearray(b'\x00'*(250))
     data_L6E = bytearray(b'\x00'*(250))
 
-    types = [[CODE.L1C, CODE.L1W, CODE.L2W, CODE.L2X, CODE.L5X, CODE.L1X],
-             [CODE.L1C, CODE.L1P, CODE.L2P, CODE.L2C, CODE.L3X,        0],
-             [CODE.L1C,        0,        0,        0, CODE.L5X,        0],
-             [CODE.L1X, CODE.L8X, CODE.L7X, CODE.L6X, CODE.L5X,        0],
-             [CODE.L1C, CODE.L1Z, CODE.L6X, CODE.L2X, CODE.L5X, CODE.L1X],
-             [CODE.L1I,        0, CODE.L7I, CODE.L6I, CODE.L5X, CODE.L1X],
-             [0,        0,        0,        0, CODE.L5X,        0]]
+    types = [[uSIG.L1C, uSIG.L1W, uSIG.L2W, uSIG.L2X, uSIG.L5X, uSIG.L1X],
+             [uSIG.L1C, uSIG.L1P, uSIG.L2P, uSIG.L2C, uSIG.L3X,        0],
+             [uSIG.L1C,        0,        0,        0, uSIG.L5X,        0],
+             [uSIG.L1X, uSIG.L8X, uSIG.L7X, uSIG.L6X, uSIG.L5X,        0],
+             [uSIG.L1C, uSIG.L1Z, uSIG.L6X, uSIG.L2X, uSIG.L5X, uSIG.L1X],
+             [uSIG.L2I, uSIG.L8X, uSIG.L7I, uSIG.L6I, uSIG.L5X, uSIG.L1X],
+             [uSIG.L9A,        0,        0,        0, uSIG.L5A, uSIG.L1X],
+             [0,        0,        0,        0,        0,        0],
+             [uSIG.L4X,        0,        0, uSIG.L6X, uSIG.L3X,        0]]
     freqs = [[1, 1, 2, 2, 3, 1], [1, 1, 2, 2, 3, 0], [1, 0, 0, 0, 3, 0],
-             [1, 6, 2, 4, 3, 0], [1, 1, 4, 2, 3, 1], [1, 0, 2, 3, 3, 1],
-             [0, 0, 0, 0, 3, 0]]
+             [1, 6, 2, 4, 3, 0], [1, 1, 4, 2, 3, 1], [1, 6, 2, 3, 3, 1],
+             [0, 0, 0, 0, 3, 1]]
+
+    sys_t = {
+        GNSS.GPS: uGNSS.GPS, GNSS.GLO: uGNSS.GLO, GNSS.GAL: uGNSS.GAL,
+        GNSS.BDS: uGNSS.BDS, GNSS.QZS: uGNSS.QZS, GNSS.SBS: uGNSS.SBS,
+        GNSS.IRN: uGNSS.IRN, GNSS.GLO_C: uGNSS.GLO,
+    }
 
     rec = []
     mid_decoded = []
 
-    def __init__(self, opt=None, prefix=''):
-        super().__init__()
+    def __init__(self, opt=None, prefix='', gnss_t='GECJ'):
+        super().__init__(opt, prefix, gnss_t)
 
         self.pr_ref = np.zeros(self.nmax)
         self.PR_REF = np.zeros(self.nmax)
@@ -130,67 +150,93 @@ class jps(rcvDec):
         self.CNO = np.zeros((self.nmax, self.nsigmax))
         self.CNOd = np.zeros((self.nmax, self.nsigmax))
 
+        self.nsat = 0
         self.qzl6_time_p = -1
         self.tod = -1
+        self.freqn = None
+        # QZS PRN broadcasting L1C/B
+        self.prn_l1cb = [196, 197, 200, 201]  # QZS 1R/5/6/7 since 2025/8/11
+        # self.prn_l1cb = [197, 200, 201]  # QZS 5/6/7
 
-        self.sig_tab = {
-            uGNSS.GPS: {
-                uTYP.C: [rSigRnx('GC1C'), rSigRnx('GC2W'), rSigRnx('GC2L'),
-                         rSigRnx('GC5Q')],
-                uTYP.L: [rSigRnx('GL1C'), rSigRnx('GL2W'), rSigRnx('GL2L'),
-                         rSigRnx('GL5Q')],
-                uTYP.D: [rSigRnx('GD1C'), rSigRnx('GD2W'), rSigRnx('GD2L'),
-                         rSigRnx('GD5Q')],
-                uTYP.S: [rSigRnx('GS1C'), rSigRnx('GS2W'), rSigRnx('GS2L'),
-                         rSigRnx('GS5Q')],
-            },
-            uGNSS.GLO: {
-                uTYP.C: [rSigRnx('RC1C'), rSigRnx('RC2C'), rSigRnx('RC2P'),
-                         rSigRnx('RC3Q')],
-                uTYP.L: [rSigRnx('RL1C'), rSigRnx('RL2C'), rSigRnx('RL2P'),
-                         rSigRnx('RL3Q')],
-                uTYP.D: [rSigRnx('RD1C'), rSigRnx('RD2C'), rSigRnx('RD2P'),
-                         rSigRnx('RD3Q')],
-                uTYP.S: [rSigRnx('RS1C'), rSigRnx('RS2C'), rSigRnx('RS2P'),
-                         rSigRnx('RS3Q')],
-            },
-            uGNSS.GAL: {
-                uTYP.C: [rSigRnx('EC1C'), rSigRnx('EC5Q'), rSigRnx('EC7Q'),
-                         rSigRnx('EC8Q'), rSigRnx('EC6C')],
-                uTYP.L: [rSigRnx('EL1C'), rSigRnx('EL5Q'), rSigRnx('EL7Q'),
-                         rSigRnx('EL8Q'), rSigRnx('EL6C')],
-                uTYP.D: [rSigRnx('ED1C'), rSigRnx('ED5Q'), rSigRnx('ED7Q'),
-                         rSigRnx('ED8Q'), rSigRnx('ED6C')],
-                uTYP.S: [rSigRnx('ES1C'), rSigRnx('ES5Q'), rSigRnx('GS7Q'),
-                         rSigRnx('ES8Q'), rSigRnx('ES6C')],
-            },
-            uGNSS.BDS: {
-                uTYP.C: [rSigRnx('CC1P'), rSigRnx('CC2I'), rSigRnx('CC5P'),
-                         rSigRnx('CC6I'), rSigRnx('CC7D'), rSigRnx('CC7I')],
-                uTYP.L: [rSigRnx('CL1P'), rSigRnx('CL2I'), rSigRnx('CL5P'),
-                         rSigRnx('CL6I'), rSigRnx('CL7D'), rSigRnx('CL7I')],
-                uTYP.D: [rSigRnx('CD1P'), rSigRnx('CD2I'), rSigRnx('CD5P'),
-                         rSigRnx('CD6I'), rSigRnx('CD7D'), rSigRnx('CD7I')],
-                uTYP.S: [rSigRnx('CS1P'), rSigRnx('CS2I'), rSigRnx('CS5P'),
-                         rSigRnx('CS6I'), rSigRnx('CS7D'), rSigRnx('CS7I')],
-            },
-            uGNSS.QZS: {
-                uTYP.C: [rSigRnx('JC1C'), rSigRnx('JC2L'), rSigRnx('JC5Q')],
-                uTYP.L: [rSigRnx('JL1C'), rSigRnx('JL2L'), rSigRnx('JL5Q')],
-                uTYP.D: [rSigRnx('JD1C'), rSigRnx('JD2L'), rSigRnx('JD5Q')],
-                uTYP.S: [rSigRnx('JS1C'), rSigRnx('JS2L'), rSigRnx('JS5Q')],
-            },
-            # uGNSS.SBS: {
-            #    uTYP.C: [rSigRnx('SC1C'), rSigRnx('SC5I')],
-            #    uTYP.L: [rSigRnx('SL1C'), rSigRnx('SL5I')],
-            #    uTYP.D: [rSigRnx('SD1C'), rSigRnx('SD5I')],
-            #    uTYP.S: [rSigRnx('SS1C'), rSigRnx('SS5I')],
-            # },
-            # uGNSS.IRN: {
-            #    uTYP.C: [rSigRnx('IC5A')], uTYP.L: [rSigRnx('IL5A')],
-            #    uTYP.D: [rSigRnx('ID5A')], uTYP.S: [rSigRnx('IS5A')],
-            # },
-        }
+        self.navic_work_around = True  # v4.6.0 has incorrect NavIC obs.
+
+        self.sig_tab = {}
+
+        if 'G' in gnss_t:
+            self.sig_tab[uGNSS.GPS] = {
+                uTYP.C: [rSigRnx('GC1C'), rSigRnx('GC1W'), rSigRnx('GC2W'),
+                         rSigRnx('GC2X'), rSigRnx('GC5X')],
+                uTYP.L: [rSigRnx('GL1C'), rSigRnx('GL1W'), rSigRnx('GL2W'),
+                         rSigRnx('GL2X'), rSigRnx('GL5X')],
+                uTYP.D: [rSigRnx('GD1C'), rSigRnx('GD1W'), rSigRnx('GD2W'),
+                         rSigRnx('GD2X'), rSigRnx('GD5X')],
+                uTYP.S: [rSigRnx('GS1C'), rSigRnx('GS1W'), rSigRnx('GS2W'),
+                         rSigRnx('GS2X'), rSigRnx('GS5X')],
+            }
+        if 'R' in gnss_t:
+            self.sig_tab[uGNSS.GLO] = {
+                uTYP.C: [rSigRnx('RC1C'), rSigRnx('RC1P'), rSigRnx('RC2C'),
+                         rSigRnx('RC2P'), rSigRnx('RC3X')],
+                uTYP.L: [rSigRnx('RL1C'), rSigRnx('RL1P'), rSigRnx('RL2C'),
+                         rSigRnx('RL2P'), rSigRnx('RL3X')],
+                uTYP.D: [rSigRnx('RD1C'), rSigRnx('RD1P'), rSigRnx('RD2C'),
+                         rSigRnx('RD2P'), rSigRnx('RD3X')],
+                uTYP.S: [rSigRnx('RS1C'), rSigRnx('RS1P'), rSigRnx('RS2C'),
+                         rSigRnx('RS2P'), rSigRnx('RS3X')],
+            }
+        if 'E' in gnss_t:
+            self.sig_tab[uGNSS.GAL] = {
+                uTYP.C: [rSigRnx('EC1X'), rSigRnx('EC5X'), rSigRnx('EC7X'),
+                         rSigRnx('EC8X'), rSigRnx('EC6X')],
+                uTYP.L: [rSigRnx('EL1X'), rSigRnx('EL5X'), rSigRnx('EL7X'),
+                         rSigRnx('EL8X'), rSigRnx('EL6X')],
+                uTYP.D: [rSigRnx('ED1X'), rSigRnx('ED5X'), rSigRnx('ED7X'),
+                         rSigRnx('ED8X'), rSigRnx('ED6X')],
+                uTYP.S: [rSigRnx('ES1X'), rSigRnx('ES5X'), rSigRnx('GS7X'),
+                         rSigRnx('ES8X'), rSigRnx('ES6X')],
+            }
+        if 'C' in gnss_t:
+            self.sig_tab[uGNSS.BDS] = {
+                uTYP.C: [rSigRnx('CC1X'), rSigRnx('CC2I'), rSigRnx('CC5X'),
+                         rSigRnx('CC6I'), rSigRnx('CC8X'), rSigRnx('CC7I')],
+                uTYP.L: [rSigRnx('CL1X'), rSigRnx('CL2I'), rSigRnx('CL5X'),
+                         rSigRnx('CL6I'), rSigRnx('CL8X'), rSigRnx('CL7I')],
+                uTYP.D: [rSigRnx('CD1X'), rSigRnx('CD2I'), rSigRnx('CD5X'),
+                         rSigRnx('CD6I'), rSigRnx('CD8X'), rSigRnx('CD7I')],
+                uTYP.S: [rSigRnx('CS1X'), rSigRnx('CS2I'), rSigRnx('CS5X'),
+                         rSigRnx('CS6I'), rSigRnx('CS8X'), rSigRnx('CS7I')],
+            }
+        if 'J' in gnss_t:
+            self.sig_tab[uGNSS.QZS] = {
+                uTYP.C: [rSigRnx('JC1C'), rSigRnx('JC1X'), rSigRnx('JC2X'),
+                         rSigRnx('JC5X'), rSigRnx('JC6X'), rSigRnx('JC1E')],
+                uTYP.L: [rSigRnx('JL1C'), rSigRnx('JL1X'), rSigRnx('JL2X'),
+                         rSigRnx('JL5X'), rSigRnx('JL6X'), rSigRnx('JL1E')],
+                uTYP.D: [rSigRnx('JD1C'), rSigRnx('JD1X'), rSigRnx('JD2X'),
+                         rSigRnx('JD5X'), rSigRnx('JD6X'), rSigRnx('JD1E')],
+                uTYP.S: [rSigRnx('JS1C'), rSigRnx('JS1X'), rSigRnx('JS2X'),
+                         rSigRnx('JS5X'), rSigRnx('JS6X'), rSigRnx('JS1E')],
+            }
+        if 'S' in gnss_t:
+            self.sig_tab[uGNSS.SBS] = {
+                uTYP.C: [rSigRnx('SC1C'), rSigRnx('SC5X')],
+                uTYP.L: [rSigRnx('SL1C'), rSigRnx('SL5X')],
+                uTYP.D: [rSigRnx('SD1C'), rSigRnx('SD5X')],
+                uTYP.S: [rSigRnx('SS1C'), rSigRnx('SS5X')],
+            }
+        if 'I' in gnss_t:
+            self.sig_tab[uGNSS.IRN] = {
+                uTYP.C: [rSigRnx('IC5A'), rSigRnx('IC1X')],
+                uTYP.L: [rSigRnx('IL5A'), rSigRnx('IL1X')],
+                uTYP.D: [rSigRnx('ID5A'), rSigRnx('ID1X')],
+                uTYP.S: [rSigRnx('IS5A'), rSigRnx('IS1X')],
+            }
+
+        self.sidx_l1cb = -1
+        if uGNSS.QZS in self.sig_tab.keys():  # record index for L1C/B
+            for k, sig_ in enumerate(self.sig_tab[uGNSS.QZS][uTYP.L]):
+                if sig_.sig == uSIG.L1E:
+                    self.sidx_l1cb = k
 
         if opt is not None:
             self.init_param(opt=opt, prefix=prefix)
@@ -273,6 +319,87 @@ class jps(rcvDec):
             fn = fn_t[freq]
         return fn
 
+    def decode_obs(self):
+        obs = Obs()
+        obs.sig = self.sig_tab
+
+        obs.time = gpst2time(self.week, self.tow)
+
+        nsig_max = 0
+        for s in self.sig_tab:
+            if len(self.sig_tab[s][uTYP.L]) > nsig_max:
+                nsig_max = len(self.sig_tab[s][uTYP.L])
+
+        self.nsig[uTYP.C] = nsig_max
+        self.nsig[uTYP.L] = nsig_max
+        self.nsig[uTYP.D] = nsig_max
+        self.nsig[uTYP.S] = nsig_max
+
+        obs.sat = []
+        nsat = len(self.prn)
+
+        obs.P = np.zeros((nsat, self.nsig[uTYP.C]), dtype=np.float64)
+        obs.L = np.zeros((nsat, self.nsig[uTYP.L]), dtype=np.float64)
+        obs.D = np.zeros((nsat, self.nsig[uTYP.D]), dtype=np.float64)
+        obs.S = np.zeros((nsat, self.nsig[uTYP.S]), dtype=np.float64)
+        obs.lli = np.zeros((nsat, self.nsig[uTYP.L]), dtype=np.int32)
+        j = 0
+        kr = 0
+        for k in range(nsat):
+            if self.sys[k] == GNSS.GLO:
+                prn = self.osn[kr]
+                kr += 1
+            else:
+                prn = self.prn[k]
+
+            sys = self.sys_t[self.sys[k]]
+            if sys not in self.sig_tab.keys():
+                continue
+            if sys == uGNSS.GLO and prn == 255:
+                continue
+            if sys == uGNSS.SBS and self.prn[k] > 156:
+                continue
+            sat = prn2sat(sys, prn)
+            if sat in obs.sat:
+                jn = obs.sat.index(sat)
+            else:
+                jn = j
+
+            for kk, sig_ in enumerate(self.sig_tab[sys][uTYP.L]):
+                if sig_.sig in self.types[self.sys[k]-1]:
+                    # L1C/A -> L1C/B for QZS in prn_l1cb
+                    if sys == uGNSS.QZS and prn in self.prn_l1cb and \
+                            self.sidx_l1cb > 0 and sig_.sig == uSIG.L1C:
+                        kk_ = self.sidx_l1cb
+                    else:
+                        kk_ = kk
+
+                    idx = self.types[self.sys[k]-1].index(sig_.sig)
+                    obs.P[jn][kk_] = self.pr[k][idx]*rCST.CLIGHT
+                    obs.L[jn][kk_] = self.cp[k][idx]
+                    obs.D[jn][kk_] = self.dp[k][idx]
+                    obs.S[jn][kk_] = self.CNO[k][idx]
+                    if self.code[k][idx] & 0x0020:
+                        obs.lli[jn][kk_] += 1
+
+            if sat not in obs.sat:
+                obs.sat += [sat]
+                j += 1
+
+        nsat = len(obs.sat)
+        obs.P = obs.P[:nsat]
+        obs.L = obs.L[:nsat]
+        obs.D = obs.D[:nsat]
+        obs.S = obs.S[:nsat]
+        obs.lli = obs.lli[:nsat]
+
+        obs.P[np.isnan(obs.P)] = 0
+        obs.L[np.isnan(obs.L)] = 0
+        obs.D[np.isnan(obs.D)] = 0
+        obs.S[np.isnan(obs.S)] = 0
+
+        return obs
+
     def decode_nd(self, buff, sys=uGNSS.GPS):
         prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
         sat = prn2sat(sys, prn)
@@ -315,7 +442,7 @@ class jps(rcvDec):
     def decode(self, buff, len_, sys=[], prn=[]):
         head = buff[0:2].decode()
         if head == 'RE':
-            if self.monlevel >= 1:
+            if self.monlevel > 1:
                 print("[{:2s}] {:}".format(head, buff[5:5+len_].decode()))
 
         elif self.crc8(buff, len_-1) != buff[-1]:
@@ -324,19 +451,26 @@ class jps(rcvDec):
 
         if head == '~~':  # receiver time [RT] (epoch start)
             self.tod = st.unpack_from('<L', buff, 5)[0]*1e-3
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[RT] tod={:.1f}".format(self.tod))
         elif head == 'RE':
             return
         elif head == '::':  # epoch time [ET] (epoch end)
             self.tod = st.unpack_from('<L', buff, 5)[0]*1e-3
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[ET] tod={:.1f}".format(self.tod))
+
+            obs = self.decode_obs()
+            if self.flg_rnxobs and obs is not None:
+                self.obs = obs
+                self.re.rnx_obs_header(obs.time, self.fh_rnxobs)
+                self.re.rnx_obs_body(obs, self.fh_rnxobs)
+
         elif head == 'GT':  # GPS time [GT]
             tow, wn, cycle = st.unpack_from('<LHB', buff, 5)  # ms
             self.week = wn+cycle*1024
             self.tow = tow*1e-3
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[GT] tow={:.1f} week={:4d}".format(self.tow, self.week))
         elif head == 'RD':  # Receiver Date and Receiver Time
             # base 0:GPS,1:UTC USNO,2:GLO,3:UTC SU
@@ -349,7 +483,7 @@ class jps(rcvDec):
                 ep = [year, month, day, h, m, s]
                 self.week, self.tow = time2gpst(epoch2time(ep))
 
-            if self.monlevel >= 0:
+            if self.monlevel > 1:
                 print("[RD] {:d}/{:d}/{:d} {:d}".
                       format(year, month, day, base))
         elif head == 'SX':  # satellite index
@@ -357,6 +491,7 @@ class jps(rcvDec):
             prn = []
             nsat = (len_-6)//2
             esi = st.unpack_from('<'+'B'*2*nsat, buff, 5)
+            self.nsat = nsat
             self.freqn = np.zeros(nsat, dtype=int)
             for k in range(nsat):
                 ssid = esi[k*2]
@@ -404,12 +539,12 @@ class jps(rcvDec):
 
         elif head == 'xd':  # QZSS L6 Message Data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
-            if self.monlevel >= 1:
+            if self.monlevel > 1:
                 print("[xd] prn={:d} tow={:d} type={:d} len={:d}".
                       format(prn, time_, type_, len_))
             if self.week >= 0:
                 if self.flg_qzsl6:
-                    if prn_ref > 0 and prn != prn_ref:
+                    if self.prn_ref > 0 and prn != self.prn_ref:
                         return
                     msg_l6 = buff[12:12+len_]
                     self.fh_qzsl6.write(
@@ -465,13 +600,100 @@ class jps(rcvDec):
 
         elif head == 'id':  # NavIC Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
+            sat = prn2sat(uGNSS.IRN, prn)
+            # type 0 - L5, 1 - S, 2 - reserved(L1), 3 - L1
+            msg = st.unpack_from('>'+len_*'L', buff, 12)
+            b = bytes(np.array(msg, dtype='uint32'))
+
+            if self.flg_rnxnav:
+                eph = None
+                if type_ == 0:
+                    eph = self.rn.decode_irn_lnav(self.week, time_, sat, b)
+                elif type_ == 2 or type_ == 3:
+                    # for L1
+                    # data[0] – subframe 1 (toi)
+                    # data[1…19] – subframe 2
+                    # data[20…28] – subframe 3
+
+                    msg = bytearray(228)  # recover original L1C msg structure
+                    # toi: 9b, data2: 600b, data3: 274b
+                    toi = bs.unpack_from('u32', b, 0)[0]
+                    bs.pack_into('u9', msg, 0, toi)
+                    copy_buff(b, msg, 32, 52, 600)
+                    copy_buff(b, msg, 640, 1252, 274)
+                    msg = bytes(msg)
+                    eph = self.rn.decode_irn_l1nav(self.week, time_, sat, msg)
+
+                if eph is not None:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
+
+            if self.monlevel >= 2:
+                print(f"[id] time={time_:6d} prn={prn:2d} type={type_}")
+
         elif head == 'lD':  # Glonass Raw Navigation data
             svn, fcn, time_, type_, len_ = st.unpack_from('<BbLBB', buff, 5)
-        elif head == 'ED':  # Galileo Navigation data
+            # type 0 - L1, 2 - L2C, 3 - P1, 4 - P2
+            msg = st.unpack_from('>'+len_*'L', buff, 13)
+            b = bytes(np.array(msg, dtype='uint32'))
+            sat = prn2sat(uGNSS.GLO, svn)
+
+            # get 77 bit (25x3+2) in frame without hamming and time mark
+            if type_ == 0:
+                buff = bytearray(12)
+                for k in range(4):
+                    d = bs.unpack_from('u32', b, 32*k)[0]
+                    if k < 3:
+                        bs.pack_into('u25', buff, 25*k, d & 0x1ffffff)
+                    else:
+                        bs.pack_into('u2', buff, 25*k, (d >> 23) & 0x3)
+
+            if self.flg_rnxnav and type_ == 0:
+                geph = self.rn.decode_glo_fdma(
+                    self.week, self.tow, sat, buff, fcn)
+
+                if geph is not None:
+                    self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+
+            if self.monlevel >= 2:
+                print(f"[lD] time={time_:6d} svn={svn:2d} fcn{fcn:2d} " +
+                      f"type={type_}")
+        elif head == 'ud':  # Glonass CDMA Raw Navigation data
+            prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
+            # type: 0 - L1, 1 - L2, 3 - L3
+            sat = prn2sat(uGNSS.GLO, prn)
+            msg = st.unpack_from('>'+len_*'L', buff, 12)
+            b = bytes(np.array(msg, dtype='uint32'))
+
+            if self.flg_rnxnav:
+                geph = None
+                if type_ == 0:  # L1OC
+                    geph = self.rn.decode_glo_l1oc(self.week, self.tow, sat, b)
+                elif type_ == 1:  # L2CSI
+                    None
+                elif type_ == 2:  # L3OC
+                    geph = self.rn.decode_glo_l3oc(self.week, self.tow, sat, b)
+
+                if geph is not None:
+                    self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+
+            if self.monlevel >= 2:
+                print(f"[ud] time={time_:6d} prn={prn:2d} type={type_}")
+
+        elif head == 'ED':  # Galileo Raw Navigation data
             prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
             sat = prn2sat(uGNSS.GAL, prn)
             if self.monlevel >= 2:
-                print("[ED] time={:6d} prn={:2d}".format(time_, prn))
+                print(f"[ED] time={time_:6d} prn={prn:2d} type={type_}")
+
+            # [I/NAV]
+            # even/odd,page-type,data(1/2),tail => 1,1,112,6
+            # evan/odd,page-type,data(2/2),field1,crc,field2,tail
+            # => 1,1,16,64,24,8,6
+            # For E1B: field1(64) = OSNMA(40)+SAR(22)+spare(2), field2(8)=SSP
+            # For E5B: field1(64) = resv, field2(8) = resv
+
+            # [FNAV]
+            # page-type(6), nav(208), crc(24), tail(6)
 
             # type_ = 0:E1B(INAV), 1:E5a(FNAV), 2:E5b(INAV), 6:E6(CNAV)
             if type_ == 0 or type_ == 2:  # INAV
@@ -487,11 +709,17 @@ class jps(rcvDec):
                         .format(self.week, time_, prn, type_, len_,
                                 hexlify(b).decode()))
             elif type_ == 1:  # FNAV
+                b = buff[12:]
                 if self.flg_rnxnav:
                     eph = self.rn.decode_gal_fnav(
-                        self.week, time_, sat, type_, buff[12:])
+                        self.week, time_, sat, type_, b)
                     if eph is not None:
                         self.re.rnx_nav_body(eph, self.fh_rnxnav)
+                if self.flg_galfnav and self.week >= 0:
+                    self.fh_galfnav.write(
+                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n"
+                        .format(self.week, time_, prn, type_, len_,
+                                hexlify(b).decode()))
             elif type_ == 6:  # CNAV
                 if self.flg_gale6 and self.week >= 0:
                     self.fh_gale6.write(
@@ -505,12 +733,19 @@ class jps(rcvDec):
                 print("[WD] prn={:d} tow={:d} type={:d}".
                       format(prn, time_, type_))
 
+            sat = prn2sat(uGNSS.SBS, prn)
+            b = buff[12:]
+            if self.flg_sbas and self.flg_rnxnav:
+                seph = self.rn.decode_sbs_l1(self.week, time_, sat, b)
+                if seph is not None:
+                    self.re.rnx_snav_body(seph, self.fh_rnxnav)
+
             if self.flg_sbas and self.week >= 0:
-                if sbs_ref > 0 and prn != sbs_ref:
+                if self.sbs_ref > 0 and prn != self.sbs_ref:
                     return
                 self.fh_sbas.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
                                    format(self.week, time_, prn, type_, len_,
-                                          hexlify(buff[12:]).decode()))
+                                          hexlify(b).decode()))
 
         elif head[0] == 'r' and head[1] in self.ch_t.keys():
             # Integer Pseudo-ranges
@@ -529,7 +764,7 @@ class jps(rcvDec):
             for k in range(nsat):
                 Ksys = Ksys_t[self.sys[k]]
                 Asys = Asys_t[self.sys[k]]
-                pr_ = (spr[k]*Ksys+Asys)*_c
+                pr_ = (spr[k]*Ksys+Asys)*rCST.CLIGHT
                 if head[1] == 'x' or head[1] == 'c':
                     self.pr_ref[k] = pr_
                 else:
@@ -548,11 +783,11 @@ class jps(rcvDec):
             for k in range(nsat):
                 if rcp[k] == 0x7fffffff or self.pr_ref[k] == 0:
                     continue
-                ref = self.pr_ref[k]/_c
+                ref = self.pr_ref[k]/rCST.CLIGHT
                 freq, code = self.tofreq(head[0], self.sys[k])
                 fn = self.freq_sys(self.sys[k], freq, self.freqn[k])
                 # self.fn_t[ch]
-                self.cp[k, ch] = (rcp[k]*P2_40+ref)*fn
+                self.cp[k, ch] = (rcp[k]*rCST.P2_40+ref)*fn
                 self.code[k, ch] = code
                 if self.sys[k] == GNSS.GPS and self.prn[k] == 24:
                     sys = self.sys[k]
@@ -574,7 +809,7 @@ class jps(rcvDec):
                 if srpr[k] == 0x7fff or self.pr_ref[k] == 0:
                     continue
                 ref = self.pr_ref[k]
-                self.pr[k, ch] = (1e-11*srpr[k]+2e-7)*_c+ref
+                self.pr[k, ch] = (1e-11*srpr[k]+2e-7)*rCST.CLIGHT+ref
                 # if self.sys[k] == GNSS.QZS:
                 #    pr = self.pr[k, ch]
                 if self.monlevel >= 2:
@@ -620,13 +855,22 @@ class jps(rcvDec):
         elif head[0] == 'R' and head[1].lower() in self.ch_t.keys():  # PR
             ch = self.ch_t[head[1].lower()]
             nsat = (len_-6)//8
-            self.pr[:nsat, ch] = st.unpack_from('d'*nsat, buff, 5)
+            pr_ = np.array(st.unpack_from('d'*nsat, buff, 5))
+            if self.navic_work_around:
+                pr_[pr_ < 0 & (np.array(self.sys) == GNSS.IRN)] = np.nan
+            if head[1] == 'X':  # [RX]
+                self.PR_REF[:nsat] = pr_
+            else:
+                self.pr[:nsat, ch] = pr_
 
         elif head[0] == 'P' and head[1].lower() in self.ch_t.keys():
             # Carrier-Phase
             ch = self.ch_t[head[1].lower()]
             nsat = (len_-6)//8
-            self.cp[:nsat, ch] = st.unpack_from('d'*nsat, buff, 5)
+            cp_ = np.array(st.unpack_from('d'*nsat, buff, 5))
+            if self.navic_work_around:
+                cp_[cp_ < 0 & (np.array(self.sys) == GNSS.IRN)] = np.nan
+            self.cp[:nsat, ch] = cp_
 
         elif head[0] == 'c' and head[1] in self.ch_t.keys():
             # smoothing corrections
@@ -637,9 +881,12 @@ class jps(rcvDec):
             # doppler [Hz*1e-4]
             ch = self.ch_t[head[1]]
             nsat = (len_-6)//4
-            dp = st.unpack_from('i'*nsat, buff, 5)
+            dp = st.unpack_from('<'+'l'*nsat, buff, 5)
             for k in range(nsat):
-                self.dp[:, ch] = dp[k]*(-1e-4)
+                self.dp[k, ch] = dp[k]*1e-4
+                if dp[k] == 2147483647:
+                    self.dp[k, ch] = 0.0
+
         elif head[0] == 'E' and head[1].lower() in self.ch_t.keys():
             # C/N [dB-Hz]
             ch = self.ch_t[head[1]]
@@ -656,7 +903,11 @@ class jps(rcvDec):
             # C/Nx4 [dB-Hz]
             ch = self.ch_t[head[0]]
             nsat = (len_-6)//1
-            cnr = st.unpack_from('b'*nsat, buff, 5)
+            cnr = st.unpack_from('B'*nsat, buff, 5)
+            for k in range(nsat):
+                if cnr[k] == 255:
+                    continue
+                self.CNO[k, ch] = cnr[k]*0.25
         # elif head == 'SE':  # security (skip)
         #    data = st.unpack_from('bbbbb', buff, 5)
         elif head == 'GE':  # GPS ephemeris
@@ -671,72 +922,56 @@ class jps(rcvDec):
             sv, frqnum, dne, tk, tb = st.unpack_from('<Bbhll', buff, 5)
         elif head == 'WE':  # SBAS ephemeris
             sbasprn, gpsprn, iod, acc, tod = st.unpack_from('<BBBBL', buff, 5)
-        elif head[1] == 'E' and head[0].lower() in self.ch_t.keys():
-            # SNRx4 [dB*Hz]
-            ch = self.ch_t[head[0]]
-            nsat = (len_-6)
-            cnr = st.unpack_from('<'+'B'*nsat, buff, 5)
         elif head[0] == 'F' and head[1].lower() in self.ch_t.keys():
             # signal lock loop flags
             ch = self.ch_t[head[1]]
             nsat = (len_-6)//2
-            # flags = st.unpack_from('<'+'H'*nsat, buff, 5)
+            flags = st.unpack_from('<'+'H'*nsat, buff, 5)
+            self.code[:nsat, ch] = flags
 
         elif head[1] == 'd' and head[0] in self.ch_t.keys():
             # relative doppler [Hz*1e-4]
             ch = self.ch_t[head[0]]
             nsat = (len_-6)//2
             # srdp = st.unpack_from('h'*nsat, buff, 5)
+        elif head in ('ST', 'SP', 'PV', 'PG', 'IE', 'UO'):
+            # [ST] Solution Time-Tag
+            # [SP] Position Covariance Matrix
+            # [PV] Cartesian Position and Velocity
+            # [PG] Geodetic Position
+            # [IE] IRNSS Ephemeris
+            # [UO] GPS UTC Time Parameters
+            pass
         else:
             print("[{:s}] undef".format(head))
         return 0
 
 
-_c = 299792458.0
-P2_40 = 9.094947017729280e-13
-
-# locl mode
-# turn off tracking of all GPS SVs but SVs #8
-# set,/par/lock/sat/qzss,n
-# set,/par/lock/sat/qzss/193,y
-
-# turn off GALILEO E6 signal tracking for all SVs
-# set,/par/lock/sig/qzss/l6,n
-# set,/par/lock/sig/qzss/l6/193,y
-
-year = 2023
-
-bdir = '../data/doy223/'
-fnames = 'jav3223v.jps'
-
-opt = rcvOpt()
-opt.flg_qzsl6 = True
-opt.flg_gale6 = True
-opt.flg_galinav = True
-opt.flg_galfnav = True
-opt.flg_bdsb2b = True
-opt.flg_bdsb1c = True
-opt.flg_sbas = False
-opt.flg_rnxnav = True
-
-prn_ref = 199
-sbs_ref = -1
-
-for f in glob(bdir+fnames):
+def decode(f, opt, args):
 
     print("Decoding {}".format(f))
+
     bdir, fname = os.path.split(f)
-    bdir += '/'
 
-    prefix = bdir+fname[4:].removesuffix('.jps')+'_'
-    jpsdec = jps(opt=opt, prefix=bdir+fname[4:].removesuffix('.jps')+'_')
-    jpsdec.monlevel = 2
+    prefix = fname[4:].removesuffix('.jps')+'_'
+    prefix = str(Path(bdir) / prefix) if bdir else prefix
+    jpsdec = jps(opt=opt, prefix=prefix, gnss_t=args.gnss)
+    jpsdec.monlevel = 1
 
-    jpsdec.re.anttype = "JAVRINGANT_DM   JVDM"
-    jpsdec.re.rectype = "JAVAD DELTA-3"
+    # jpsdec.prn_ref = 199
+    jpsdec.prn_ref = -1
+    jpsdec.sbs_ref = -1
 
-    blen = os.path.getsize(bdir+fname)
-    with open(bdir+fname, 'rb') as f:
+    if fname.startswith('jav3'):
+        jpsdec.re.anttype = "JAVRINGANT_DM   JVDM"
+        jpsdec.re.rectype = "JAVAD DELTA-3"
+    else:
+        jpsdec.re.anttype = args.antenna
+        jpsdec.re.rectype = args.receiver
+
+    path = str(Path(bdir) / fname) if bdir else fname
+    blen = os.path.getsize(path)
+    with open(path, 'rb') as f:
         msg = f.read(blen)
         maxlen = len(msg)-5
         # maxlen = 400000
@@ -750,3 +985,59 @@ for f in glob(bdir+fnames):
             k += len_
 
     jpsdec.file_close()
+
+
+def main():
+
+    # Parse command line arguments
+    #
+    parser = argparse.ArgumentParser(description="JAVAD JPS converter")
+
+    # Input file and folder
+    #
+    parser.add_argument("inpFileName",
+                        help="Input JPS file(s) (wildcards allowed)")
+
+    parser.add_argument("--receiver", default='unknown',
+                        help="Receiver type [unknown]")
+    parser.add_argument("--antenna", default='unknown',
+                        help="Antenna type [unknown]")
+
+    parser.add_argument("-g", "--gnss", default='GRECIJ',
+                        help="GNSS [GRECIJ]")
+
+    parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
+                        type=int, help='Max. number of parallel processes')
+
+    # Retrieve all command line arguments
+    #
+    args = parser.parse_args()
+
+    opt = rcvOpt()
+
+    opt.flg_rnxobs = True
+    opt.flg_rnxnav = True
+
+    opt.flg_gale6 = True
+    opt.flg_galinav = True
+    opt.flg_galfnav = True
+
+    opt.flg_qzsl6 = True
+
+    opt.flg_bdsb1c = False
+    opt.flg_bdsb2b = True
+
+    opt.flg_sbas = True
+
+    opt.flg_gpslnav = True
+
+    # Start processing pool
+    #
+    with mp.Pool(processes=args.jobs) as pool:
+        pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
+
+
+# Call main function
+#
+if __name__ == "__main__":
+    main()

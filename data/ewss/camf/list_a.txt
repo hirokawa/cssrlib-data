@@ -1,0 +1,32 @@
+0	[empty]
+1	You are in the danger zone, leave the area immediately. Listen to radio or media for directions and information.
+2	You are in the danger zone, leave the area immediately and reach the evacuation point indicated by the area plotted in yellow. Listen to radio or media for directions and information.
+3	Seek shelter in a building immediately. Stay under cover and stay informed.
+4	Seek out a cellar or interior rooms on lower floors.
+5	If you are in an alpine terrain, start descending immediately and seek for shelter.
+6	Quickly move into interior rooms. If you are in a vehicle: Stop driving immediately on the edge of the road. If a building is nearby, seek shelter in that building.
+7	If you are in open terrain and you cannot find shelter, lie face-down on the ground and protect your head and neck with your hands, in a hollow where possible.
+8	Prepare for evacuation. Take only the essentials with you, especially ID cards, passport, credit cards and cash. Evacuate only after the instruction of the emergency authorities.
+9	Prepare emergency food and relief material: Check and restock your equipment and supplies of water, food, medicine, cash and batteries.
+10	Stay away from glass surfaces such as windows and glass doors. There is a risk of injury from glass splinters.
+11	Reduce your power consumption to a minimum.
+12	Reduce your water consumption to a minimum.
+13	Boil water before drinking it or using it in the kitchen.
+14	Keep at least one metre away from any conversation partners. Avoid physical contact with other people such as kissing and shaking hands. Wash your hands regularly and thoroughly.
+15	Do not drink any tap water. Avoid any skin contact with tap water. Only drink mineral water from a bottle. Turn off the water supply to your house.
+16	Watch out for escaping gas. This can be indicated by hissing noises or a typical gas odour. Do not use matches, lighters or the like: naked flames in combination with leaking gas can lead to explosions and fires.
+17	Do not go outside and do not use your car.
+18	Do not touch any objects that seem suspicious to you. Debris can cause additional hazards such as fires and explosions. Inform the emergency services about damage and debris.
+19	Do not enter smoke-filled rooms. Deadly gases can form there.
+20	Do not enter cellars or underground car parks.
+21	Do not leave pets or livestock outside.
+22	Do not touch any dead animals. Report any findings of dead wild animals to the authorities.
+23	Avoid driving
+24	Avoid all items with metal parts such as umbrellas and bicycles. Do not bathe or shower during a thunderstorm. Bathing and showering can be life-threatening.
+25	Avoid rooms directly underneath the roof truss. Avoid very large rooms, such as halls, in which the ceiling is not supported by pillars.
+26	Avoid going outdoors. Keep away from trees, towers and masts. Keep at least 20 m away from power lines. Watch out for flying objects and falling objects.
+27	Avoid the danger area
+28	Avoid going out when it is not necessary
+29	This is only a test. You do not have to take any action or to adopt any particular sheltering behaviour
+30	This replaces the warning previously in effect for this area.
+31	Conditions have improved and are no longer expected to meet alert criteria.

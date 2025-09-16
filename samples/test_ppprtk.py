@@ -4,11 +4,12 @@
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+from sys import exit as sys_exit
 from sys import stdout
 
 import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
-from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str
+from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str, time2doy
 from cssrlib.gnss import rSigRnx, sys2str, epoch2time
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.ppprtk import ppprtkpos
@@ -16,26 +17,75 @@ from cssrlib.rinex import rnxdec
 from binascii import unhexlify
 
 l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
+dataset = 2
 
-if l6_mode == 1:
-    ep = [2021, 3, 19, 12, 0, 0]
-    xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
-    navfile = '../data/SEPT078M.21P'
-    obsfile = '../data/SEPT078M.21O'
-    l6file = '../data/2021078M.l6'
-else:
-    ep = [2023, 8, 11, 21, 0, 0]
-    xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
-    navfile = '../data/doy223/NAV223.23p'
-    obsfile = '../data/doy223/SEPT223Y.23O'  # PolaRX5
-    file_l6 = '../data/doy223/223v_qzsl6.txt'
+if l6_mode == 1:  # from archive
 
-    prn_ref = 199  # QZSS PRN
+    if dataset == 1:
+
+        ep = [2021, 3, 19, 12, 0, 0]
+        xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
+        navfile = '../data/doy2021-078/SEPT078M.21P'
+        obsfile = '../data/doy2021-078/SEPT078M.21O'
+        l6file = '../data/doy2021-078/2021078M.l6'
+
+    elif dataset == 2:
+
+        ep = [2025, 2, 15, 17, 0, 0]
+        xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+
+        time = epoch2time(ep)
+        year = ep[0]
+        doy = int(time2doy(time))
+        let = chr(ord('a')+ep[3])
+
+        bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+
+        navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
+        obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
+        l6file = bdir+'{:04d}{:03d}{}.l6'.format(year, doy, let.upper())
+
+else:  # from receiver log
+
+    if dataset == 0:
+
+        ep = [2023, 8, 11, 21, 0, 0]
+        xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
+        navfile = '../data/doy2023-223/NAV223.23p'
+        obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
+        file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
+
+    elif dataset == 2:
+
+        ep = [2025, 8, 21, 7, 0, 0]
+        xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+
+        time = epoch2time(ep)
+        year = ep[0]
+        doy = int(time2doy(time))
+        let = chr(ord('a')+ep[3])
+
+        bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+
+        navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
+        obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
+        file_l6 = bdir+'{:03d}{}_qzsl6.txt'.format(doy, let)
+
+        # obsfile = bdir+'ux2233h_rnx.obs' # u-blox X20P
+        # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
+
+    # from Tab 4.1.1-1 of IS-QZSS-L6
+    prn_p1 = 199  # QZSS PRN pattern 1 (195, 197, 199)
+    prn_p2 = 194  # QZSS PRN pattern 2 (194, 196)
     l6_ch = 0  # 0:L6D, 1:L6E
 
 time = epoch2time(ep)
 
-atxfile = '../data/igs14.atx'
+atxfile = '../data/antex/'
+if time > epoch2time([2022, 11, 27, 0, 0, 0]):
+    atxfile += 'igs20.atx'
+else:
+    atxfile += 'igs14.atx'
 griddef = '../data/clas_grid.def'
 
 pos_ref = ecef2pos(xyz_ref)
@@ -44,6 +94,11 @@ cs = cssr()
 cs.monlevel = 1
 cs.week = time2gpst(time)[0]
 cs.read_griddef(griddef)
+
+cs_ = cssr()
+cs_.monlevel = 1
+cs_.week = cs.week
+cs_.read_griddef(griddef)
 
 # Define signals to be processed
 #
@@ -67,7 +122,7 @@ rnx.setSignals(sigs)
 
 nav = Nav()
 nav = rnx.decode_nav(navfile, nav)
-nep = 900*4-10
+nep = 900*4
 
 # Load ANTEX data for satellites and stations
 #
@@ -78,6 +133,7 @@ t = np.zeros(nep)
 enu = np.ones((nep, 3))*np.nan
 sol = np.zeros((nep, 4))
 smode = np.zeros(nep, dtype=int)
+nsat = np.zeros((nep, 3), dtype=int)
 
 if rnx.decode_obsh(obsfile) >= 0:
 
@@ -99,15 +155,28 @@ if rnx.decode_obsh(obsfile) >= 0:
     nav.fout.write("Antenna : {}\n".format(rnx.ant))
     nav.fout.write("\n")
 
+    # Set satellite PCO/PCV information
+    #
+    nav.sat_ant = atx.pcvs
+
+    # Set receiver PCO/PCV information, check antenna name and exit if unknown
+    #
+    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
+    #       receiver antenna corrections!
+    #
     if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
         nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
+        sys_exit(1)
+    else:
+        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
+        if nav.rcv_ant is None:
+            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
+                           .format(rnx.ant))
+            sys_exit(1)
 
-    # Set PCO/PCV information
-    #
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
     if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
+        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
+        nav.fout.write("\n")
 
     # Print available signals
     #
@@ -134,9 +203,9 @@ if rnx.decode_obsh(obsfile) >= 0:
     if l6_mode == 1:
         fc = open(l6file, 'rb')
         if not fc:
-            nav.fout.write("ERROR: cannot open L6 messsage file {}!"
+            nav.fout.write("ERROR: cannot open L6 message file {}!"
                            .format(l6file))
-            sys.exit(-1)
+            sys_exit(-1)
     else:
         dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
                  ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
@@ -158,12 +227,17 @@ if rnx.decode_obsh(obsfile) >= 0:
                 cs.week = week
                 cs.decode_cssr(cs.buff, 0)
         else:
-            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)
-                   & (v['prn'] == prn_ref)]
-            if len(vi) > 0:
-                cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
+            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)]
+            vi_p1 = vi[vi['prn'] == prn_p1]
+            vi_p2 = vi[vi['prn'] == prn_p2]
+            if len(vi_p1) > 0:
+                cs.decode_l6msg(unhexlify(vi_p1['nav'][0]), 0)
                 if cs.fcnt == 5:  # end of sub-frame
                     cs.decode_cssr(bytes(cs.buff), 0)
+            if len(vi_p2) > 0:
+                cs_.decode_l6msg(unhexlify(vi_p2['nav'][0]), 0)
+                if cs_.fcnt == 5:  # end of sub-frame
+                    cs_.decode_cssr(bytes(cs_.buff), 0)
 
         if ne == 0:
             nav.t = deepcopy(obs.t)
@@ -181,6 +255,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
         enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
         smode[ne] = nav.smode
+        nsat[ne, :] = nav.nsat
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
                        "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"

@@ -1,0 +1,19 @@
+0	[empty]
+1	Prepare for evacuation. Take only the essentials with you, especially ID cards, passport, credit cards and cash. Evacuate only after the instruction of the emergency authorities.
+2	Prepare emergency food and relief material: Check and restock your equipment and supplies of water, food, medicine, cash and batteries.
+3	Be prepared to protect yourself and your property. Flooding of properties and transport networks is expected. Disruption to power, communications and water supplies are possible. Evacuation may be required. Dangerous driving conditions due to reduced visibility and aquaplaning.
+4	Have iodine tablets ready. DO NOT take the iodine tablets now. If this becomes necessary, we will inform you in good time.
+5	Keep your smartphone charged to be able to receive further instructions and information.
+6	Avoid using lifts.
+7	Avoid the danger area.
+8	Avoid driving.
+9	Rescue operation under process by security forces and emergency services. Avoid moving to facilitate security and emergency actions.
+10	Check with the weather services and local authorities for additional information.
+11	Find out the location of the information points set up by the authorities on official channels (radio, internet, TV, social networks…).
+12	Sensitive or vulnerable people should not go out unless they must.
+13	Protect the most vulnerable and hear from your loved ones. Be aware of their special needs and support, as required. If you notice distressed or vulnerable persons, contact the emergency services. Provide first aid if necessary but do not put yourself in any danger.
+14	Pay attention to announcements made by the police, fire brigade and by officials.
+15	Stay aware, keep listening to official instructions broadcast on the radio, television, websites and social networks pages.
+16	Only make phone calls in serious emergencies to avoid overloading the mobile network.
+30	This is only a test. You do not have to take any action or to adopt any particular sheltering behaviour.
+31	Conditions have improved and are no longer expected to meet alert criteria.

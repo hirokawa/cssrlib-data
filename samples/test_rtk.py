@@ -4,7 +4,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+from sys import exit as sys_exit
+from sys import stdout
 
 import cssrlib.rinex as rn
 import cssrlib.gnss as gn
@@ -13,25 +14,27 @@ from cssrlib.gnss import rSigRnx, time2str
 from cssrlib.peph import atxdec, searchpcv
 from cssrlib.rtk import rtkpos
 
-bdir = '../data/'
-ngsantfile = bdir+'GSI_PCV.TXT'
+ngsantfile = '../data/GSI_PCV.TXT'
 
 nav = gn.Nav()
 
+
 if False:
+    bdir = '../data/doy2021-078/'
     navfile = bdir+'SEPT078M.21P'
     obsfile = bdir+'SEPT078M.21O'
     basefile = bdir+'3034078M.21O'
     xyz_ref = [-3962108.673, 3381309.574, 3668678.638]
     nav.rb = [-3959400.631, 3385704.533, 3667523.111]  # GSI 3034 fujisawa
-    atxfile = bdir+'igs14.atx'
+    atxfile = '../data/antex/igs14.atx'
 else:
+    bdir = '../data/doy2023-238/'
     navfile = bdir+'SEPT238A.23P'
     obsfile = bdir+'SEPT238A.23O'
     basefile = bdir+'3034238A.23O'
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     nav.rb = [-3959400.6443, 3385704.4948, 3667523.1275]  # GSI 3034 fujisawa
-    atxfile = bdir+'igs20.atx'
+    atxfile = '../data/antex/igs20.atx'
 
 pos_ref = gn.ecef2pos(xyz_ref)
 
@@ -88,11 +91,11 @@ atx.readngspcv(ngsantfile)
 nav.rcv_ant = searchpcv(atx.pcvr, dec.ant,  dec.ts)
 if nav.rcv_ant is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(dec.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 nav.rcv_ant_b = searchpcv(atx.pcvr, decb.ant,  dec.ts)
 if nav.rcv_ant_b is None:
     print("ERROR: missing antenna type <{}> in ANTEX file!".format(decb.ant))
-    sys.exit(-1)
+    sys_exit(-1)
 
 # nav.excl_sat = [20]
 # nav.cnr_min_gpy = 20
@@ -129,15 +132,15 @@ for ne in range(nep):
 
     # Log to standard output
     #
-    sys.stdout.write('\r {} ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
+    stdout.write('\r {} ENU {:7.4f} {:7.4f} {:7.4f}, 2D {:6.4f}, mode {:1d}'
+                 .format(time2str(obs.t),
+                         enu[ne, 0], enu[ne, 1], enu[ne, 2],
+                         np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
+                         smode[ne]))
 
 # Send line-break to stdout
 #
-sys.stdout.write('\n')
+stdout.write('\n')
 
 dec.fobs.close()
 decb.fobs.close()

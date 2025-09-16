@@ -23,9 +23,9 @@ if dataset == 0:
 else:
 
     file_has = '../data/SBF_GALRawCNAV.txt'
-    dtype = [('tow', 'float64'), ('wn', 'int'),  ('prn', 'S3'), ('validity', 'str'),
-             ('num1', 'int'), ('signal', 'str'), ('num2', 'int'), ('num3', 'int'),
-             ('nav', 'S144')]
+    dtype = [('tow', 'float64'), ('wn', 'int'),  ('prn', 'S3'),
+             ('validity', 'object'), ('num1', 'int'), ('signal', 'object'),
+             ('num2', 'int'), ('num3', 'int'), ('nav', 'S144')]
     v = np.genfromtxt(file_has, dtype=dtype, delimiter=',')
     v = v[v['validity'] == b'Passed']
 
