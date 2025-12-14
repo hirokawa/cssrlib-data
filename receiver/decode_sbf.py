@@ -260,22 +260,22 @@ class sbf(rcvDec):
                 else:
                     S1 = cn0*0.25 + 10.0
 
-            if code not in self.sig_tab[sys][code.typ]:
+            if code in self.sig_tab[sys][code.typ]:
+                idx = self.sig_tab[sys][code.typ].index(code)
+
+                pr[idx] = P1
+                cp[idx] = L1
+                dp[idx] = D1
+                ll[idx] = lli
+                cn[idx] = S1
+
+                if self.monlevel >= 2:
+                    print("{:6d} {:3d} {:} {:14.3f} {:14.3f} {:10.3f} {:4.2f}".
+                          format(int(self.tow), prn, code, P1, L1, D1, S1))
+
+            else:
                 if self.monlevel > 1:
                     print("skip code={:}".format(code))
-                k += nb2*sb2len
-                continue
-            idx = self.sig_tab[sys][code.typ].index(code)
-
-            pr[idx] = P1
-            cp[idx] = L1
-            dp[idx] = D1
-            ll[idx] = lli
-            cn[idx] = S1
-
-            if self.monlevel >= 2:
-                print("{:6d} {:3d} {:} {:14.3f} {:14.3f} {:10.3f} {:4.2f}".
-                      format(int(self.tow), prn, code, P1, L1, D1, S1))
 
             for j in range(nb2):
                 typ, ltime, cn0, ofst1, cp1, info, cofst0, cp0, dop0 = \
@@ -349,6 +349,8 @@ class sbf(rcvDec):
         obs.D = obs.D.reshape(len(obs.sat), self.nsig[uTYP.D])
         obs.S = obs.S.reshape(len(obs.sat), self.nsig[uTYP.S])
         obs.lli = obs.lli.reshape(len(obs.sat), self.nsig[uTYP.L])
+
+        obs.sort()
 
         return obs
 

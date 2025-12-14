@@ -103,7 +103,10 @@ class rtcmDec(rcvDec):
                 uTYP.S: [rSigRnx('IS5A'), rSigRnx('IS1X')],
             }
 
-        self.rtcm = rtcm()
+        if opt is not None:
+            foutname = opt.foutname
+
+        self.rtcm = rtcm(foutname=foutname)
         self.time_p = gtime_t()
         self.obs = None
 
@@ -164,19 +167,8 @@ class rtcmDec(rcvDec):
         self.obs.sat = np.empty(0, dtype=int)
         self.obs.sig = {}
 
-       #     if tow_p > 0 and tow_p != obs.tow:
-       #         flg_head = True
-       #         k = 0
-       #         f.seek(0)
-
-       #     tow_p = obs.tow
-
-       #     if not flg_head:
-       #         for sys in self.sig:
-       #             self.re.sig_tab[sys] = self.sig[sys]
-       # self.re.rnx_obs_header_sent
-
     def decode(self, buff, len_, sys=[], prn=[]):
+        """ decode RTCM binary messages """
 
         _, obs, eph, geph, seph = self.rtcm.decode(buff, len_)
 
@@ -221,7 +213,7 @@ def decode(f, opt, args):
     prefix = fname[4:].removesuffix('.rtcm3')+'_'
     prefix = str(Path(bdir) / prefix) if bdir else prefix
     rtcmdec = rtcmDec(opt=opt, prefix=prefix, gnss_t=args.gnss)
-    rtcmdec.monlevel = 1
+    rtcmdec.monlevel = 2
 
     rtcmdec.rtcm.week = args.weekref
 
@@ -249,6 +241,8 @@ def decode(f, opt, args):
             k += rtcmdec.rtcm.dlen
 
     rtcmdec.file_close()
+
+# python decode_rtcm.py ..\data\doy2025-298\CL07298j.rtc --weekref=2389
 
 
 def main():
@@ -284,6 +278,9 @@ def main():
 
     opt.flg_rnxobs = True
     opt.flg_rnxnav = True
+
+    s = args.inpFileName
+    opt.foutname = s[:s.rfind('.')]+'.log'
 
     # Start processing pool
     #

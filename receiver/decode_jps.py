@@ -398,6 +398,8 @@ class jps(rcvDec):
         obs.D[np.isnan(obs.D)] = 0
         obs.S[np.isnan(obs.S)] = 0
 
+        obs.sort()
+
         return obs
 
     def decode_nd(self, buff, sys=uGNSS.GPS):
