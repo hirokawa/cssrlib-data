@@ -3,11 +3,14 @@
 """
 Septentrio Receiver SBF messages decoder
 
- [1] mosaic-X5 Reference Guide, Applicable to version 4.14.10.1
-     of the Firmware, 2024
+ [1] mosaic-X5 Reference Guide, Applicable to version 4.15.0
+     of the Firmware, July, 2025
 
- [1] PolaRX5 Reference Guide, Applicable to version 5.6.0
-     of the Firmware, 2025
+ [2] mosaic-G5 Reference Guide, Applicable to version 1.0.1
+     of the Firmware, Novemrber, 2025
+
+ [3] PolaRX5 Reference Guide, Applicable to version 5.7.0
+     of the Firmware, December, 2025
 
 @author Rui Hirokawa
 """
@@ -131,37 +134,40 @@ class sbf(rcvDec):
         elif svid <= 61:  # R1-R24
             sys = uGNSS.GLO
             prn = svid-37
-        elif svid <= 62:  # GLONASS, unknown slot
+        elif svid == 62:  # GLONASS, unknown slot
             sys = uGNSS.GLO
             prn = 0
         elif svid <= 68:  # R25-R30
             sys = uGNSS.GLO
             prn = svid-38
-        elif svid >= 71 and svid <= 106:  # E1-E36
-            sys = uGNSS.GAL
-            prn = svid-70
-        elif svid >= 71 and svid <= 119:  # L-Band(MSS)
+        elif svid <= 70:  # reserved (69-70)
             sys = uGNSS.NONE
             prn = 0
-        elif svid >= 120 and svid <= 140:  # S120-S140
+        elif svid <= 106:  # E1-E36
+            sys = uGNSS.GAL
+            prn = svid-70
+        elif svid <= 119:  # L-Band(MSS)
+            sys = uGNSS.NONE
+            prn = 0
+        elif svid <= 140:  # S120-S140
             sys = uGNSS.SBS
             prn = svid
-        elif svid >= 141 and svid <= 180:  # C1-C40
+        elif svid <= 180:  # C1-C40
             sys = uGNSS.BDS
             prn = svid-140
-        elif svid >= 181 and svid <= 190:  # J1-J10
+        elif svid <= 190:  # J1-J10
             sys = uGNSS.QZS
             prn = svid-180+192
-        elif svid >= 191 and svid <= 197:  # I1-I7
+        elif svid <= 197:  # I1-I7
             sys = uGNSS.IRN
             prn = svid-190
-        elif svid >= 198 and svid <= 215:  # S141-S158
+        elif svid <= 215:  # S141-S158
             sys = uGNSS.SBS
             prn = svid-57
-        elif svid >= 216 and svid <= 222:  # I8-I14
+        elif svid <= 222:  # I8-I14
             sys = uGNSS.IRN
             prn = svid-208
-        elif svid >= 223 and svid <= 245:  # C41-C63
+        elif svid <= 245:  # C41-C63
             sys = uGNSS.BDS
             prn = svid-182
         else:  # reserved (246-255)
@@ -262,6 +268,9 @@ class sbf(rcvDec):
 
             if code in self.sig_tab[sys][code.typ]:
                 idx = self.sig_tab[sys][code.typ].index(code)
+
+                if code == rSigRnx('JL1E'):  # for testing
+                    idx = 0
 
                 pr[idx] = P1
                 cp[idx] = L1
@@ -1108,6 +1117,9 @@ def main():
     parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
                         type=int, help='Max. number of parallel processes')
 
+    parser.add_argument("--useL1CB", action='store_true',
+                        help="use L1C/B as like L1C/A for QZS")
+
     # Retrieve all command line arguments
     #
     args = parser.parse_args()
@@ -1141,6 +1153,8 @@ def main():
 
     opt.flg_irnnav = True
     opt.flg_sbas = True
+
+    opt.useL1CB = args.useL1CB
 
     # Start processing pool
     #

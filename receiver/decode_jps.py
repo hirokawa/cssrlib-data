@@ -1011,6 +1011,9 @@ def main():
     parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
                         type=int, help='Max. number of parallel processes')
 
+    parser.add_argument("--useL1CB", action='store_true',
+                        help="use L1C/B as like L1C/A for QZS")
+
     # Retrieve all command line arguments
     #
     args = parser.parse_args()
@@ -1032,6 +1035,8 @@ def main():
     opt.flg_sbas = True
 
     opt.flg_gpslnav = True
+
+    opt.useL1CB = args.useL1CB
 
     # Start processing pool
     #

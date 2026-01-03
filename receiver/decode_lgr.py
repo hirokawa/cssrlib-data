@@ -8,6 +8,8 @@ Qascom LuGRE messages decoder
 @author Rui Hirokawa
 """
 
+from skyfield.framelib import itrs
+from skyfield.api import load
 import argparse
 from glob import glob
 import multiprocessing as mp
@@ -16,7 +18,8 @@ import os
 from pathlib import Path
 import struct as st
 from crccheck.crc import Crc24LteA
-from cssrlib.gnss import uGNSS, uTYP, prn2sat, Obs, rSigRnx, gpst2time, uSIG, rCST, gtime_t
+from cssrlib.gnss import uGNSS, uTYP, prn2sat, Obs, rSigRnx, gpst2time, \
+    uSIG, rCST, gtime_t, time2gpst
 from cssrlib.rawnav import rcvDec, rcvOpt
 
 
@@ -82,6 +85,11 @@ class lgr(rcvDec):
                 self.sig_tab[sys][uTYP.S].append(rSigRnx(sys, uTYP.S, sig))
 
         self.nav = navRec()
+
+        self.fn = open('lgr-nav.txt', 'w')
+
+        self.fn.write("# week, tow, nsat, x, y, z, vx, vy, vz, cb, cd, " +
+                      "ggto, sigp, sigv, sigt, pdop, hdop, vdop\n")
 
     def sync(self, buff, k):
         return buff[k] == 0x71  # 'q'
@@ -169,6 +177,18 @@ class lgr(rcvDec):
         self.nav.ggto = ggto
         self.nav.std = np.array([stdp, stdv, stdt])
         self.nav.dops = np.array([gdop, pdop, hdop, vdop, tdop])
+
+        return self.nav
+
+    def output_nav(self, nav):
+        f = self.fn
+        week, tow = time2gpst(nav.t)
+        f.write(f"{week:4d} {tow:6.1f} {nav.nsat:2d} ")
+        f.write(f"{nav.pos[0]:11.1f} {nav.pos[1]:11.1f} {nav.pos[2]:11.1f} ")
+        f.write(f"{nav.vel[0]:8.1f} {nav.vel[1]:8.1f} {nav.vel[2]:8.1f} ")
+        f.write(f"{nav.clkb:10.1f} {nav.clkd:8.1f} {nav.ggto:4.1f} ")
+        f.write(f"{nav.std[0]:8.1f} {nav.std[1]:8.1f} {nav.std[2]:8.1f} ")
+        f.write(f"{nav.dops[1]:8.1f} {nav.dops[2]:8.1f} {nav.dops[3]:8.1f}\n")
 
     def decode_obs(self, buff, k=10):
         """ decode RAW message """
@@ -281,7 +301,8 @@ class lgr(rcvDec):
                 self.re.rnx_obs_header(obs.time, self.fh_rnxobs)
                 self.re.rnx_obs_body(obs, self.fh_rnxobs)
         elif mt == b'NAV':
-            self.decode_nav(buff)
+            nav = self.decode_nav(buff)
+            self.output_nav(nav)
         elif mt == b'IQS':
             self.decode_iqs(buff)
         return 0
@@ -331,6 +352,61 @@ def decode(f, opt, args):
                 break
 
     lgrdec.file_close()
+
+
+def ecef_to_lunar_fixed(x_m, y_m, z_m, target_time=None):
+    """
+    Converts ECEF (ITRS) coordinates to the Lunar-fixed coordinate system (Selenocentric).
+    """
+    # 1. Load ephemeris and timescale data
+    # DE421 is a standard JPL ephemeris; DE440 is a more recent alternative.
+    eph = load('de440.bsp')
+    earth = eph['earth']
+    moon = eph['moon']
+    ts = load.timescale()
+
+    if target_time is None:
+        t = ts.now()
+    else:
+        t = target_time
+
+    # 2. Define ECEF coordinates as Earth-fixed (ITRS)
+    # This creates a position object relative to the Earth's center in the ITRS frame.
+    ecef_pos = itrs.at(t, x_m=x_m, y_m=y_m, z_m=z_m)
+
+    # 3. Get the point's position in the Inertial Coordinate System (ICRF)
+    # Calling .at(t) on an ITRS position transforms it into the inertial ICRF frame.
+    pos_icrf = ecef_pos
+
+    # 4. Get the Moon's center position in the ICRF frame
+    moon_icrf = moon.at(t)
+
+    # 5. Calculate the relative vector from the Moon's center to the point
+    # Relative Vector = Point Position (ICRF) - Moon Position (ICRF)
+    relative_vec_icrf = pos_icrf - moon_icrf
+
+    # 6. Transform to the Lunar-fixed frame (considering rotation and libration)
+    # Using the "Mean Earth/Polar Axis" (ME) frame via the moon_pa_de421 kernel.
+    # Note: .frame_xyz() rotates the inertial vector into the specified body-fixed frame.
+    lunar_fixed_pos = relative_vec_icrf.frame_xyz(load('moon_pa_de421.tf'))
+
+    # Retrieve the coordinates in meters
+    x_l, y_l, z_l = lunar_fixed_pos.m
+
+    return x_l, y_l, z_l
+
+
+# --- Example Usage ---
+# Example: ECEF coordinates for a point on Earth (e.g., Tokyo area)
+x_ecef = -3957224.0
+y_ecef = 3310210.0
+z_ecef = 3737512.0
+
+lx, ly, lz = ecef_to_lunar_fixed(x_ecef, y_ecef, z_ecef)
+
+print(f"Time (UTC): {load.timescale().now().utc_strftime()}")
+print(f"Input ECEF (m): X={x_ecef}, Y={y_ecef}, Z={z_ecef}")
+print(f"Output Lunar Fixed (m): X={lx:.2f}, Y={ly:.2f}, Z={lz:.2f}")
 
 
 def main():
