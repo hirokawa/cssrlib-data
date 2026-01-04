@@ -143,6 +143,7 @@ def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024):
 
 
 def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
+    """ read test script for SC-134 messages """
 
     fc = open(file_rtcm, 'rb')
     if not fc:
