@@ -1,5 +1,5 @@
 """
- interopetabity test for SSR Integrity messages MT11,12,13
+ interopetabity test for SSR Integrity messages MT11,12,13,MT54.*
 
  @author Rui Hirokawa
 """
@@ -23,6 +23,12 @@ def read_asc(file):
             b += unhexlify(''.join(line.split()))
 
     return b
+
+
+def read_bin(file):
+    with open(file, 'rb') as fh:
+        return fh.read()
+    return None
 
 
 def gen_data(mt, sys_t, svid_t):
@@ -151,41 +157,49 @@ def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
 
 
 if __name__ == "__main__":
-    file_rtcm = '../data/sample.rtcm'
-    file_log = '../data/sample.log'
+    bdir = '../data/sc134/msg/'
+    flg_sim = False
 
-    file_asc = '../data/sc134/MT05_DFi56=00.txt'
+    if flg_sim:  # generate test data
+        file_rtcm = bdir+'test.rtcm'
+        file_log = bdir+'test.log'
+        nep = 1
+        maxlen = 1024
+        nsatmax = 10
 
-    nep = 1
-    maxlen = 1024
-    nsatmax = 10
+        seed_ = 1
+        # parameters
+        # msg_t = [11, 12, 13]
+        msg_t = [11]
+        # msg_t = [12]
+        # msg_t = [13]
 
-    seed_ = 1
-    # parameters
-    # msg_t = [11, 12, 13]
-    msg_t = [11]
-    # msg_t = [12]
-    # msg_t = [13]
+        # 0:GPS,1:GLO,2:GAL,3:BDS,4:QZS,5:IRN
+        sys_t = [uGNSS.GPS, uGNSS.GLO, uGNSS.GAL, uGNSS.QZS]
 
-    # 0:GPS,1:GLO,2:GAL,3:BDS,4:QZS,5:IRN
-    sys_t = [uGNSS.GPS, uGNSS.GLO, uGNSS.GAL, uGNSS.QZS]
+        # GNSS satellite mask DFi009
+        prn_rng_t = {uGNSS.GPS: [1, 32],  # Table 8.5-1
+                     uGNSS.GLO: [1, 27],  # Table 8.5-3
+                     uGNSS.GAL: [1, 36],  # Table 8.5-5
+                     uGNSS.BDS: [1, 63],
+                     uGNSS.QZS: [193, 209],
+                     uGNSS.IRN: [1, 14]}
 
-    # GNSS satellite mask DFi009
-    prn_rng_t = {uGNSS.GPS: [1, 32],  # Table 8.5-1
-                 uGNSS.GLO: [1, 27],  # Table 8.5-3
-                 uGNSS.GAL: [1, 36],  # Table 8.5-5
-                 uGNSS.BDS: [1, 63],
-                 uGNSS.QZS: [193, 209],
-                 uGNSS.IRN: [1, 14]}
+        mt = msg_t[0]
 
-    mt = msg_t[0]
+        seed(seed_)
+        prn_t = gen_sat_list(sys_t, prn_rng_t)  # generate random sat list
+        intr = gen_data(mt, sys_t, prn_t)  # generate random message data
+        msg = write_rtcm(file_rtcm, msg_t, intr, nep)
+        cs = read_rtcm(file_rtcm, intr, nep, logfile=file_log)
 
-    seed(seed_)
-    prn_t = gen_sat_list(sys_t, prn_rng_t)  # generate random sat list
-    intr = gen_data(mt, sys_t, prn_t)  # generate random message data
-    msg = write_rtcm(file_rtcm, msg_t, intr, nep)
-    cs = read_rtcm(file_rtcm, intr, nep, logfile=file_log)
+    else:  # decode using sample dataset (*.bin)
 
-    # msg = read_asc(file_asc)
-    # cs = rtcm(foutname=file_log)
-    # decode_rtcm(msg)
+        file_rtcm = ['MT54_9', 'MT54_10_DFi209=0',
+                     'MT54_10_DFi209=1', 'MT54_10_DFi209=2']
+
+        # msg = read_asc(file_asc)
+        for f in file_rtcm:
+            file_log = bdir+f+'.dlg'
+            msg = read_bin(bdir+f+'.bin')
+            decode_rtcm(msg, logfile=file_log, maxlen=len(msg))
