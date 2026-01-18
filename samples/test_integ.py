@@ -11,10 +11,6 @@ from cssrlib.rtcm import rtcm, rtcme, Integrity
 from random import randint, seed, sample
 from binascii import unhexlify
 
-# Validity Period DFi065
-vp_tbl = [1, 2, 5, 10, 15, 30, 60, 120, 240,
-          300, 600, 900, 1800, 3600, 7200, 10800]
-
 
 def read_asc(file):
     b = bytearray()
@@ -49,7 +45,7 @@ def gen_data(mt, sys_t, svid_t):
         # issue of GNSS satellite mask DFi010
         intr.pid = randint(0, 4095)  # provider id DFi027 (0-4095)
         intr.tow = randint(0, 604799)*1e-3  # tow
-        intr.vp = vp_tbl[randint(0, 15)]  # validity period DFi065 (0-15)
+        intr.vp = intr.vp_tbl[randint(0, 15)]  # validity period DFi065 (0-15)
         intr.uri = randint(0, 65535)*0.1  # update rate interval DFi067
 
         intr.pidssr = randint(0, 65535)  # SSR Provider ID DFi078 (0-65535)
@@ -198,6 +194,8 @@ if __name__ == "__main__":
 
         file_rtcm = ['MT54_9', 'MT54_10_DFi209=0',
                      'MT54_10_DFi209=1', 'MT54_10_DFi209=2']
+
+        # file_rtcm = ['sampledataMT03-04-05-06-07']
 
         # msg = read_asc(file_asc)
         for f in file_rtcm:

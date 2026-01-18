@@ -294,7 +294,7 @@ def main():
 
     # Input file and folder
     #
-    parser.add_argument("inpFileName",
+    parser.add_argument("-inpFileName",
                         help="Input RTCM3 file(s) (wildcards allowed)")
 
     parser.add_argument("--receiver", default='unknown',
@@ -305,7 +305,7 @@ def main():
     parser.add_argument("-g", "--gnss", default='GRECJ',
                         help="GNSS [GRECJ]")
 
-    parser.add_argument("--weekref", type=int, required=True,
+    parser.add_argument("--weekref", type=int, required=False,
                         help="GPS week number reference [unknown]")
 
     parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
@@ -327,17 +327,19 @@ def main():
     # args.weekref = 2397  # 2025/352
     # args.inpFileName = '..\data\doy2025-352\sept352a.rtc'
     # args.inpFileName = '../data/doy2025-352/tr92352a.rtc'
+    args.weekref = 2380
+    args.inpFileName = '../data/doy2025-233/233h_qzsl6.rtc'
     # args.gnss = 'GJ'
     # opt.useL1CB = True
 
     s = args.inpFileName
     opt.foutname = s[:s.rfind('.')]+'.log'
 
-    # decode(args.inpFileName, opt, args)
+    decode(args.inpFileName, opt, args)
     # Start processing pool
     #
-    with mp.Pool(processes=args.jobs) as pool:
-        pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
+    # with mp.Pool(processes=args.jobs) as pool:
+    #    pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
 
 
 # Call main function
