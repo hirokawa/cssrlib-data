@@ -328,7 +328,7 @@ def main():
     # args.inpFileName = '..\data\doy2025-352\sept352a.rtc'
     # args.inpFileName = '../data/doy2025-352/tr92352a.rtc'
     # args.weekref = 2380
-    # args.inpFileName = '../data/doy2025-233/233h_qzsl6.rtc'
+    # args.inpFileName = '../data/doy2025-233/233h_qzsl6.rtcm3'
     # args.gnss = 'GJ'
     # opt.useL1CB = True
 

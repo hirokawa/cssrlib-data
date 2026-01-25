@@ -7,16 +7,17 @@ Compact SSR messages to RTCM 3 messages converter
 @author: Rui Hirokawa
 """
 
+import argparse
+from glob import glob
+import multiprocessing as mp
 import numpy as np
 from binascii import unhexlify
 
 from cssrlib.rtcm import rtcme
 from cssrlib.cssrlib import cssr, sCType
-from cssrlib.gnss import load_config
+from cssrlib.gnss import load_config, char2sys
 
 config = load_config('config_ppprtk.yml')
-
-# msg, msg_e = decode_msg(v, tow, prn_ref, l6_ch, prn_ref_ext, l6_ch_ext)
 
 
 def decode_msg(v, tow, prn_ref, l6_ch=0, prn_ref_ext=0, l6_ch_ext=0):
@@ -39,13 +40,14 @@ def decode_msg(v, tow, prn_ref, l6_ch=0, prn_ref_ext=0, l6_ch_ext=0):
     return msg, msg_e
 
 
-def encode_msg(cs, re, msgtype=1057, maxlen=1024):
+def encode_msg(cs, re, msgtype, maxlen=1024):
+    """ encode RTCM message """
 
     k = 0
     buff = bytearray(maxlen)
     msg = bytearray(maxlen)
 
-    re.msgtype = msgtype  # Orbit GPS
+    re.msgtype = msgtype
     re.udi = cs.udi
     re.datum = cs.datum
     re.nsat_n = cs.nsat_n
@@ -67,41 +69,55 @@ def encode_msg(cs, re, msgtype=1057, maxlen=1024):
     return msg[:k]
 
 
-if __name__ == "__main__":
+def out_ssr(cs, re, fc, sct, sys_t=None, inet=0):
+    """ output SSR messages """
 
-    file_l6 = '../data/doy2025-233/233h_qzsl6.txt'
-    file_rtcm = '../data/doy2025-233/233h_qzsl6.rtc'
+    if cs.lc[inet].cstat & (1 << sct) == 0:
+        if sct not in [sCType.META, sCType.GRID]:
+            return
 
+    if sys_t is None:
+        mt = re.sct2mt(sct)
+        msg = encode_msg(cs, re, mt)
+        fc.write(msg)
+    else:
+        for sys in sys_t:
+            mt = re.sct2mt(sct, sys)
+            if mt < 0:
+                return
+            msg = encode_msg(cs, re, mt)
+            fc.write(msg)
+    cs.lc[inet].cstat ^= (1 << sct)
+
+
+def process(infile, outfile, args):
     dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
              ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
-    v = np.genfromtxt(file_l6, dtype=dtype)
+    v = np.genfromtxt(args.inpFileName, dtype=dtype)
 
     griddef = config['griddef']
 
-    nep = 10
-
     cs = cssr()
-    cs.monlevel = 2
+    cs.monlevel = config['cs']['monlevel']
     cs.read_griddef(griddef)
 
-    fc = open(file_rtcm, 'wb')
+    fc = open(outfile, 'wb')
     if not fc:
         print("RTCM message file cannot open.")
 
     re = rtcme()
-    re.gid = 1  # TBD
-    re.gtype = 0
-    re.ofst = 0
-    re.nm = 0  # number of metadata model
+    re.gtype = 1
 
-    prn_ref = 199
-    l6_ch = 0  # L6D
-    tow = 370800-1
+    re.gid = args.gid
+    prn_ref = args.prnref
+    l6_ch = args.l6ch  # L6D
+    tow = v[0]['tow']-1
+    nep = 3600
 
-    maxlen = len(cs.buff)
+    re.inet = re.gid
+    # maxlen = len(cs.buff)
 
-    # re.encode(cs.buff)
-    k = 0
+    sys_t = char2sys(args.gnss)
 
     for ne in range(nep):
         tow += 1
@@ -111,60 +127,53 @@ if __name__ == "__main__":
             cs.decode_l6msg(msg_, 0)
             if cs.fcnt == 5:  # end of sub-frame
                 cs.decode_cssr(bytes(cs.buff), 0)
-                k = 0
 
         if ne == 0:
-            msg = encode_msg(cs, re, 60)  # metadata
-            fc.write(msg)
-            msg = encode_msg(cs, re, 61)  # grid
-            fc.write(msg)
+            out_ssr(cs, re, fc, sCType.META)
+            out_ssr(cs, re, fc, sCType.GRID)
 
         if cs.lc[0].cstat & (1 << sCType.MASK) == 0:
             continue
 
-        if cs.lc[0].cstat & (1 << sCType.CLOCK):
-            msg = encode_msg(cs, re, 1058)  # GPS
-            fc.write(msg)
-            msg = encode_msg(cs, re,   65)  # GAL
-            fc.write(msg)
-            msg = encode_msg(cs, re,   67)  # QZS
-            fc.write(msg)
-            cs.lc[0].cstat ^= (1 << sCType.CLOCK)
-
-        if cs.lc[0].cstat & (1 << sCType.ORBIT):
-            msg = encode_msg(cs, re, 1057)  # GPS
-            fc.write(msg)
-            msg = encode_msg(cs, re,   62)  # GAL
-            fc.write(msg)
-            msg = encode_msg(cs, re,   64)  # QZS
-            fc.write(msg)
-            cs.lc[0].cstat ^= (1 << sCType.ORBIT)
-
-        if cs.lc[0].cstat & (1 << sCType.URA):
-            msg = encode_msg(cs, re, 1061)  # GPS
-            fc.write(msg)
-            msg = encode_msg(cs, re,   74)  # GAL
-            fc.write(msg)
-            msg = encode_msg(cs, re,   76)  # QZS
-            fc.write(msg)
-            cs.lc[0].cstat ^= (1 << sCType.URA)
-
-        if cs.lc[0].cstat & (1 << sCType.CBIAS):
-            msg = encode_msg(cs, re, 1059)  # GPS
-            fc.write(msg)
-            msg = encode_msg(cs, re,   68)  # GAL
-            fc.write(msg)
-            msg = encode_msg(cs, re,   70)  # QZS
-            fc.write(msg)
-            cs.lc[0].cstat ^= (1 << sCType.CBIAS)
-
-        if cs.lc[0].cstat & (1 << sCType.PBIAS):
-            msg = encode_msg(cs, re,   85)  # GPS
-            fc.write(msg)
-            msg = encode_msg(cs, re,   87)  # GAL
-            fc.write(msg)
-            msg = encode_msg(cs, re,   89)  # QZS
-            fc.write(msg)
-            cs.lc[0].cstat ^= (1 << sCType.PBIAS)
+        out_ssr(cs, re, fc, sCType.CLOCK, sys_t)
+        out_ssr(cs, re, fc, sCType.ORBIT, sys_t)
+        out_ssr(cs, re, fc, sCType.URA, sys_t)
+        out_ssr(cs, re, fc, sCType.CBIAS, sys_t)
+        out_ssr(cs, re, fc, sCType.PBIAS, sys_t, inet=re.inet)
+        out_ssr(cs, re, fc, sCType.TROP, inet=re.inet)
+        out_ssr(cs, re, fc, sCType.STEC, sys_t, inet=re.inet)
 
     fc.close()
+
+
+if __name__ == "__main__":
+
+    # Parse command line arguments
+    #
+    parser = argparse.ArgumentParser(
+        description="QZS L6 (CSSR) to RTCM SSR converter")
+
+    parser.add_argument("inpFileName",
+                        help="Input QZS L6 file(s) (wildcards allowed)")
+    parser.add_argument("-g", "--gnss", default='GEJ',
+                        help="GNSS [GEJ]")
+    parser.add_argument("--prnref", type=int, default=199,
+                        help="QZS satellite PRN [193-210] (default:199)")
+    parser.add_argument("--l6ch", type=int, default=0,
+                        help="QZS satellite L6 channel [0|1] (default:0)")
+    parser.add_argument("--gid", type=int, default=7,
+                        help="Network ID [1-12] (default:7)")
+    parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
+                        type=int, help='Max. number of parallel processes')
+
+    args = parser.parse_args()
+
+    # args.inpFileName = '../data/doy2025-233/233h_qzsl6.txt'
+    foutname = args.inpFileName.removesuffix('.txt')+'.rtcm3'
+
+    # process(args.inpFileName, foutname, args)
+    # Start processing pool
+    #
+    with mp.Pool(processes=args.jobs) as pool:
+        pool.starmap(process, [(f, foutname, args)
+                     for f in glob(args.inpFileName)])
