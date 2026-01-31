@@ -195,6 +195,8 @@ if __name__ == "__main__":
         file_rtcm = ['MT54_9', 'MT54_10_DFi209=0',
                      'MT54_10_DFi209=1', 'MT54_10_DFi209=2']
 
+        #file_rtcm = ['RTCM134test_21012026']
+
         # file_rtcm = ['sampledataMT03-04-05-06-07']
 
         # msg = read_asc(file_asc)
