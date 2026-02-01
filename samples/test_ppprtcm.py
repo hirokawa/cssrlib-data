@@ -3,7 +3,6 @@
 """
 
 import os
-from copy import deepcopy
 from cssrlib.gnss import Nav, load_config, time2doy, timediff, epoch2time
 from cssrlib.cssrlib import sCSSRTYPE, sCType
 from cssrlib.rtcm import rtcm

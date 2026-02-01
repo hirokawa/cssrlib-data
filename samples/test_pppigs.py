@@ -9,7 +9,7 @@ from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 from cssrlib.utils import process
 
-config = load_config('config.yml')
+config = load_config('config_ppp.yml')
 
 # Start epoch and number of epochs
 #

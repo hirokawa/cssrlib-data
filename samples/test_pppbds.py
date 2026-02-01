@@ -20,7 +20,7 @@ def decode_msg(v, tow, prn_ref):
     return msg
 
 
-config = load_config('config.yml')
+config = load_config('config_ppp.yml')
 
 # Select test case
 #

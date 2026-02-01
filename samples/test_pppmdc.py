@@ -12,7 +12,7 @@ from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 from cssrlib.utils import process
 
-config = load_config('config.yml')
+config = load_config('config_ppp.yml')
 
 
 def decode_msg(v, tow, prn_ref, l6_ch=0, prn_ref_ext=0, l6_ch_ext=0):

@@ -12,7 +12,7 @@ from cssrlib.rinex import rnxdec
 from cssrlib.cssr_pvs import decode_sinca_line
 from cssrlib.utils import process
 
-config = load_config('config.yml')
+config = load_config('config_ppp.yml')
 
 # Select test case
 #

@@ -38,7 +38,7 @@ nav:
     thresar: 2.0  # AR acceptance threshold
     elmaskar: 15.0
 
-    parmode: 2 # Partial AR 1: normal, 2: PAR
+    parmode: 1 # Partial AR 1: normal, 2: PAR
     par_P0: 0.995  # probability of sussefull AR
 
 cs:
