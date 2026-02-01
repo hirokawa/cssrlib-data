@@ -36,7 +36,8 @@ nav:
     # AR parameters
     armode: 3 # 0:float-ppp,1:continuous,2:instantaneous,3:fix-and-hold
     thresar: 2.0  # AR acceptance threshold
-    elmaskar: 15.0
+    elmaskar: 20.0
+    elmin: 10.0
 
     parmode: 1 # Partial AR 1: normal, 2: PAR
     par_P0: 0.995  # probability of sussefull AR

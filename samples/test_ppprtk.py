@@ -29,7 +29,7 @@ config = load_config('config_ppprtk.yml')
 l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
 dataset = 3
 nep = 900*4
-nep = 60
+# nep = 60
 
 navfile = None
 file_l6 = None
