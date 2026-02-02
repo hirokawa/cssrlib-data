@@ -7,26 +7,33 @@ from sys import exit as sys_exit
 
 from cssrlib.cssrlib import cssr
 import cssrlib.rinex as rn
-import cssrlib.gnss as gn
-from cssrlib.gnss import rSigRnx, time2str, sys2str, epoch2time
+from cssrlib.gnss import rSigRnx, time2str, sys2str, time2doy, Nav, time2gpst
+from cssrlib.gnss import epoch2time, load_config, pos2ecef, ecef2pos, timediff
+from cssrlib.gnss import ecef2enu
 from cssrlib.ppprtk import ppprtkpos
 from cssrlib.peph import atxdec, searchpcv
 
+config = load_config('config_ppprtk.yml')
+
+ttl = 'test_ppprtk2'
 ep = [2021, 9, 22, 6, 30, 0]
-time = gn.epoch2time(ep)
 
-atxfile = '../data/antex/'
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile += 'igs20.atx'
-else:
-    atxfile += 'igs14.atx'
 
-navfile = '../data/doy2021-265/SEPT2650.21P'
-obsfile = '../data/doy2021-265/SEPT265G.21O'
-l6file = '../data/doy2021-265/2021265G.l6'
+time = epoch2time(ep)
+year = ep[0]
+doy = int(time2doy(time))
+ses = chr(ord('A')+ep[3])
+
+if time < epoch2time([2022, 11, 27, 0, 0, 0]):
+    config['atxfile'] = '../data/antex/igs14.atx'
+
 griddef = '../data/clas_grid.def'
 
-xyz_ref = gn.pos2ecef([35.342058098, 139.521986657, 47.5515], True)
+navfile = f'../data/doy{year}-{doy:03d}/SEPT{doy:03d}0.{year%100:02d}P'
+obsfile = f'../data/doy{year}-{doy:03d}/SEPT{doy:03d}{ses}.{year%100:02d}O'
+l6file = f'../data/doy{year}-{doy:03d}/{year:4d}{doy:03d}{ses}.l6'
+
+xyz_ref = pos2ecef([35.342058098, 139.521986657, 47.5515], True)
 
 # Initial position guess
 #
@@ -34,7 +41,7 @@ rr0 = xyz_ref  # from pntpos
 
 cs = cssr()
 cs.monlevel = 1
-cs.week = 2176  # 2021/9/22
+cs.week,_ = time2gpst(time)
 cs.read_griddef(griddef)
 
 nep = 360
@@ -42,12 +49,12 @@ t = np.zeros(nep)
 enu = np.zeros((nep, 3))
 smode = np.zeros(nep, dtype=int)
 # rr0 = [-3961951.1326752,  3381198.11019757,  3668916.0417232]  # from pntpos
-pos_ref = gn.ecef2pos(xyz_ref)
+pos_ref = ecef2pos(xyz_ref)
 
 # Load ANTEX data for satellites and stations
 #
 atx = atxdec()
-atx.readpcv(atxfile)
+atx.readpcv(config['atxfile'])
 
 # Define signals to be processed
 #
@@ -70,7 +77,7 @@ if 'J' in gnss:
 rnx = rn.rnxdec()
 rnx.setSignals(sigs)
 
-nav = gn.Nav()
+nav = Nav()
 rnx.decode_nav(navfile, nav)
 
 if rnx.decode_obsh(obsfile) >= 0:
@@ -81,7 +88,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     # Initialize position
     #
-    ppprtk = ppprtkpos(nav, rnx.pos, 'test_ppprtk2.log')
+    ppprtk = ppprtkpos(nav, rnx.pos, logfile=f'{ttl}.log', config=config)
     nav.armode = 3
 
     # Satellite exclusion
@@ -138,7 +145,7 @@ if rnx.decode_obsh(obsfile) >= 0:
         nav.fout.write(txt+"\n")
     nav.fout.write("\n")
 
-    pos = gn.ecef2pos(rr0)
+    pos = ecef2pos(rr0)
     inet = cs.find_grid_index(pos)
 
     fc = open(l6file, 'rb')
@@ -163,7 +170,7 @@ if rnx.decode_obsh(obsfile) >= 0:
 
     for ne in range(nep):
 
-        week, tow = gn.time2gpst(obs.t)
+        week, tow = time2gpst(obs.t)
 
         cs.decode_l6msg(fc.read(250), 0)
         if cs.fcnt == 5:  # end of sub-frame
@@ -179,9 +186,9 @@ if rnx.decode_obsh(obsfile) >= 0:
         if cstat:
             ppprtk.process(obs, cs=cs)
 
-        t[ne] = gn.timediff(nav.t, t0)
+        t[ne] = timediff(nav.t, t0)
         sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
-        enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
+        enu[ne, :] = ecef2enu(pos_ref, sol-xyz_ref)
         smode[ne] = nav.smode
 
         nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:14.4f} {:2d}\n"
@@ -231,7 +238,7 @@ for k in range(3):
         plt.legend()
     plt.grid()
 
-plotFileName = '.'.join(('test_ppprtk2_1', plotFileFormat))
+plotFileName = '.'.join((f'{ttl}_1', plotFileFormat))
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()
@@ -250,7 +257,7 @@ plt.grid()
 plt.axis('equal')
 plt.legend()
 
-plotFileName = '.'.join(('test_ppprtk2_2', plotFileFormat))
+plotFileName = '.'.join((f'{ttl}_2', plotFileFormat))
 plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
 
 # plt.show()
