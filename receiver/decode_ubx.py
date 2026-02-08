@@ -348,15 +348,15 @@ class ubx(rcvDec):
                 seph = self.rn.decode_sbs_l1(self.week, self.tow, sat, b)
         elif sys == uGNSS.QZS:
             if sigid in [0, 12] and self.flg_qzslnav:  # L1C/A or L1C/B
-                fh_ = self.fh_qzslnav
+                fh_ = self.fh_gpslnav
                 type_ = 0
                 eph = self.rn.decode_gps_lnav(self.week, self.tow, sat, b)
             elif sigid == 4 and self.flg_qzscnav:  # L2C
-                fh_ = self.fh_qzscnav
+                fh_ = self.fh_gpscnav
                 type_ = 1
                 eph = self.rn.decode_gps_cnav(self.week, self.tow, sat, b)
             elif sigid == 8 and self.flg_qzscnav:  # L5I
-                fh_ = self.fh_qzscnav
+                fh_ = self.fh_gpscnav
                 type_ = 2
                 eph = self.rn.decode_gps_cnav(self.week, self.tow, sat, b)
 
@@ -374,8 +374,14 @@ class ubx(rcvDec):
                 itype = 0 if sigid == 0 else 1
                 self.output_sbas(prn, b[:blen], fh_, itype)
             else:
-                fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
+                if (sys in [uGNSS.GPS, uGNSS.QZS] and type_ in [1,2]) or \
+                    (sys == uGNSS.GAL and type_ in [0,2]):
+                    fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
                           format(self.week, int(self.tow+0.01), prn, type_,
+                                 blen, hexlify(b[:blen]).decode()))                        
+                else:
+                    fh_.write("{:4d}\t{:6d}\t{:3d}\t{:3d}\t{:s}\n".
+                          format(self.week, int(self.tow+0.01), prn,
                                  blen, hexlify(b[:blen]).decode()))
 
         if self.monlevel > 1:
@@ -432,7 +438,7 @@ def decode(f, opt, args):
 
     bdir, fname = os.path.split(f)
 
-    prefix = fname.removesuffix('.ubx')[-4:]+'_'
+    prefix = fname.removesuffix('.ubx')
     prefix = str(Path(bdir) / prefix) if bdir else prefix
     ubxdec = ubx(opt, prefix=prefix, gnss_t=args.gnss)
     ubxdec.monlevel = 1
