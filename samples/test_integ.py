@@ -102,15 +102,18 @@ def write_rtcm(file_rtcm, msg_t, intr, nep=1):
     return msg[:k]
 
 
-def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024):
+def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024, 
+                mt_skip=None):
     cs = rtcm(foutname=logfile)
     cs.monlevel = 2
+    if mt_skip is not None:
+        cs.mt_skip = mt_skip
 
     k = 0
     for ne in range(nep):
 
         # loop for RTCM
-        while k < maxlen:
+        while k < maxlen-1024:
             stat = cs.sync(msg, k)
             if stat is False:
                 k += 1
@@ -138,7 +141,7 @@ def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024):
     return cs
 
 
-def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
+def read_rtcm(file_rtcm, intr, nep=1, logfile=None, mt_skip=None):
     """ read test script for SC-134 messages """
 
     fc = open(file_rtcm, 'rb')
@@ -150,12 +153,15 @@ def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
     maxlen = len(msg)-5
     fc.close()
 
-    return decode_rtcm(msg, intr, nep, logfile, maxlen)
+    return decode_rtcm(msg, intr, nep, logfile, maxlen, mt_skip)
 
 
 if __name__ == "__main__":
     bdir = '../data/sc134/msg/'
     flg_sim = False
+    
+    mt_skip = []
+    #mt_skip = [1267] # work-around for SC134 SSR interop-test
 
     if flg_sim:  # generate test data
         file_rtcm = bdir+'test.rtcm'
@@ -198,9 +204,12 @@ if __name__ == "__main__":
         #file_rtcm = ['RTCM134test_21012026']
 
         # file_rtcm = ['sampledataMT03-04-05-06-07']
+        file_rtcm = ['ssr/SSRTEST_20260206_CORR',
+                     'ssr/ROVRMSG',
+                     'ssr/ROMAMSG']
 
         # msg = read_asc(file_asc)
         for f in file_rtcm:
             file_log = bdir+f+'.dlg'
             msg = read_bin(bdir+f+'.bin')
-            decode_rtcm(msg, logfile=file_log, maxlen=len(msg))
+            decode_rtcm(msg, logfile=file_log, maxlen=len(msg),mt_skip=mt_skip)
