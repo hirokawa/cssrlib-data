@@ -6,7 +6,7 @@
 
 import os
 import copy
-from cssrlib.gnss import uGNSS, prn2sat
+from cssrlib.gnss import uGNSS, prn2sat, gpst2time
 from cssrlib.rtcm import rtcm, rtcme, Integrity
 from random import randint, seed, sample
 from binascii import unhexlify
@@ -103,9 +103,11 @@ def write_rtcm(file_rtcm, msg_t, intr, nep=1):
 
 
 def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024, 
-                mt_skip=None):
+                mt_skip=None, weekref = -1):
     cs = rtcm(foutname=logfile)
     cs.monlevel = 2
+    cs.week = weekref
+    cs.time = gpst2time(cs.week, 0)
     if mt_skip is not None:
         cs.mt_skip = mt_skip
 
@@ -200,6 +202,7 @@ if __name__ == "__main__":
 
         file_rtcm = ['MT54_9', 'MT54_10_DFi209=0',
                      'MT54_10_DFi209=1', 'MT54_10_DFi209=2']
+        weekref = 2403
 
         #file_rtcm = ['RTCM134test_21012026']
 
@@ -207,9 +210,11 @@ if __name__ == "__main__":
         file_rtcm = ['ssr/SSRTEST_20260206_CORR',
                      'ssr/ROVRMSG',
                      'ssr/ROMAMSG']
+        weekref = 2404
 
         # msg = read_asc(file_asc)
         for f in file_rtcm:
             file_log = bdir+f+'.dlg'
             msg = read_bin(bdir+f+'.bin')
-            decode_rtcm(msg, logfile=file_log, maxlen=len(msg),mt_skip=mt_skip)
+            decode_rtcm(msg, logfile=file_log, maxlen=len(msg),mt_skip=mt_skip, 
+                        weekref=weekref)
