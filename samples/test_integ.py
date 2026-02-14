@@ -115,7 +115,7 @@ def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024,
     for ne in range(nep):
 
         # loop for RTCM
-        while k < maxlen-1024:
+        while k < maxlen:
             stat = cs.sync(msg, k)
             if stat is False:
                 k += 1
@@ -200,17 +200,23 @@ if __name__ == "__main__":
 
     else:  # decode using sample dataset (*.bin)
 
-        file_rtcm = ['MT54_9', 'MT54_10_DFi209=0',
-                     'MT54_10_DFi209=1', 'MT54_10_DFi209=2']
-        weekref = 2403
+        icase = 2
+
+        if icase == 1:
+
+            file_rtcm = ['MT54_9', 'MT54_10_DFi209=0',
+                         'MT54_10_DFi209=1', 'MT54_10_DFi209=2']
+            weekref = 2403
 
         #file_rtcm = ['RTCM134test_21012026']
 
         # file_rtcm = ['sampledataMT03-04-05-06-07']
-        file_rtcm = ['ssr/SSRTEST_20260206_CORR',
-                     'ssr/ROVRMSG',
-                     'ssr/ROMAMSG']
-        weekref = 2404
+        
+        elif icase == 2:
+            file_rtcm = ['ssr/SSRTEST_20260206_CORR',
+                         'ssr/ROVRMSG',
+                         'ssr/ROMAMSG']
+            weekref = 2404
 
         # msg = read_asc(file_asc)
         for f in file_rtcm:
