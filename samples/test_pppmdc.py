@@ -106,7 +106,7 @@ proc = process(nav, rnx, config, nep=nep, xyz_ref=xyz_ref)
 # Define signals to be processed
 
 # sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q']} # GE
-sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q'], 'J': ['1C', '2L'],
+sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q'], 'J': ['1C', '5Q'],
          'R': ['1C', '2C'], 'C': ['2I', '5P']}  # GEJRC
 
 sigs, nav.nf = proc.init_sig(sig_t)
