@@ -213,7 +213,7 @@ if __name__ == "__main__":
         # file_rtcm = ['sampledataMT03-04-05-06-07']
         
         elif icase == 2:
-            file_rtcm = ['ssr/SSRTEST_20260206_CORR',
+            file_rtcm = ['ssr/SSRTEST_20260206_CORR_v123',
                          'ssr/ROVRMSG',
                          'ssr/ROMAMSG']
             weekref = 2404
