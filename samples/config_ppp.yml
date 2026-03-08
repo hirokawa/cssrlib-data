@@ -16,6 +16,7 @@ nav:
     
     eratio: [50.0, 50.0]
     err: [0, 0.007, 0.0035]
+    # excl_sat: ['G02']
     
     # initial value of covariance
     sig_p0: 100.0 # [m]

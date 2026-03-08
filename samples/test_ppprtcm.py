@@ -3,25 +3,28 @@
 """
 
 import os
-from cssrlib.gnss import Nav, load_config, time2doy, timediff, epoch2time
+from cssrlib.gnss import Nav, load_config, time2doy, timediff, epoch2time, timeadd
 from cssrlib.cssrlib import sCSSRTYPE, sCType
 from cssrlib.rtcm import rtcm
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
 from cssrlib.utils import process
 
-config = load_config('config.yml')
+config = load_config('config_ppp.yml')
 
 # Select test case
 #
 icase = 3
 nep = 900*4-5
+# nep = 60*16
 
 ttl = 'test_ppprtcm'
 navfile = None
 file_rtcm = None
 # Start epoch and number of epochs
 #
+cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT | 1 << sCType.CBIAS
+
 if icase == 1:  # Galileo HAS IDD
 
     ep = [2023, 8, 17, 2, 0, 0]
@@ -31,7 +34,6 @@ if icase == 1:  # Galileo HAS IDD
     xyz_ref = [4186704.2262, 834903.7677, 4723664.9337]
     file_rtcm = '../data/doy2023-229/idd2023229c.rtc'
     file_rtcm_log = '../data/doy2023-229/idd2023229c.log'
-    cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT | 1 << sCType.CBIAS
 
 elif icase == 2:  # JPL GDGPS  Mosaic-X5
 
@@ -39,7 +41,6 @@ elif icase == 2:  # JPL GDGPS  Mosaic-X5
     xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
     file_rtcm = '../data/doy2024-043/JPL32T2043h.rtcm3'
     file_rtcm_log = '../data/doy2024-043/JPL32T2043h.log'
-    cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT | 1 << sCType.CBIAS
 
 elif icase == 3:  # JPL GDGPS (w/o code bias) JAVAD DELTA-3S
 
@@ -49,6 +50,19 @@ elif icase == 3:  # JPL GDGPS (w/o code bias) JAVAD DELTA-3S
     file_rtcm = '../data/doy2025-233/jpl233h.rtcm3'
     file_rtcm_log = '../data/doy2025-233/jpl233h.log'
     cs_mask = 1 << sCType.CLOCK | 1 << sCType.ORBIT
+
+elif icase == 4:  # RTCM-SC134
+
+    ep = [2026, 2, 6,20, 0, 39]
+    # xyz_ref = [4649341.5804,   1029778.2736,   4229073.4732]
+    xyz_ref = [4649331.6995,   1029774.1231,   4229062.7567]
+    # SSRA11JPL0 GPS+GAL orbit+clock corrs
+    bdir = '../data/sc134/msg/ssr/'
+    file_rtcm = bdir+'SSRTEST_20260206_CORR_v123.bin'
+    file_rtcm_log = bdir+'SSRTEST_20260206_CORR_v123.log'
+    #navfile = bdir+'ROMA037.nav'
+    navfile = bdir+'M0SE00ITA_R_20260370000_01D_MN.rnx'
+    obsfile = bdir+'ROVR037.obs'
 
 time = epoch2time(ep)
 year = ep[0]
@@ -89,6 +103,8 @@ cs.monlevel = 1
 cs.cssrmode = sCSSRTYPE.RTCM3_SSR
 cs.inet = 0
 
+# cs.workaround_sc134 = True
+
 if icase in [2, 3]:  # mask phase-bias for JPL GDGPS
     cs.mask_pbias = True
 
@@ -119,6 +135,7 @@ obs = rnx.decode_obs()
 while time > obs.t and obs.t.time != 0:
     obs = rnx.decode_obs()
 
+cs.time = obs.t
 k = 0
 # Loop over number of epoch from file start
 #
@@ -134,13 +151,13 @@ for ne in range(nep):
         # nav.time_p = t0
         proc.init_time(obs.t)
 
-    while True:
+    while k<maxlen:
         stat = cs.sync(msg, k)
         if stat is False:
             k += 1
             continue
         if not cs.checksum(msg, k, maxlen):
-            k += 1
+            k += cs.dlen
             continue
 
         tc = cs.decode_time(msg[k:k+cs.len+3])
