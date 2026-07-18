@@ -2,314 +2,121 @@
  static test for DGPS (QZSS SLAS)
 """
 from binascii import unhexlify
-from copy import deepcopy
-import matplotlib.pyplot as plt
-import matplotlib.dates as md
 import numpy as np
-from sys import exit as sys_exit
-from sys import stdout
-
-import cssrlib.gnss as gn
-from cssrlib.gnss import ecef2pos, Nav
-from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
-from cssrlib.gnss import rSigRnx, sys2str, uIonoModel
-from cssrlib.peph import atxdec, searchpcv
+from cssrlib.gnss import Nav, time2gpst, time2doy, epoch2time
+from cssrlib.gnss import rSigRnx, uIonoModel, load_config
 from cssrlib.pntpos import stdpos
 from cssrlib.dgps import dgpsDec
 from cssrlib.rinex import rnxdec
+from cssrlib.utils import process
 
+
+def decode_msg(v, tow, prn_ref):
+    """ find valid correction message """
+
+    vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
+           & ((v['type'] >= 47) & (v['type'] <= 51))]
+    if len(vi) > 0:
+        msg = unhexlify(vi['nav'][0])
+    else:
+        msg = None
+
+    return msg
+
+
+config = load_config('config.yml')
 
 # Select test case
 #
 dataset = 0
+nep = 3600
+ttl = 'test_dgps'  # title for case
+
+navfile = None
 
 # Start epoch and number of epochs
 #
-if dataset == 0:  # MSAS, L1 SBAS
-    ep = [2023, 8, 11, 21, 0, 0]
-    # navfile = '../data/doy2023-308/308c_rnx.nav'
-    navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
-    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
-    file_sbas = '../data/doy2023-223/223v_sbas.txt'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
-    prn_ref = 189  # satellite PRN for SLAS
+if dataset == 0:  # QZSS SLAS
+    ep = [2025, 8, 21, 7, 0, 0]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
+
+    prn_ref = 199  # satellite PRN for SBAS correction
     sbas_type = 0  # L1: 0, L5: 1
     nf = 1
-
-elif dataset == 1:  # MSAS, L1 SBAS
-    ep = [2025, 2, 15, 12, 0, 0]
-    navfile = '../data/doy2025-046/046r_rnx.nav'
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # PolaRX5
-    file_sbas = '../data/doy2025-046/046m_sbas.txt'
-    xyz_ref = [-3962108.6726, 3381309.4719, 3668678.6264]
-    prn_ref = 189  # satellite PRN for SBAS correction
-    sbas_type = 0  # L1: 0, L5: 1
-    nf = 1
-
-elif dataset == 2:  # SouthPAN L5
-    print("ERROR: datset not yet available!")
-    sys_exit(1)
-
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
+ses = chr(ord('a')+ep[3])
 
-nep = 3600
-# nep = 360
+if navfile is None:
+    navfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.nav'
+    obsfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.obs'
+    file_sbas = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_sbas.txt'
 
-pos_ref = ecef2pos(xyz_ref)
+if sbas_type == 0:  # DGNSS
+    sig_t = {'G': ['1C'], 'J': ['1C']}
+
+else:  # dual frequency
+    sig_t = {'G': ['1C', '5Q'], 'E': ['1C', '5Q']}
+
+rnx = rnxdec()
+nav = Nav()
+proc = process(nav, rnx, config, nep=nep, xyz_ref=xyz_ref)
 
 # Define signals to be processed
 #
-sigs = []
-
-if sbas_type == 0:  # single frequency L1 SBAS
-    nf = 1
-    gnss = "GJ"
-    if 'G' in gnss:
-        sigs.extend([rSigRnx("GC1C"), rSigRnx("GL1C"), rSigRnx("GS1C")])
-    if 'J' in gnss:
-        sigs.extend([rSigRnx("JC1C"), rSigRnx("JL1C"), rSigRnx("JS1C")])
-
-else:  # dual frequency
-    nf = 2
-    gnss = "GE"
-    if 'G' in gnss:
-        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC5Q"),
-                     rSigRnx("GL1C"), rSigRnx("GL5Q"),
-                     rSigRnx("GS1C"), rSigRnx("GS5Q")])
-    if 'E' in gnss:
-        sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
-                     rSigRnx("EL1C"), rSigRnx("EL5Q"),
-                     rSigRnx("ES1C"), rSigRnx("ES5Q")])
-
-rnx = rnxdec()
+sigs, nav.nf = proc.init_sig(sig_t)
 rnx.setSignals(sigs)
-
-nav = Nav()
-
-# Positioning mode
-# 0:static, 1:kinematic
-#
-nav.pmode = 0
 
 # Decode RINEX NAV data
 #
 nav = rnx.decode_nav(navfile, nav)
 
-cs = dgpsDec('test_dgps_cs.log')
-cs.monlevel = 0
-
-# Load ANTEX data for satellites and stations
-#
-atx = atxdec()
-atx.readpcv('../data/antex/igs20.atx')
-
-# Initialize data structures for results
-#
-t = np.zeros(nep)
-enu = np.ones((nep, 3))*np.nan
-sol = np.zeros((nep, 4))
-ztd = np.zeros((nep, 1))
-smode = np.zeros(nep, dtype=int)
-
-# Logging level
-#
-nav.monlevel = 1  # TODO: enabled for testing!
+cs = dgpsDec(f'{ttl}_cs.log')
+cs.monlevel = config['cs']['monlevel']
 
 # Load RINEX OBS file header
 #
-if rnx.decode_obsh(obsfile) >= 0:
+rnx.decode_obsh(obsfile)
 
-    # Auto-substitute signals
-    #
-    rnx.autoSubstituteSignals()
+std = stdpos(nav, rnx.pos, f'{ttl}.log', trop_opt=2, iono_opt=2)
+std.ionoModel = uIonoModel.SBAS
 
-    # Initialize position
-    #
-    std = stdpos(nav, rnx.pos, 'test_dgps.log', trop_opt=2, iono_opt=2)
-    nav.elmin = np.deg2rad(5.0)
+proc.prepare_signal(obsfile)
 
-    std.ionoModel = uIonoModel.SBAS
-
-    nav.nf = nf
-
-    # Get equipment information
-    #
-    nav.fout.write("FileName: {}\n".format(obsfile))
-    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
-    if rnx.te is not None:
-        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
-    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
-    nav.fout.write("Antenna : {}\n".format(rnx.ant))
-    nav.fout.write("\n")
-
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-
-    # Set PCO/PCV information
-    #
-    nav.sat_ant = atx.pcvs
-    nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
-    if nav.rcv_ant is None:
-        nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                       .format(rnx.ant))
-
-    # Print available signals
-    #
-    nav.fout.write("Available signals\n")
-    for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys), ' '.
-                                  join([sig.str() for sig in sigs.values()]))
-        nav.fout.write(txt)
-    nav.fout.write("\n")
-
-    nav.fout.write("Selected signals\n")
-    for sys, tmp in rnx.sig_tab.items():
-        txt = "{:7s} ".format(sys2str(sys))
-        for _, sigs in tmp.items():
-            txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        nav.fout.write(txt+"\n")
-    nav.fout.write("\n")
-
-    # Skip epochs until start time
-    #
+# Skip epochs until start time
+#
+obs = rnx.decode_obs()
+while time > obs.t and obs.t.time != 0:
     obs = rnx.decode_obs()
-    while time > obs.t and obs.t.time != 0:
-        obs = rnx.decode_obs()
 
-    dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
-             ('type', 'int'), ('len', 'int'), ('nav', 'S124')]
-    v = np.genfromtxt(file_sbas, dtype=dtype)
+dtype = [('wn', 'int'), ('tow', 'float'), ('prn', 'int'),
+         ('type', 'int'), ('marker', 'S2'), ('nav', 'S124')]
+v = np.genfromtxt(file_sbas, dtype=dtype)
 
-    # Loop over number of epoch from file start
+# Loop over number of epoch from file start
+#
+for ne in range(nep):
+    _, tow = cs.set_time(obs.t)  # set time for reference
+
+    # Set initial epoch
     #
-    for ne in range(nep):
+    if ne == 0:
+        proc.init_time(obs.t)
 
-        week, tow = time2gpst(obs.t)
-        cs.week = week
-        cs.tow0 = tow//86400*86400
-        cs.time = obs.t
+    msg = decode_msg(v, tow, prn_ref)
+    if msg is not None:
+        cs.decode_cssr(msg, 0)  # decode DGPS correction
 
-        # Set initial epoch
-        #
-        if ne == 0:
-            nav.t = deepcopy(obs.t)
-            t0 = deepcopy(obs.t)
-            t0.time = t0.time//30*30
-            nav.time_p = t0
+    if (cs.lc[0].cstat & 0x7) == 0x7:  # wait for mask/clock/orbit
+        std.process(obs, cs=cs)  # standalone positioning
 
-        vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)
-               & (v['type'] == sbas_type)]
-        if len(vi) > 0:
-            buff = unhexlify(vi['nav'][0])
-            cs.decode_cssr(buff, 0)
+    proc.save_output(obs.t, ne)  # save output
 
-        # cs.check_validity(obs.t)
+    obs = rnx.decode_obs()  # get new epoch
+    if obs.t.time == 0:  # exit after last epoch
+        break
 
-        # Call PPP module with PVS corrections
-        #
-        if (cs.lc[0].cstat & 0x7) == 0x7:
-            std.process(obs, cs=cs)
-        # std.process(obs)
-
-        # Save output
-        #
-        t[ne] = timediff(nav.t, t0)/86400.0
-
-        sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
-        enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
-
-        # ztd[ne] = nav.xa[std.IT(nav.na)] \
-        #    if nav.smode == 4 else nav.x[std.IT(nav.na)]
-        smode[ne] = nav.smode
-
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
-                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
-                       .format(time2str(obs.t),
-                               sol[0], sol[1], sol[2],
-                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                               smode[ne]))
-
-        # Log to standard output
-        #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, '
-                     '2D {:6.3f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
-
-    # Send line-break to stdout
-    #
-    stdout.write('\n')
-
-    # Close RINEX observation file
-    #
-    rnx.fobs.close()
-
-    # Close output file
-    #
-    if nav.fout is not None:
-        nav.fout.close()
-
-fig_type = 1
-ylim_h = 2.0
-ylim_v = 6.0
-
-idx2 = np.where(smode == 2)[0]
-idx1 = np.where(smode == 1)[0]
-idx0 = np.where(smode == 0)[0]
-
-fig = plt.figure(figsize=[7, 9])
-fig.set_rasterized(True)
-
-fmt = '%H:%M'
-
-if fig_type == 1:
-
-    lbl_t = ['East [m]', 'North [m]', 'Up [m]']
-
-    for k in range(3):
-        ylim = ylim_h if k < 2 else ylim_v
-        plt.subplot(3, 1, k+1)
-        plt.plot(t[idx0], enu[idx0, k], 'r.', label='none')
-        plt.plot(t[idx2], enu[idx2, k], 'y.', label='SBAS/DGPS')
-        plt.plot(t[idx1], enu[idx1, k], 'g.', label='standalone')
-
-        plt.ylabel(lbl_t[k])
-        plt.grid()
-        plt.ylim([-ylim, ylim])
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter(fmt))
-
-    plt.xlabel('Time [HH:MM]')
-    plt.legend()
-
-elif fig_type == 2:
-
-    ax = fig.add_subplot(111)
-
-    plt.plot(enu[idx0, 0], enu[idx0, 1], 'r.', label='none')
-    plt.plot(enu[idx2, 0], enu[idx2, 1], 'y.', label='SBAS/DGPS')
-    plt.plot(enu[idx1, 0], enu[idx1, 1], 'g.', label='standalone')
-
-    plt.xlabel('Easting [m]')
-    plt.ylabel('Northing [m]')
-    plt.grid()
-    plt.axis('equal')
-    plt.legend()
-    # ax.set(xlim=(-ylim, ylim), ylim=(-ylim, ylim))
-
-plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_dgps', plotFileFormat))
-
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-# plt.show()
+proc.close()
+proc.plot(ttl, fig_type=1, ylim=2, ylim_v=4)

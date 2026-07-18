@@ -2,67 +2,84 @@
  static test for PPP (MADOCA PPP)
 """
 from binascii import unhexlify
-from copy import deepcopy
-import matplotlib.pyplot as plt
 import numpy as np
 from sys import exit as sys_exit
-from sys import stdout
-
-from cssrlib.gnss import ecef2pos, ecef2enu, Nav, rSigRnx, sys2str
-from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
-from cssrlib.peph import atxdec, searchpcv
+from cssrlib.gnss import ecef2pos, Nav, load_config
+from cssrlib.gnss import time2doy, epoch2time
 from cssrlib.cssrlib import sCType as sc
 from cssrlib.cssr_mdc import cssr_mdc
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
-from cssrlib.plot import plot_enu
+from cssrlib.utils import process
+
+config = load_config('config_ppp.yml')
+
+
+def decode_msg(v, tow, prn_ref, l6_ch=0, prn_ref_ext=0, l6_ch_ext=0):
+    """ find valid correction message """
+
+    msg, msg_e = None, None
+
+    vi_ = v[v['tow'] == tow]
+    vi = vi_[(vi_['type'] == l6_ch) & (vi_['prn'] == prn_ref)]
+    if len(vi) > 0:
+        msg = unhexlify(vi['nav'][0])
+
+    # load regional STEC info (experimental)
+    if prn_ref_ext > 0:
+        vi = vi_[(vi_['type'] == l6_ch_ext) &
+                 (vi_['prn'] == prn_ref_ext)]
+        if len(vi) > 0:
+            msg_e = unhexlify(vi['nav'][0])
+
+    return msg, msg_e
+
 
 # Select test case
 #
+ttl = 'test_pppmdc'
 l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
-dataset = 3
-
+dataset = 1
+navfile = None
+file_l6 = None
 file_stec = None
+
+prn_ref = 199  # QZSS PRN
+l6_ch = 1  # 0:L6D, 1:L6E
+
+prn_ref_ext = -1
+l6_ch_ext = 0  # 0:L6D,1:L6E
 
 # Start epoch and number of epochs
 #
 if dataset == 0:
-    ep = [2023, 7, 8, 4, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2023-189/SEPT1890.23P'
-    obsfile = '../data/doy2023-189/SEPT1890.23O'
-    file_l6 = '../data/doy2023-189/qzsl6_189e.txt'
-elif dataset == 1:
-    ep = [2023, 8, 11, 21, 0, 0]
-    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2023-223/NAV223.23p'
-    # navfile = '../data/brdc/BRD400DLR_S_20232230000_01D_MN.rnx'
-    # obsfile = '../data/doy2023-223/SEPT223Z.23O'  # MOSAIC-CLAS
-    obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
-    file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
-elif dataset == 2:
     ep = [2025, 2, 15, 17, 0, 0]
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2025-046/046r_rnx.nav'  #
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # SEPT MOSAIC-X5
-    if l6_mode == 0:
-        file_l6 = '../data/doy2025-046/046r_qzsl6.txt'
-    elif l6_mode == 1:
+    if l6_mode == 1:
         file_l6 = '../data/doy2025-046/2025046R.l6'
-elif dataset == 3:
+elif dataset == 1:
     ep = [2025, 8, 21, 7, 0, 0]
-    navfile = '../data/doy2025-233/233h_rnx.nav'
-    # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
-    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
-    file_l6 = '../data/doy2025-233/233h_qzsl6.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
-    # file_stec = '../data/qzsl6/2025233H.201.l6'  # STEC correction
+elif dataset == 2:  # MADOCA-PPP with iono correction
+    ep = [2025, 8, 21, 7, 0, 0]
+    xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
+    file_stec = '../data/qzsl6/2025233H.201.l6'  # STEC correction
+    # prn_ref_ext = 201  # QZSS PRN for iono-correction
+
 
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
+ses = chr(ord('a')+ep[3])
 
-nep = 900*4-5
+if navfile is None:
+    navfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.nav'
+    obsfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.obs'
+if file_l6 is None:
+    file_l6 = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_qzsl6.txt'
+
+nep = 3600-5
+# nep = 120
 
 if l6_mode == 1:
     fc = open(file_l6, 'rb')
@@ -74,13 +91,6 @@ else:
              ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
     v = np.genfromtxt(file_l6, dtype=dtype)
 
-prn_ref = 199  # QZSS PRN
-l6_ch = 1  # 0:L6D, 1:L6E
-
-prn_ref_ext = -1
-# prn_ref_ext = 201  # QZSS PRN for iono-correction
-l6_ch_ext = 0  # 0:L6D,1:L6E
-
 if file_stec is not None:
     fc = open(file_stec, 'rb')
     if not fc:
@@ -89,40 +99,18 @@ if file_stec is not None:
 
 iono_opt = 2 if prn_ref_ext > 0 or (file_stec is not None) else 1
 
-pos_ref = ecef2pos(xyz_ref)
+rnx = rnxdec()
+nav = Nav()
+proc = process(nav, rnx, config, nep=nep, xyz_ref=xyz_ref)
 
 # Define signals to be processed
-#
-# gnss = "GE"
-gnss = "GEJRC"
-sigs = []
-if 'G' in gnss:
-    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
-                 rSigRnx("GL1C"), rSigRnx("GL2W"),
-                 rSigRnx("GS1C"), rSigRnx("GS2W")])
-if 'E' in gnss:
-    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
-                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
-                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
-if 'J' in gnss:
-    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
-                 rSigRnx("JL1C"), rSigRnx("JL2L"),
-                 rSigRnx("JS1C"), rSigRnx("JS2L")])
 
-if 'R' in gnss:
-    sigs.extend([rSigRnx("RC1C"), rSigRnx("RC2C"),
-                 rSigRnx("RL1C"), rSigRnx("RL2C"),
-                 rSigRnx("RS1C"), rSigRnx("RS2C")])
+# sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q']} # GE
+sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q'], 'J': ['1C', '5Q'],
+         'R': ['1C', '2C'], 'C': ['2I', '5P']}  # GEJRC
 
-if 'C' in gnss:
-    sigs.extend([rSigRnx("CC2I"), rSigRnx("CC5P"),
-                 rSigRnx("CL2I"), rSigRnx("CL5P"),
-                 rSigRnx("CS2I"), rSigRnx("CS5P")])
-
-rnx = rnxdec()
+sigs, nav.nf = proc.init_sig(sig_t)
 rnx.setSignals(sigs)
-
-nav = Nav()
 
 # Positioning mode
 # 0:static, 1:kinematic
@@ -149,217 +137,77 @@ cs_ = cssr_mdc('../data/madoca_cssr_ex.log')
 cs_.monlevel = 2
 """
 
-# Load ANTEX data for satellites and stations
-#
-atxfile = '../data/antex/'
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile += 'igs20.atx'
-else:
-    atxfile += 'igs14.atx'
-
-atx = atxdec()
-atx.readpcv(atxfile)
-
-# Initialize data structures for results
-#
-t = np.zeros(nep)
-enu = np.ones((nep, 3))*np.nan
-sol = np.zeros((nep, 4))
-ztd = np.zeros((nep, 1))
-smode = np.zeros(nep, dtype=int)
-nsat = np.zeros((nep, 3), dtype=int)
-
-# Logging level
-#
-nav.monlevel = 1  # TODO: enabled for testing!
-
 # Load RINEX OBS file header
 #
-if rnx.decode_obsh(obsfile) >= 0:
+rnx.decode_obsh(obsfile)
 
-    # Auto-substitute signals
+# Initialize position
+#
+ppp = pppos(nav, rnx.pos, f'{ttl}.log', iono_opt=iono_opt)
+# nav.armode = 3
+# nav.thresar = 2.0
+
+proc.prepare_signal(obsfile)
+
+# Skip epochs until start time
+#
+obs = rnx.decode_obs()
+while time > obs.t and obs.t.time != 0:
+    obs = rnx.decode_obs()
+
+# Loop over number of epoch from file start
+#
+for ne in range(nep):
+    week, tow = cs.set_time(obs.t)  # set time for reference
+
+    # Set initial epoch
     #
-    rnx.autoSubstituteSignals()
+    if ne == 0:
+        proc.init_time(obs.t)
 
-    # Initialize position
+    if l6_mode == 1:  # from log file
+        cs.decode_l6msg(fc.read(250), 0)
+        if cs.fcnt == 5:  # end of sub-frame
+            cs.week = week
+            cs.decode_cssr(cs.buff, 0)
+    else:  # from L6 log
+        msg, msg_e = decode_msg(v, tow, prn_ref, l6_ch, prn_ref_ext, l6_ch_ext)
+        if msg is not None:
+            cs.decode_l6msg(msg, 0)
+            if cs.fcnt == 5:  # end of sub-frame
+                cs.decode_cssr(bytes(cs.buff), 0)
+
+        # load regional STEC info (experimental)
+        if prn_ref_ext > 0 and msg_e is not None:
+            cs_.decode_l6msg(msg_e, 0)
+            if cs_.sid == 1:  # end of sub-frame
+                cs.decode_cssr(bytes(cs_.buff_p), 0)
+
+        if file_stec is not None:  # STEC read from file
+            cs_.decode_l6msg(fc.read(250), 0)
+            if cs_.sid == 1:  # end of sub-frame
+                cs.decode_cssr(bytes(cs_.buff_p), 0)
+
+        cs.inet = cs.find_grid_index(ecef2pos(nav.x[:3]))
+
+    # Call PPP module
     #
-    ppp = pppos(nav, rnx.pos, 'test_pppmdc.log', iono_opt=iono_opt)
-    # nav.armode = 3
-    # nav.thresar = 2.0
+    if (cs.lc[0].cstat & 0xf) == 0xf:
+        if iono_opt == 2:  # STEC is available
+            mask_s = 1 << sc.STEC
+            if cs.inet > 0 and \
+                    cs.lc[cs.inet].cstat & mask_s == mask_s:
+                ppp.process(obs, cs=cs)
+        else:
+            ppp.process(obs, cs=cs)
 
-    nav.elmin = np.deg2rad(5.0)
+    proc.save_output(obs.t, ne, ppp)  # save output
 
-    nav.glo_ch = rnx.glo_ch
-
-    # Get equipment information
-    #
-    nav.fout.write("FileName: {}\n".format(obsfile))
-    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
-    if rnx.te is not None:
-        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
-    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
-    nav.fout.write("Antenna : {}\n".format(rnx.ant))
-    nav.fout.write("\n")
-
-    # Set satellite PCO/PCV information
-    #
-    nav.sat_ant = atx.pcvs
-
-    # Set receiver PCO/PCV information, check antenna name and exit if unknown
-    #
-    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
-    #       receiver antenna corrections!
-    #
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys_exit(1)
-    else:
-        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
-        if nav.rcv_ant is None:
-            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                           .format(rnx.ant))
-            sys_exit(1)
-
-    if nav.rcv_ant is None:
-        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
-        nav.fout.write("\n")
-
-    # Print available signals
-    #
-    nav.fout.write("Available signals\n")
-    for sys_, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys_),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
-        nav.fout.write(txt)
-    nav.fout.write("\n")
-
-    nav.fout.write("Selected signals\n")
-    for sys_, tmp in rnx.sig_tab.items():
-        txt = "{:7s} ".format(sys2str(sys_))
-        for _, sigs in tmp.items():
-            txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        nav.fout.write(txt+"\n")
-    nav.fout.write("\n")
-
-    # Skip epochs until start time
+    # Get new epoch, exit after last epoch
     #
     obs = rnx.decode_obs()
-    while time > obs.t and obs.t.time != 0:
-        obs = rnx.decode_obs()
+    if obs.t.time == 0:
+        break
 
-    # Loop over number of epoch from file start
-    #
-    for ne in range(nep):
-
-        week, tow = time2gpst(obs.t)
-        cs.week = week
-        cs.tow0 = tow//3600*3600
-
-        # Set initial epoch
-        #
-        if ne == 0:
-            nav.t = deepcopy(obs.t)
-            t0 = deepcopy(obs.t)
-            t0.time = t0.time//30*30
-            nav.time_p = t0
-
-        if l6_mode == 1:
-            cs.decode_l6msg(fc.read(250), 0)
-            if cs.fcnt == 5:  # end of sub-frame
-                cs.week = week
-                cs.decode_cssr(cs.buff, 0)
-        else:  # multi-channel mode
-            vi_ = v[v['tow'] == tow]
-
-            vi = vi_[(vi_['type'] == l6_ch) & (vi_['prn'] == prn_ref)]
-            if len(vi) > 0:
-                cs.decode_l6msg(unhexlify(vi['nav'][0]), 0)
-                if cs.fcnt == 5:  # end of sub-frame
-                    cs.decode_cssr(bytes(cs.buff), 0)
-
-            # load regional STEC info (experimental)
-            if prn_ref_ext > 0:
-                vi = vi_[(vi_['type'] == l6_ch_ext) &
-                         (vi_['prn'] == prn_ref_ext)]
-                if len(vi) > 0:
-                    cs_.decode_l6msg(unhexlify(vi['nav'][0]), 0)
-                    if cs_.sid == 1:  # end of sub-frame
-                        cs.decode_cssr(bytes(cs_.buff_p), 0)
-            if file_stec is not None:  # STEC read from file
-                cs_.decode_l6msg(fc.read(250), 0)
-                if cs_.sid == 1:  # end of sub-frame
-                    cs.decode_cssr(bytes(cs_.buff_p), 0)
-
-            cs.inet = cs.find_grid_index(ecef2pos(nav.x[:3]))
-
-        # Call PPP module
-        #
-        if (cs.lc[0].cstat & 0xf) == 0xf:
-            if iono_opt == 2:  # STEC is available
-                mask_s = 1 << sc.STEC
-                if cs.inet > 0 and \
-                        cs.lc[cs.inet].cstat & mask_s == mask_s:
-                    ppp.process(obs, cs=cs)
-            else:
-                ppp.process(obs, cs=cs)
-
-        # Save output
-        #
-        t[ne] = timediff(nav.t, t0)/86400.0
-
-        sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
-        enu[ne, :] = ecef2enu(pos_ref, sol-xyz_ref)
-
-        ztd[ne] = nav.xa[ppp.IT(nav.na)] \
-            if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
-        smode[ne] = nav.smode
-        nsat[ne, :] = nav.nsat
-
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
-                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
-                       .format(time2str(obs.t),
-                               sol[0], sol[1], sol[2],
-                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                               smode[ne]))
-
-        # Log to standard output
-        #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
-
-    # Send line-break to stdout
-    #
-    stdout.write('\n')
-
-    # Close RINEX observation file
-    #
-    rnx.fobs.close()
-
-    # Close output file
-    #
-    if nav.fout is not None:
-        nav.fout.close()
-
-fig_type = 1
-
-if fig_type == 1:
-    plot_enu(t, enu, smode, ztd)
-elif fig_type == 2:
-    plot_enu(t, enu, smode, figtype=fig_type)
-
-plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_pppmdc', plotFileFormat))
-
-plt.savefig(plotFileName, format=plotFileFormat,
-            bbox_inches='tight', dpi=300)
-# plt.show()
+proc.close()
+proc.plot(ttl, fig_type=1)

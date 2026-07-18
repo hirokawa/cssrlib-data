@@ -181,7 +181,7 @@ class nov(rcvDec):
             #    prn -= 37
             sat = prn2sat(sys, prn)
 
-            gfrq, pr_, sig_pr, cp_, sig_cp, dop_, cn0, lockt = \
+            gfrq, pr_, sig_pr, adr_, sig_adr, dop_, cn0, lockt = \
                 st.unpack_from('<Hdfdffff', buff, k+2)
             k += 44
 
@@ -191,7 +191,7 @@ class nov(rcvDec):
             if not clock:
                 pr_ = 0.0
             if not plock:
-                cp_ = dop_ = 0.0
+                adr_ = dop_ = 0.0
 
             if sys not in self.sig_t.keys():
                 continue
@@ -215,7 +215,7 @@ class nov(rcvDec):
             lli_ = slip + halfc*0
 
             pr[sat][idx] = pr_
-            cp[sat][idx] = cp_
+            cp[sat][idx] = -adr_
             dp[sat][idx] = dop_
             lli[sat][idx] = lli_
             cn[sat][idx] = cn0
@@ -267,22 +267,24 @@ class nov(rcvDec):
         type_ = 0 if src in (69, 14787) else 1
         blen = 38
 
-        fh_ = self.fh_qzscnav if sys == uGNSS.QZS else self.fh_gpscnav
-
-        fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
-                  format(self.week, int(self.tow), prn, type_, blen))
         msg = bytearray(40)
-        for i in range(38):
-            d = st.unpack_from('<B', buff, k)[0]
-            fh_.write("{:02x}".format(d))
-            msg[i] = d
+        for i in range(blen):
+            msg[i] = buff[k]
             k += 1
-        fh_.write("\n")
 
-        eph = self.rn.decode_gps_cnav(
-            self.week, self.tow, sat, msg)
-        if eph is not None:
-            self.re.rnx_nav_body(eph, self.fh_rnxnav)
+        if self.flg_gpscnav or self.flg_qzscnav:
+            fh_ = self.fh_gpscnav
+            fh_.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                      format(self.week, int(self.tow), prn, type_, blen))
+            for i in range(blen):
+                fh_.write("{:02x}".format(msg[i]))            
+            fh_.write("\n")
+
+        if self.flg_rnxnav:
+            eph = self.rn.decode_gps_cnav(
+                self.week, self.tow, sat, msg)
+            if eph is not None:
+                self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
     def decode(self, buff, len_, sys=[], prn=[]):
 
@@ -295,11 +297,13 @@ class nov(rcvDec):
         self.week = week
         self.tow = tow
         self.time = gpst2time(self.week, self.tow)
-        if self.monlevel > 0:
-            print(f"week={week} tow={tow:6.1f} id={id_:2d}")
 
         if id_ == 7:  # GPS L1 C/A ephemeris
             pass
+
+        elif id_ == 8:  # IONUTC
+            pass
+
         elif id_ == 25:  # RAWGPSSUBFRAME
             if self.flg_gpslnav:
                 k = self.head_len
@@ -312,7 +316,20 @@ class nov(rcvDec):
             if obs is not None:
                 self.re.rnx_obs_header(obs.time, self.fh_rnxobs)
                 self.re.rnx_obs_body(obs, self.fh_rnxobs)
+        
+        elif id_ == 47:  # PSRPOS: Pseudorange position
+            pass
+        
         elif id_ == 93:  # RXSTATUS
+            pass
+
+        elif id_ == 128:  # RXCONFIG
+            pass
+
+        elif id_ == 243:  # PSRXYZ: Pseudorange Cartesian position and velocity
+            pass
+
+        elif id_ == 719:  # GLOCLOCK: GLONASS L1 C/A clock information
             pass
 
         elif id_ == 722:  # GLORAWSTRING
@@ -348,34 +365,45 @@ class nov(rcvDec):
         elif id_ == 1336:  # GLONASS Eph
             pass
         elif id_ == 1413:  # GALFNAVRAWPAGE
+            if uGNSS.GAL not in self.sys_t:
+                return 0
+            
             k = self.head_len
             ch, prn = st.unpack_from('<II', buff, k)
             k += 8
             sat = prn2sat(uGNSS.GAL, prn)
 
+            msg = bytearray(31)
+            for i in range(27):
+                msg[i] = buff[k]
+                k += 1
+
             if self.flg_galfnav:
                 type_ = 0
-                self.fh_galfnav.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                self.fh_galfnav.write("{:4d}\t{:6d}\t{:3d}\t{:3d}\t".
                                       format(self.week, int(self.tow), prn,
-                                             type_, 27))
-
-                msg = bytearray(31)
+                                               27))
                 for i in range(27):
-                    d = st.unpack_from('<B', buff, k)[0]
-                    self.fh_galfnav.write("{:02x}".format(d))
-                    msg[i] = buff[k]
-                    k += 1
+                    self.fh_galfnav.write("{:02x}".format(msg[i]))
                 self.fh_galfnav.write("\n")
 
+            if self.flg_rnxnav:
                 eph = self.rn.decode_gal_fnav(self.week, self.tow, sat, 1, msg)
                 if eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif id_ == 1414:  # GALINAVRAWWORD
+            if uGNSS.GAL not in self.sys_t:
+                return 0
+                
             k = self.head_len
             ch, prn, src = st.unpack_from('<III', buff, k)
             k += 12
             sat = prn2sat(uGNSS.GAL, prn)
+
+            msg = bytearray(20)
+            copy_buff(buff, msg, k*8, 2, 112)
+            copy_buff(buff, msg, (k+14)*8, 122, 16)
 
             if self.flg_galinav:
                 if src == 10433:  # E1B
@@ -389,37 +417,37 @@ class nov(rcvDec):
                                       format(self.week, int(self.tow), prn,
                                              type_, 30))
 
-                msg = bytearray(20)
-                copy_buff(buff, msg, k*8, 2, 112)
-                copy_buff(buff, msg, (k+14)*8, 122, 16)
-
                 for i in range(16):
-                    d = st.unpack_from('<B', buff, k)[0]
-                    self.fh_galinav.write("{:02x}".format(d))
+                    self.fh_galinav.write("{:02x}".format(buff[k]))
                     k += 1
                 self.fh_galinav.write("\n")
 
+            if self.flg_rnxnav:
                 eph = self.rn.decode_gal_inav(self.week, self.tow,
                                               sat, 2, msg)
                 if self.mode_galinav == 0 and eph is not None:
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
         elif id_ == 1695:  # BDSRAWNAVSUBFRAME
-            if self.flg_bdsd12:
-                k = self.head_len
-                ch, prn, src, sid = st.unpack_from('<IIII', buff, k)
-                k += 16
-                sat = prn2sat(uGNSS.BDS, prn)
-                msg = bytearray(40)
-                ofst = k*8
-                for i in range(10):
-                    sz = 26 if i == 0 else 22
-                    fmt = 'u'+str(sz)
-                    d = bs.unpack_from(fmt, buff, ofst)[0]
-                    ofst += sz
-                    bs.pack_into(fmt, msg, 30*i, d)
+            if uGNSS.BDS not in self.sys_t:
+                return 0
+        
+            k = self.head_len
+            ch, prn, src, sid = st.unpack_from('<IIII', buff, k)
+            k += 16        
 
+            sat = prn2sat(uGNSS.BDS, prn)
+
+            msg = bytearray(40)
+            ofst = k*8
+            for i in range(10):
+                sz = 26 if i == 0 else 22
+                fmt = 'u'+str(sz)
+                d = bs.unpack_from(fmt, buff, ofst)[0]
+                ofst += sz
+                bs.pack_into(fmt, msg, 30*i, d)
+            
+            if self.flg_rnxnav:
                 eph = None
-
                 if prn > 5 and prn < 59:
                     eph = self.rn.decode_bds_d1(
                         self.week, self.tow, sat, msg)
@@ -433,7 +461,10 @@ class nov(rcvDec):
         elif id_ == 1696:  # BDS Eph
             pass
         elif id_ == 2105:  # NAVICRAWSUBFRAME
-            if self.flg_irnnav:
+            if uGNSS.IRN not in self.sys_t:
+                return 0
+                
+            if self.flg_rnxnav:
                 k = self.head_len
                 ch, prn, sid = st.unpack_from('<III', buff, k)
                 k += 12
@@ -449,41 +480,45 @@ class nov(rcvDec):
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif id_ == 2185:  # RAWSBASFRAME2
+
+            if timediff(self.time, self.time_p) > 0:
+                self.sbas_frm = {}
+
+            self.time_p = self.time
+            k = self.head_len
+            prn, ch, src, pre, _, frm = st.unpack_from('<IIBBHI', buff, k)
+            k += 16
+
+            itype = 0 if src == 1 else 1  # 0:L1, 1:L5
+
+            if prn not in self.sbas_frm.keys():
+                self.sbas_frm[prn] = []
+            if itype not in self.sbas_frm[prn]:
+                self.sbas_frm[prn].append(itype)
+
+            msg = bytearray(32)
+            for i in range(29):
+                d = st.unpack_from('<B', buff, k)[0]
+                msg[i] = buff[k]
+                k += 1
+                
             if self.flg_sbas:
-                if timediff(self.time, self.time_p) > 0:
-                    self.sbas_frm = {}
+                self.output_sbas(prn, msg, self.fh_sbas, itype)
 
-                self.time_p = self.time
-                k = self.head_len
-                prn, ch, src, pre, _, frm = st.unpack_from('<IIBBHI', buff, k)
-                k += 16
-
-                itype = 0 if src == 1 else 1  # 0:L1, 1:L5
-
-                if prn not in self.sbas_frm.keys():
-                    self.sbas_frm[prn] = []
-                if itype not in self.sbas_frm[prn]:
-                    self.sbas_frm[prn].append(itype)
-
-                    msg = bytearray(32)
-                    for i in range(29):
-                        d = st.unpack_from('<B', buff, k)[0]
-                        msg[i] = buff[k]
-                        k += 1
-
-                    self.output_sbas(prn, msg, self.fh_sbas, itype)
-
-                    sat = prn2sat(uGNSS.SBS, prn)
-                    if self.flg_rnxnav:
-                        seph = None
-                        if itype == 0:
-                            seph = self.rn.decode_sbs_l1(
-                                self.week, self.tow, sat, msg)
-                        if seph is not None:
-                            self.re.rnx_snav_body(seph, self.fh_rnxnav)
+            if self.flg_rnxnav:
+                sat = prn2sat(uGNSS.SBS, prn)
+                seph = None
+                if itype == 0:
+                    seph = self.rn.decode_sbs_l1(
+                        self.week, self.tow, sat, msg)
+                if seph is not None:
+                    self.re.rnx_snav_body(seph, self.fh_rnxnav)
 
         elif id_ == 2261:  # QZSSCNAVRAWMESSAGE
-            if self.flg_qzscnav:
+            if uGNSS.QZS not in self.sys_t:
+                return 0
+            
+            if self.flg_rnxnav:
                 k = self.head_len
                 ch, prn, src, id_ = st.unpack_from('<IIII', buff, k)
                 k += 16
@@ -491,6 +526,9 @@ class nov(rcvDec):
                 self.decode_gps_cnav(buff, uGNSS.QZS, prn, src, k)
 
         elif id_ == 2239:  # GALCNAVRAWPAGE
+            if uGNSS.GAL not in self.sys_t:
+                return 0
+            
             k = self.head_len
             ch, prn, id_, page = st.unpack_from('<IIHH', buff, k)
             k += 12
@@ -498,9 +536,9 @@ class nov(rcvDec):
             if self.flg_gale6:
                 blen = 58
                 type_ = 6
-                self.fh_gale6.write("{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t".
+                self.fh_gale6.write("{:4d}\t{:6d}\t{:3d}\t{:3d}\t".
                                     format(self.week, int(self.tow), prn,
-                                           type_, blen))
+                                           blen))
                 for i in range(58):
                     d = st.unpack_from('<B', buff, k)[0]
                     self.fh_gale6.write("{:02x}".format(d))
@@ -508,7 +546,9 @@ class nov(rcvDec):
                 self.fh_gale6.write("\n")
 
         elif id_ == 2262:  # GPSCNAVRAWMESSAGE
-            if self.flg_gpscnav:
+            if uGNSS.GPS not in self.sys_t:
+                return 0
+            if self.flg_rnxnav:
                 k = self.head_len
                 ch, prn, src, id_ = st.unpack_from('<IIII', buff, k)
                 k += 16
@@ -516,7 +556,10 @@ class nov(rcvDec):
                 self.decode_gps_cnav(buff, uGNSS.GPS, prn, src, k)
 
         elif id_ == 2373:  # BDSBCNAV1RAWMESSAGE
-            if self.flg_bdsb1c:
+            if uGNSS.BDS not in self.sys_t:
+                return 0
+
+            if self.flg_rnxnav:
                 k = self.head_len
                 ch, prn, page = st.unpack_from('<III', buff, k)
                 k += 12
@@ -536,7 +579,10 @@ class nov(rcvDec):
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif id_ == 2374:  # BDSBCNAV2RAWMESSAGE
-            if self.flg_bdsb2a:
+            if uGNSS.BDS not in self.sys_t:
+                return 0
+            
+            if self.flg_rnxnav:
                 k = self.head_len
                 ch, prn, page = st.unpack_from('<III', buff, k)
                 k += 12
@@ -555,7 +601,10 @@ class nov(rcvDec):
                     self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
         elif id_ == 2411:  # BDSBCNAV3RAWMESSAGE
-            if self.flg_bdsb2b:
+            if uGNSS.BDS not in self.sys_t:
+                return 0
+            
+            if self.flg_rnxnav:
                 k = self.head_len
                 ch, prn, page = st.unpack_from('<III', buff, k)
                 k += 12
@@ -585,7 +634,7 @@ def decode(f, opt, args):
 
     bdir, fname = os.path.split(f)
 
-    prefix = fname[4:].removesuffix('.nvr')+'_'
+    prefix = fname.removesuffix('.nvr')
     prefix = str(Path(bdir) / prefix) if bdir else prefix
     novdec = nov(opt, prefix=prefix, gnss_t=args.gnss)
     novdec.monlevel = 1
@@ -660,33 +709,33 @@ def main():
     opt.flg_rnxobs = True
     opt.flg_rnxnav = True
 
-    opt.flg_gpslnav = True
-    opt.flg_gpscnav = True
+    opt.flg_gpslnav = False
+    opt.flg_gpscnav = False
 
     opt.flg_qzsl6 = False
-    opt.flg_qzslnav = True
-    opt.flg_qzscnav = True
+    opt.flg_qzslnav = False
+    opt.flg_qzscnav = False
     opt.flg_qzsl1s = False
 
     opt.flg_gale6 = True
-    opt.flg_galinav = True
-    opt.flg_galfnav = True
+    opt.flg_galinav = False
+    opt.flg_galfnav = False
 
-    opt.flg_bdsb1c = True
-    opt.flg_bdsb2a = True
-    opt.flg_bdsb2b = True
-    opt.flg_bdsd12 = True
+    opt.flg_bdsb1c = False
+    opt.flg_bdsb2a = False
+    opt.flg_bdsb2b = False
+    opt.flg_bdsd12 = False
 
-    opt.flg_gloca = True
+    opt.flg_gloca = False
 
     opt.flg_irnnav = False
     opt.flg_sbas = True
 
     # Start processing pool
     #
-    # with mp.Pool(processes=args.jobs) as pool:
-    #    pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
-    decode(args.inpFileName, opt, args)
+    with mp.Pool(processes=args.jobs) as pool:
+        pool.starmap(decode, [(f, opt, args) for f in glob(args.inpFileName)])
+    # decode(args.inpFileName, opt, args)
 
 
 # Call main function

@@ -1,24 +1,44 @@
 """
  static test for PPP-RTK (QZSS CLAS)
 """
-from copy import deepcopy
-import matplotlib.pyplot as plt
 import numpy as np
 from sys import exit as sys_exit
-from sys import stdout
 
-import cssrlib.gnss as gn
 from cssrlib.cssrlib import cssr
-from cssrlib.gnss import ecef2pos, Nav, time2gpst, timediff, time2str, time2doy
-from cssrlib.gnss import rSigRnx, sys2str, epoch2time
-from cssrlib.peph import atxdec, searchpcv
+from cssrlib.gnss import ecef2pos, Nav, time2gpst, time2doy
+from cssrlib.gnss import epoch2time, load_config
 from cssrlib.ppprtk import ppprtkpos
 from cssrlib.rinex import rnxdec
 from binascii import unhexlify
-from cssrlib.plot import plot_enu
+from cssrlib.utils import process
+
+
+def decode_msg(v, tow, l6_ch, prn_ref):
+    """ find valid correction message """
+
+    msg = None
+    vi = v[(v['tow'] == tow) & (v['type'] == l6_ch) & (v['prn'] == prn_ref)]
+    if len(vi) > 0:
+        msg = unhexlify(vi['nav'][0])
+
+    return msg
+
+
+config = load_config('config_ppprtk.yml')
 
 l6_mode = 0  # 0: from receiver log, 1: from archive on QZSS
-dataset = 2
+dataset = 3
+nep = 900*4
+# nep = 60
+
+navfile = None
+file_l6 = None
+ttl = 'test_ppprtk'
+l6_ch = 0  # 0:L6D, 1:L6E
+prn_p1 = 199
+prn_p2 = -1
+
+sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q'], 'J': ['1C', '2L']}  # GEJ
 
 if l6_mode == 1:  # from archive
 
@@ -35,17 +55,6 @@ if l6_mode == 1:  # from archive
         ep = [2025, 2, 15, 17, 0, 0]
         xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
-        time = epoch2time(ep)
-        year = ep[0]
-        doy = int(time2doy(time))
-        let = chr(ord('a')+ep[3])
-
-        bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
-
-        navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
-        obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
-        l6file = bdir+'{:04d}{:03d}{}.l6'.format(year, doy, let.upper())
-
 else:  # from receiver log
 
     if dataset == 0:
@@ -54,256 +63,140 @@ else:  # from receiver log
         xyz_ref = [-3962108.7007, 3381309.5532, 3668678.6648]
         navfile = '../data/doy2023-223/NAV223.23p'
         obsfile = '../data/doy2023-223/SEPT223Y.23O'  # PolaRX5
-        file_l6 = '../data/doy2023-223/223v_qzsl6.txt'
 
-    elif dataset == 2:
+    elif dataset == 1:  # single channel
 
         ep = [2025, 8, 21, 7, 0, 0]
         xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
-        time = epoch2time(ep)
-        year = ep[0]
-        doy = int(time2doy(time))
-        let = chr(ord('a')+ep[3])
+    elif dataset == 2:  # two channel
 
-        bdir = '../data/doy{:04d}-{:03d}/'.format(year, doy)
+        ep = [2025, 8, 21, 7, 0, 0]
+        xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
 
-        navfile = bdir+'{:03d}{}_rnx.nav'.format(doy, let)
-        obsfile = bdir+'{:03d}{}_rnx.obs'.format(doy, let)  # SEPT MOSAIC-X5
-        file_l6 = bdir+'{:03d}{}_qzsl6.txt'.format(doy, let)
+        # from Tab 4.1.1-1 of IS-QZSS-L6
+        prn_p1 = 199  # QZSS PRN pattern 1 (195, 197, 199)
+        prn_p2 = 194  # QZSS PRN pattern 2 (194, 196)
 
-        # obsfile = bdir+'ux2233h_rnx.obs' # u-blox X20P
-        # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
+    elif dataset == 3:  # single channel
 
-    # from Tab 4.1.1-1 of IS-QZSS-L6
-    prn_p1 = 199  # QZSS PRN pattern 1 (195, 197, 199)
-    prn_p2 = 194  # QZSS PRN pattern 2 (194, 196)
-    l6_ch = 0  # 0:L6D, 1:L6E
+        ep = [2025, 8, 21, 7, 0, 0]
+        xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
+
+time = epoch2time(ep)
+year = ep[0]
+doy = int(time2doy(time))
+ses = chr(ord('a')+ep[3])
+
+if navfile is None:
+    navfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.nav'
+    obsfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.obs'
+if file_l6 is None:
+    file_l6 = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_qzsl6.txt'
+    if l6_mode == 1:
+        file_l6 = f'../data/doy{year}-{doy:03d}/{year}{doy:03d}{ses.upper()}.txt'
+
 
 time = epoch2time(ep)
 
-atxfile = '../data/antex/'
-if time > epoch2time([2022, 11, 27, 0, 0, 0]):
-    atxfile += 'igs20.atx'
-else:
-    atxfile += 'igs14.atx'
-griddef = '../data/clas_grid.def'
+if time < epoch2time([2022, 11, 27, 0, 0, 0]):
+    config['atxfile'] = '../data/antex/igs14.atx'
+
+griddef = config['griddef']
 
 pos_ref = ecef2pos(xyz_ref)
 
 cs = cssr()
-cs.monlevel = 1
+cs.monlevel = config['cs']['monlevel']
 cs.week = time2gpst(time)[0]
 cs.read_griddef(griddef)
 
 cs_ = cssr()
-cs_.monlevel = 1
+cs_.monlevel = config['cs']['monlevel']
 cs_.week = cs.week
 cs_.read_griddef(griddef)
 
-# Define signals to be processed
-#
-gnss = "GEJ"  # "GEJ"
-sigs = []
-if 'G' in gnss:
-    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
-                 rSigRnx("GL1C"), rSigRnx("GL2W"),
-                 rSigRnx("GS1C"), rSigRnx("GS2W")])
-if 'E' in gnss:
-    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
-                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
-                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
-if 'J' in gnss:
-    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC2L"),
-                 rSigRnx("JL1C"), rSigRnx("JL2L"),
-                 rSigRnx("JS1C"), rSigRnx("JS2L")])
-
 rnx = rnxdec()
+nav = Nav()
+proc = process(nav, rnx, config, nep=nep, xyz_ref=xyz_ref)
+
+sigs, nav.nf = proc.init_sig(sig_t)
 rnx.setSignals(sigs)
 
-nav = Nav()
 nav = rnx.decode_nav(navfile, nav)
-nep = 900*4
+rnx.decode_obsh(obsfile)
 
-# Load ANTEX data for satellites and stations
+# Initialize position
 #
-atx = atxdec()
-atx.readpcv(atxfile)
+ppprtk = ppprtkpos(nav, rnx.pos, logfile=f'{ttl}.log', config=config)
 
-t = np.zeros(nep)
-enu = np.ones((nep, 3))*np.nan
-sol = np.zeros((nep, 4))
-smode = np.zeros(nep, dtype=int)
-nsat = np.zeros((nep, 3), dtype=int)
+proc.prepare_signal(obsfile)
 
-if rnx.decode_obsh(obsfile) >= 0:
+# Get grid location
+#
+pos = ecef2pos(rnx.pos)
+inet = cs.find_grid_index(pos)
 
-    # Auto-substitute signals
-    #
-    rnx.autoSubstituteSignals()
+if l6_mode == 1:
+    fc = open(file_l6, 'rb')
+    if not fc:
+        nav.fout.write(f"ERROR: cannot open L6 message file {file_l6}!")
+        sys_exit(-1)
+else:
+    dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
+             ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
+    v = np.genfromtxt(file_l6, dtype=dtype)
 
-    # Initialize position
-    #
-    ppprtk = ppprtkpos(nav, rnx.pos, 'test_ppprtk.log')
+# Skip epoch until start time
+#
+obs = rnx.decode_obs()
+while time > obs.t and obs.t.time != 0:
+    obs = rnx.decode_obs()
 
-    # Get equipment information
-    #
-    nav.fout.write("FileName: {}\n".format(obsfile))
-    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
-    if rnx.te is not None:
-        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
-    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
-    nav.fout.write("Antenna : {}\n".format(rnx.ant))
-    nav.fout.write("\n")
+msg, msg2 = None, None
 
-    # Set satellite PCO/PCV information
-    #
-    nav.sat_ant = atx.pcvs
+for ne in range(nep):
+    week, tow = cs.set_time(obs.t)  # set time for reference
 
-    # Set receiver PCO/PCV information, check antenna name and exit if unknown
-    #
-    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
-    #       receiver antenna corrections!
-    #
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys_exit(1)
+    if ne == 0:
+        proc.init_time(obs.t)
+
+    if l6_mode == 1:  # from log file
+        cs.decode_l6msg(fc.read(250), 0)
+        if cs.fcnt == 5:  # end of sub-frame
+            cs.week = week
+            cs.decode_cssr(cs.buff, 0)
     else:
-        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
-        if nav.rcv_ant is None:
-            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                           .format(rnx.ant))
-            sys_exit(1)
+        msg = decode_msg(v, tow, l6_ch, prn_p1)
 
-    if nav.rcv_ant is None:
-        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
-        nav.fout.write("\n")
+        if msg is not None:
+            cs.decode_l6msg(msg, 0)
+            if cs.fcnt == 5:  # end of sub-frame
+                cs.decode_cssr(bytes(cs.buff), 0)
 
-    # Print available signals
-    #
-    nav.fout.write("Available signals\n")
-    for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys), ' '.
-                                  join([sig.str() for sig in sigs.values()]))
-        nav.fout.write(txt)
-    nav.fout.write("\n")
+        if prn_p2 > 0:
+            msg2 = decode_msg(v, tow, l6_ch, prn_p2)
 
-    nav.fout.write("Selected signals\n")
-    for sys, tmp in rnx.sig_tab.items():
-        txt = "{:7s} ".format(sys2str(sys))
-        for _, sigs in tmp.items():
-            txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        nav.fout.write(txt+"\n")
-    nav.fout.write("\n")
+        if msg2 is not None:
+            cs_.decode_l6msg(msg2, 0)
+            if cs_.fcnt == 5:  # end of sub-frame
+                cs_.decode_cssr(bytes(cs_.buff), 0)
+                cs.merge_cssr(cs_)
 
-    # Get grid location
-    #
-    pos = ecef2pos(rnx.pos)
-    inet = cs.find_grid_index(pos)
+    cstat = cs.chk_stat()
+    if cstat:
+        ppprtk.process(obs, cs=cs)
 
-    if l6_mode == 1:
-        fc = open(l6file, 'rb')
-        if not fc:
-            nav.fout.write("ERROR: cannot open L6 message file {}!"
-                           .format(l6file))
-            sys_exit(-1)
-    else:
-        dtype = [('wn', 'int'), ('tow', 'int'), ('prn', 'int'),
-                 ('type', 'int'), ('len', 'int'), ('nav', 'S500')]
-        v = np.genfromtxt(file_l6, dtype=dtype)
+    proc.save_output(obs.t, ne)  # save output
 
-    # Skip epoch until start time
+    # Get new epoch, exit after last epoch
     #
     obs = rnx.decode_obs()
-    while time > obs.t and obs.t.time != 0:
-        obs = rnx.decode_obs()
+    if obs.t.time == 0:
+        break
 
-    for ne in range(nep):
+if l6_mode == 1:
+    fc.close()
 
-        week, tow = time2gpst(obs.t)
-
-        if l6_mode == 1:
-            cs.decode_l6msg(fc.read(250), 0)
-            if cs.fcnt == 5:  # end of sub-frame
-                cs.week = week
-                cs.decode_cssr(cs.buff, 0)
-        else:
-            vi = v[(v['tow'] == tow) & (v['type'] == l6_ch)]
-            vi_p1 = vi[vi['prn'] == prn_p1]
-            vi_p2 = vi[vi['prn'] == prn_p2]
-            if len(vi_p1) > 0:
-                cs.decode_l6msg(unhexlify(vi_p1['nav'][0]), 0)
-                if cs.fcnt == 5:  # end of sub-frame
-                    cs.decode_cssr(bytes(cs.buff), 0)
-            if len(vi_p2) > 0:
-                cs_.decode_l6msg(unhexlify(vi_p2['nav'][0]), 0)
-                if cs_.fcnt == 5:  # end of sub-frame
-                    cs_.decode_cssr(bytes(cs_.buff), 0)
-
-        if ne == 0:
-            nav.t = deepcopy(obs.t)
-            t0 = deepcopy(obs.t)
-            t0.time = t0.time//30*30
-            cs.time = obs.t
-            nav.time_p = t0
-
-        cstat = cs.chk_stat()
-        if cstat:
-            ppprtk.process(obs, cs=cs)
-
-        t[ne] = timediff(nav.t, t0)/60
-
-        sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
-        enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
-        smode[ne] = nav.smode
-        nsat[ne, :] = nav.nsat
-
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
-                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
-                       .format(time2str(obs.t),
-                               sol[0], sol[1], sol[2],
-                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                               smode[ne]))
-
-        # Log to standard output
-        #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
-
-    # Send line-break to stdout
-    #
-    stdout.write('\n')
-
-    # Close RINEX observation and CLAS correction file
-    #
-    if l6_mode == 1:
-        fc.close()
-    rnx.fobs.close()
-
-    # Close output file
-    #
-    if nav.fout is not None:
-        nav.fout.close()
-
-fig_type = 1
-
-if fig_type == 1:
-    plot_enu(t, enu, smode)
-elif fig_type == 2:
-    plot_enu(t, enu, smode, figtype=fig_type)
-
-plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_ppprtk', plotFileFormat))
-
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-# plt.show()
+proc.close()
+proc.plot(ttl, fig_type=1)

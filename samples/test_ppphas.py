@@ -2,28 +2,25 @@
  static test for PPP (Galileo HAS SIS)
 """
 
-from copy import deepcopy
-import matplotlib.pyplot as plt
 import numpy as np
-from sys import exit as sys_exit
-from sys import stdout
-
-import cssrlib.gnss as gn
-from cssrlib.gnss import ecef2pos, Nav
-from cssrlib.gnss import time2gpst, time2doy, time2str, timediff, epoch2time
-from cssrlib.gnss import rSigRnx, prn2sat, uGNSS
-from cssrlib.gnss import sys2str
-from cssrlib.peph import atxdec, searchpcv
+from cssrlib.gnss import Nav, time2doy, epoch2time
+from cssrlib.gnss import prn2sat, uGNSS, load_config
 from cssrlib.cssr_has import cssr_has, cnav_msg
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
-from cssrlib.plot import plot_enu
+from cssrlib.utils import process
 
+config = load_config('config_ppp.yml')
 
 # Select test case
 #
+ttl = 'test_ppphas'
 dataset = 3
+nep = 900*4
+
 excl_sat = []
+navfile = None
+file_has = None
 # Start epoch and number of epochs
 #
 fromSbfConvert = False
@@ -43,30 +40,27 @@ elif dataset == 1:
 elif dataset == 2:
     ep = [2025, 2, 15, 17, 0, 0]
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]
-    navfile = '../data/doy2025-046/046r_rnx.nav'  # Mosaic-X5
-    obsfile = '../data/doy2025-046/046r_rnx.obs'  # Mosaic-X5
-    file_has = '../data/doy2025-046/046r_gale6.txt'
     excl_sat = [prn2sat(uGNSS.GAL, 29)]  # E29
 elif dataset == 3:
     ep = [2025, 8, 21, 7, 0, 0]
-    navfile = '../data/doy2025-233/233h_rnx.nav'
-    # navfile = '../data/brdc/BRD400DLR_S_20252330000_01D_MN.rnx'
-    obsfile = '../data/doy2025-233/233h_rnx.obs'  # SEPT MOSAIC-X5
     # obsfile = '../data/doy2025-233/sept233h_rnx.obs'  # SEPT POLARX5
     # obsfile = '../data/doy2025-233/ux2233h_rnx.obs'  # u-blox X20P
     # obsfile = '../data/doy2025-233/jav3233h_rnx.obs'  # javad DELTA-3S
-    file_has = '../data/doy2025-233/233h_gale6.txt'
     xyz_ref = [-3962108.6836, 3381309.5672, 3668678.6720]  # Kamakura
 
 
 # Convert epoch and user reference position
 #
-pos_ref = ecef2pos(xyz_ref)
 time = epoch2time(ep)
 year = ep[0]
 doy = int(time2doy(time))
+ses = chr(ord('a')+ep[3])
 
-nep = 900*4
+if navfile is None:
+    navfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.nav'
+    obsfile = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_rnx.obs'
+if file_has is None:
+    file_has = f'../data/doy{year}-{doy:03d}/{doy:03d}{ses}_gale6.txt'
 
 # Load SSR correction file
 #
@@ -89,26 +83,17 @@ else:
 
 # Define signals to be processed
 #
-gnss = "GE"
-sigs = []
-if 'G' in gnss:
-    if dataset == 3:
-        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2L"),
-                     rSigRnx("GL1C"), rSigRnx("GL2L"),
-                     rSigRnx("GS1C"), rSigRnx("GS2L")])
-    else:
-        sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
-                     rSigRnx("GL1C"), rSigRnx("GL2W"),
-                     rSigRnx("GS1C"), rSigRnx("GS2W")])
-if 'E' in gnss:
-    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
-                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
-                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
+if dataset == 3:
+    sig_t = {'G': ['1C', '2L'], 'E': ['1C', '5Q']}  # GE
+else:
+    sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q']}  # GE
 
 rnx = rnxdec()
-rnx.setSignals(sigs)
-
 nav = Nav()
+proc = process(nav, rnx, config, nep=nep, xyz_ref=xyz_ref)
+
+sigs, nav.nf = proc.init_sig(sig_t)
+rnx.setSignals(sigs)
 
 # Positioning mode
 # 0:static, 1:kinematic
@@ -136,181 +121,54 @@ file_gm = "Galileo-HAS-SIS-ICD_1.0_Annex_B_Reed_Solomon_Generator_Matrix.txt"
 cnav = cnav_msg()
 cnav.load_gmat(file_gm)
 
-# Load ANTEX data for satellites and stations
-#
-atx = atxdec()
-if time > epoch2time([2025, 5, 15, 17, 18, 0]):
-    atx.readpcv('../data/antex/igs20.atx')
-else:
-    atx.readpcv('../data/antex/has14_2345.atx')
-# atx.readpcv('../data/antex/igs20.atx', onlyReceiver=True)
-
-# Initialize data structures for results
-#
-t = np.zeros(nep)
-enu = np.ones((nep, 3))*np.nan
-sol = np.zeros((nep, 4))
-ztd = np.zeros((nep, 1))
-smode = np.zeros(nep, dtype=int)
-nsat = np.zeros((nep, 3), dtype=int)
-
-# Logging level
-#
-nav.monlevel = 1  # TODO: enabled for testing!
-
 # Load RINEX OBS file header
 #
-if rnx.decode_obsh(obsfile) >= 0:
+rnx.decode_obsh(obsfile)
 
-    # Auto-substitute signals
+# Initialize position
+#
+ppp = pppos(nav, rnx.pos, f'{ttl}.log')
+
+if time < epoch2time([2025, 5, 15, 17, 18, 0]):
+    config['atxfile'] = '../data/antex/has14_2345.atx'
+
+proc.prepare_signal(obsfile)
+
+# Skip epochs until start time
+#
+obs = rnx.decode_obs()
+while time > obs.t and obs.t.time != 0:
+    obs = rnx.decode_obs()
+
+# Loop over number of epoch from file start
+#
+for ne in range(nep):
+    week, tow = cs.set_time(obs.t)  # set time for reference
+
+    # Set initial epoch
     #
-    rnx.autoSubstituteSignals()
+    if ne == 0:
+        proc.init_time(obs.t)
 
-    # Initialize position
+    vi = v[v['tow'] == tow]
+
+    HASmsg = cnav.decode_cnav(tow, vi)  # decode CNAV pages
+    if HASmsg is not None:
+        cs.msgtype = cnav.msgtype
+        cs.decode_cssr(HASmsg)  # decode HAS messages
+
+    # Call PPP module with HAS corrections
     #
-    ppp = pppos(nav, rnx.pos, 'test_ppphas.log')
-    nav.elmin = np.deg2rad(5.0)
+    if (cs.lc[0].cstat & 0xf) == 0xf:
+        ppp.process(obs, cs=cs)
 
-    # Get equipment information
-    #
-    nav.fout.write("FileName: {}\n".format(obsfile))
-    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
-    if rnx.te is not None:
-        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
-    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
-    nav.fout.write("Antenna : {}\n".format(rnx.ant))
-    nav.fout.write("\n")
+    proc.save_output(obs.t, ne, ppp)  # save output
 
-    # Set satellite PCO/PCV information
-    #
-    nav.sat_ant = atx.pcvs
-
-    # Set receiver PCO/PCV information, check antenna name and exit if unknown
-    #
-    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
-    #       receiver antenna corrections!
-    #
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys_exit(1)
-    else:
-        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
-        if nav.rcv_ant is None:
-            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                           .format(rnx.ant))
-            sys_exit(1)
-
-    if nav.rcv_ant is None:
-        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
-        nav.fout.write("\n")
-
-    # Print available signals
-    #
-    nav.fout.write("Available signals\n")
-    for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
-        nav.fout.write(txt)
-    nav.fout.write("\n")
-
-    nav.fout.write("Selected signals\n")
-    for sys, tmp in rnx.sig_tab.items():
-        txt = "{:7s} ".format(sys2str(sys))
-        for _, sigs in tmp.items():
-            txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        nav.fout.write(txt+"\n")
-    nav.fout.write("\n")
-
-    # Skip epochs until start time
+    # Get new epoch, exit after last epoch
     #
     obs = rnx.decode_obs()
-    while time > obs.t and obs.t.time != 0:
-        obs = rnx.decode_obs()
+    if obs.t.time == 0:
+        break
 
-    # Loop over number of epoch from file start
-    #
-    for ne in range(nep):
-
-        week, tow = time2gpst(obs.t)
-        tow = (tow+0.05)//1
-        cs.week = week
-        cs.tow0 = tow//3600*3600
-
-        # Set initial epoch
-        #
-        if ne == 0:
-            nav.t = deepcopy(obs.t)
-            t0 = deepcopy(obs.t)
-            t0.time = t0.time//30*30
-            nav.time_p = t0
-
-        vi = v[v['tow'] == tow]
-
-        HASmsg = cnav.decode_cnav(tow, vi)  # decode CNAV pages
-        if HASmsg is not None:
-            cs.msgtype = cnav.msgtype
-            cs.decode_cssr(HASmsg)  # decode HAS messages
-
-        # Call PPP module with HAS corrections
-        #
-        if (cs.lc[0].cstat & 0xf) == 0xf:
-            ppp.process(obs, cs=cs)
-
-        # Save output
-        #
-        t[ne] = timediff(nav.t, t0)/86400.0
-
-        sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
-        enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
-
-        ztd[ne] = nav.xa[ppp.IT(nav.na)] \
-            if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
-        smode[ne] = nav.smode
-        nsat[ne, :] = nav.nsat
-
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
-                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
-                       .format(time2str(obs.t),
-                               sol[0], sol[1], sol[2],
-                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                               smode[ne]))
-
-        # Log to standard output
-        #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
-
-    # Send line-break to stdout
-    #
-    stdout.write('\n')
-
-    # Close RINEX observation file
-    #
-    rnx.fobs.close()
-
-    # Close output file
-    #
-    if nav.fout is not None:
-        nav.fout.close()
-
-fig_type = 1
-
-if fig_type == 1:
-    plot_enu(t, enu, smode, ztd)
-elif fig_type == 2:
-    plot_enu(t, enu, smode, figtype=fig_type)
-
-plotFileFormat = 'eps'  # 'eps' or 'png'
-plotFileName = '.'.join(('test_ppphas', plotFileFormat))
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-# plt.show()
+proc.close()
+proc.plot(ttl, fig_type=1)

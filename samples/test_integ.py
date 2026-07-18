@@ -1,19 +1,15 @@
 """
- interopetabity test for SSR Integrity messages MT11,12,13
+ interopetabity test for SSR Integrity messages MT11,12,13,MT54.*
 
  @author Rui Hirokawa
 """
 
 import os
 import copy
-from cssrlib.gnss import uGNSS, prn2sat
+from cssrlib.gnss import uGNSS, prn2sat, gpst2time
 from cssrlib.rtcm import rtcm, rtcme, Integrity
 from random import randint, seed, sample
 from binascii import unhexlify
-
-# Validity Period DFi065
-vp_tbl = [1, 2, 5, 10, 15, 30, 60, 120, 240,
-          300, 600, 900, 1800, 3600, 7200, 10800]
 
 
 def read_asc(file):
@@ -23,6 +19,12 @@ def read_asc(file):
             b += unhexlify(''.join(line.split()))
 
     return b
+
+
+def read_bin(file):
+    with open(file, 'rb') as fh:
+        return fh.read()
+    return None
 
 
 def gen_data(mt, sys_t, svid_t):
@@ -43,7 +45,7 @@ def gen_data(mt, sys_t, svid_t):
         # issue of GNSS satellite mask DFi010
         intr.pid = randint(0, 4095)  # provider id DFi027 (0-4095)
         intr.tow = randint(0, 604799)*1e-3  # tow
-        intr.vp = vp_tbl[randint(0, 15)]  # validity period DFi065 (0-15)
+        intr.vp = intr.vp_tbl[randint(0, 15)]  # validity period DFi065 (0-15)
         intr.uri = randint(0, 65535)*0.1  # update rate interval DFi067
 
         intr.pidssr = randint(0, 65535)  # SSR Provider ID DFi078 (0-65535)
@@ -100,9 +102,14 @@ def write_rtcm(file_rtcm, msg_t, intr, nep=1):
     return msg[:k]
 
 
-def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024):
+def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024, 
+                mt_skip=None, weekref = -1):
     cs = rtcm(foutname=logfile)
     cs.monlevel = 2
+    cs.week = weekref
+    cs.time = gpst2time(cs.week, 0)
+    if mt_skip is not None:
+        cs.mt_skip = mt_skip
 
     k = 0
     for ne in range(nep):
@@ -136,7 +143,8 @@ def decode_rtcm(msg, intr=None, nep=1, logfile=None, maxlen=1024):
     return cs
 
 
-def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
+def read_rtcm(file_rtcm, intr, nep=1, logfile=None, mt_skip=None):
+    """ read test script for SC-134 messages """
 
     fc = open(file_rtcm, 'rb')
     if not fc:
@@ -147,45 +155,72 @@ def read_rtcm(file_rtcm, intr, nep=1, logfile=None):
     maxlen = len(msg)-5
     fc.close()
 
-    return decode_rtcm(msg, intr, nep, logfile, maxlen)
+    return decode_rtcm(msg, intr, nep, logfile, maxlen, mt_skip)
 
 
 if __name__ == "__main__":
-    file_rtcm = '../data/sample.rtcm'
-    file_log = '../data/sample.log'
+    bdir = '../data/sc134/msg/'
+    flg_sim = False
+    
+    mt_skip = []
+    #mt_skip = [1267] # work-around for SC134 SSR interop-test
 
-    file_asc = '../data/sc134/MT05_DFi56=00.txt'
+    if flg_sim:  # generate test data
+        file_rtcm = bdir+'test.rtcm'
+        file_log = bdir+'test.log'
+        nep = 1
+        maxlen = 1024
+        nsatmax = 10
 
-    nep = 1
-    maxlen = 1024
-    nsatmax = 10
+        seed_ = 1
+        # parameters
+        # msg_t = [11, 12, 13]
+        msg_t = [11]
+        # msg_t = [12]
+        # msg_t = [13]
 
-    seed_ = 1
-    # parameters
-    # msg_t = [11, 12, 13]
-    msg_t = [11]
-    # msg_t = [12]
-    # msg_t = [13]
+        # 0:GPS,1:GLO,2:GAL,3:BDS,4:QZS,5:IRN
+        sys_t = [uGNSS.GPS, uGNSS.GLO, uGNSS.GAL, uGNSS.QZS]
 
-    # 0:GPS,1:GLO,2:GAL,3:BDS,4:QZS,5:IRN
-    sys_t = [uGNSS.GPS, uGNSS.GLO, uGNSS.GAL, uGNSS.QZS]
+        # GNSS satellite mask DFi009
+        prn_rng_t = {uGNSS.GPS: [1, 32],  # Table 8.5-1
+                     uGNSS.GLO: [1, 27],  # Table 8.5-3
+                     uGNSS.GAL: [1, 36],  # Table 8.5-5
+                     uGNSS.BDS: [1, 63],
+                     uGNSS.QZS: [193, 209],
+                     uGNSS.IRN: [1, 14]}
 
-    # GNSS satellite mask DFi009
-    prn_rng_t = {uGNSS.GPS: [1, 32],  # Table 8.5-1
-                 uGNSS.GLO: [1, 27],  # Table 8.5-3
-                 uGNSS.GAL: [1, 36],  # Table 8.5-5
-                 uGNSS.BDS: [1, 63],
-                 uGNSS.QZS: [193, 209],
-                 uGNSS.IRN: [1, 14]}
+        mt = msg_t[0]
 
-    mt = msg_t[0]
+        seed(seed_)
+        prn_t = gen_sat_list(sys_t, prn_rng_t)  # generate random sat list
+        intr = gen_data(mt, sys_t, prn_t)  # generate random message data
+        msg = write_rtcm(file_rtcm, msg_t, intr, nep)
+        cs = read_rtcm(file_rtcm, intr, nep, logfile=file_log)
 
-    seed(seed_)
-    prn_t = gen_sat_list(sys_t, prn_rng_t)  # generate random sat list
-    intr = gen_data(mt, sys_t, prn_t)  # generate random message data
-    msg = write_rtcm(file_rtcm, msg_t, intr, nep)
-    cs = read_rtcm(file_rtcm, intr, nep, logfile=file_log)
+    else:  # decode using sample dataset (*.bin)
 
-    # msg = read_asc(file_asc)
-    # cs = rtcm(foutname=file_log)
-    # decode_rtcm(msg)
+        icase = 2
+
+        if icase == 1:
+
+            file_rtcm = ['MT54_9', 'MT54_10_DFi209=0',
+                         'MT54_10_DFi209=1', 'MT54_10_DFi209=2']
+            weekref = 2403
+
+        #file_rtcm = ['RTCM134test_21012026']
+
+        # file_rtcm = ['sampledataMT03-04-05-06-07']
+        
+        elif icase == 2:
+            file_rtcm = ['ssr/SSRTEST_20260206_CORR_v123',
+                         'ssr/ROVRMSG',
+                         'ssr/ROMAMSG']
+            weekref = 2404
+
+        # msg = read_asc(file_asc)
+        for f in file_rtcm:
+            file_log = bdir+f+'.dlg'
+            msg = read_bin(bdir+f+'.bin')
+            decode_rtcm(msg, logfile=file_log, maxlen=len(msg),mt_skip=mt_skip, 
+                        weekref=weekref)

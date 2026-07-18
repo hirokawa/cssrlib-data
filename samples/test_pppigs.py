@@ -2,25 +2,19 @@
  static test for PPP (IGS)
 """
 from copy import deepcopy
-import matplotlib.pyplot as plt
-import numpy as np
-from sys import exit as sys_exit
-from sys import stdout
-
-import cssrlib.gnss as gn
-from cssrlib.gnss import ecef2pos, Nav
-from cssrlib.gnss import time2doy, time2str, timediff, epoch2time
-from cssrlib.gnss import rSigRnx
-from cssrlib.gnss import sys2str
-from cssrlib.peph import atxdec, searchpcv
+from cssrlib.gnss import ecef2pos, Nav, load_config
+from cssrlib.gnss import time2doy, epoch2time
 from cssrlib.peph import peph, biasdec
 from cssrlib.pppssr import pppos
 from cssrlib.rinex import rnxdec
-from cssrlib.plot import plot_enu
+from cssrlib.utils import process
+
+config = load_config('config_ppp.yml')
 
 # Start epoch and number of epochs
 #
 dataset = 4
+ttl = 'test_pppigs'
 
 if dataset == 0:  # SETP078M.21O
     ep = [2021, 3, 19, 12, 0, 0]
@@ -82,34 +76,16 @@ bsxfile = '../data/igs/{}_{:4d}{:03d}0000_01D_01D_OSB.BIA'\
 
 # Define signals to be processed
 #
-gnss = "GEJ"
-sigs = []
-if 'G' in gnss:
-    sigs.extend([rSigRnx("GC1C"), rSigRnx("GC2W"),
-                 rSigRnx("GL1C"), rSigRnx("GL2W"),
-                 rSigRnx("GS1C"), rSigRnx("GS2W")])
-if 'R' in gnss:
-    sigs.extend([rSigRnx("RC1C"), rSigRnx("RC2P"),
-                 rSigRnx("RL1C"), rSigRnx("RL2P"),
-                 rSigRnx("RS1C"), rSigRnx("RS2P")])
-if 'E' in gnss:
-    sigs.extend([rSigRnx("EC1C"), rSigRnx("EC5Q"),
-                 rSigRnx("EL1C"), rSigRnx("EL5Q"),
-                 rSigRnx("ES1C"), rSigRnx("ES5Q")])
-if 'C' in gnss:
-    sigs.extend([rSigRnx("CC2I"), rSigRnx("CC6I"),
-                 rSigRnx("CL2I"), rSigRnx("CL6I"),
-                 rSigRnx("CS2I"), rSigRnx("CS6I")])
-if 'J' in gnss:
-    sigs.extend([rSigRnx("JC1C"), rSigRnx("JC5Q"),
-                 rSigRnx("JL1C"), rSigRnx("JL5Q"),
-                 rSigRnx("JS1C"), rSigRnx("JS5Q")])
+sig_t = {'G': ['1C', '2W'], 'E': ['1C', '5Q'], 'J': ['1C', '5Q']}  # GEJ
 
 rnx = rnxdec()
-rnx.setSignals(sigs)
-
 nav = Nav()
 orb = peph()
+
+proc = process(nav, rnx, config, nep=nep, xyz_ref=xyz_ref)
+
+sigs, nav.nf = proc.init_sig(sig_t)
+rnx.setSignals(sigs)
 
 # Set site code for GLONASS code biases
 #
@@ -144,164 +120,50 @@ elif time > epoch2time([2021, 5, 2, 0, 0, 0]):
 else:
     atxfile += 'M14.ATX' if 'COD0MGXFIN' in ac else 'igs14.atx'
 
-atx = atxdec()
-atx.readpcv(atxfile)
+config['atxfile'] = atxfile
 
-# Initialize data structures for results
-#
-t = np.zeros(nep)
-enu = np.ones((nep, 3))*np.nan
-sol = np.zeros((nep, 4))
-ztd = np.zeros((nep, 1))
-smode = np.zeros(nep, dtype=int)
-
-# Logging level
-#
-nav.monlevel = 1  # TODO: enabled for testing!
 
 # Load RINEX OBS file header
 #
-if rnx.decode_obsh(obsfile) >= 0:
+rnx.decode_obsh(obsfile)
 
-    # Auto-substitute signals
+# Initialize position
+#
+ppp = pppos(nav, rnx.pos, f'{ttl}.log')
+nav.ephopt = 4  # IGS
+nav.armode = 3  # 1: continuous, 3: fix-and-hold
+nav.parmode = 1  # 1: normal, 2: partial ambiguity resolution
+nav.thresar = 2.0
+
+proc.prepare_signal(obsfile)
+
+# Skip epochs until start time
+#
+obs = rnx.decode_obs()
+while time > obs.t and obs.t.time != 0:
+    obs = rnx.decode_obs()
+
+# Loop over number of epoch from file start
+#
+for ne in range(nep):
+
+    # Set initial epoch
     #
-    rnx.autoSubstituteSignals()
+    if ne == 0:
+        nav.t = deepcopy(obs.t)
+        t0 = deepcopy(obs.t)
 
-    # Initialize position
+    # Call PPP module with IGS products
     #
-    ppp = pppos(nav, rnx.pos, 'test_pppigs.log')
-    nav.ephopt = 4  # IGS
-    nav.armode = 3  # 1: continuous, 3: fix-and-hold
-    nav.parmode = 1  # 1: normal, 2: partial ambiguity resolution
-    nav.thresar = 2.0
+    ppp.process(obs, orb=orb, bsx=bsx)
 
-    nav.elmin = np.deg2rad(10.0)
+    proc.save_output(obs.t, ne, ppp)  # save output
 
-    # Get equipment information
-    #
-    nav.fout.write("FileName: {}\n".format(obsfile))
-    nav.fout.write("Start   : {}\n".format(time2str(rnx.ts)))
-    if rnx.te is not None:
-        nav.fout.write("End     : {}\n".format(time2str(rnx.te)))
-    nav.fout.write("Receiver: {}\n".format(rnx.rcv))
-    nav.fout.write("Antenna : {}\n".format(rnx.ant))
-    nav.fout.write("\n")
-
-    # Set satellite PCO/PCV information
-    #
-    nav.sat_ant = atx.pcvs
-
-    # Set receiver PCO/PCV information, check antenna name and exit if unknown
-    #
-    # NOTE: comment out the line with 'sys_exit(1)' to continue with zero
-    #       receiver antenna corrections!
-    #
-    if 'UNKNOWN' in rnx.ant or rnx.ant.strip() == "":
-        nav.fout.write("ERROR: missing antenna type in RINEX OBS header!\n")
-        sys_exit(1)
-    else:
-        nav.rcv_ant = searchpcv(atx.pcvr, rnx.ant,  rnx.ts)
-        if nav.rcv_ant is None:
-            nav.fout.write("ERROR: missing antenna type <{}> in ANTEX file!\n"
-                           .format(rnx.ant))
-            sys_exit(1)
-
-    if nav.rcv_ant is None:
-        nav.fout.write("WARNING: no receiver antenna corrections applied!\n")
-        nav.fout.write("\n")
-
-    # Print available signals
-    #
-    nav.fout.write("Available signals\n")
-    for sys, sigs in rnx.sig_map.items():
-        txt = "{:7s} {}\n".format(sys2str(sys),
-                                  ' '.join([sig.str() for sig in sigs.values()]))
-        nav.fout.write(txt)
-    nav.fout.write("\n")
-
-    nav.fout.write("Selected signals\n")
-    for sys, tmp in rnx.sig_tab.items():
-        txt = "{:7s} ".format(sys2str(sys))
-        for _, sigs in tmp.items():
-            txt += "{} ".format(' '.join([sig.str() for sig in sigs]))
-        nav.fout.write(txt+"\n")
-    nav.fout.write("\n")
-
-    # Skip epochs until start time
+    # Get new epoch, exit after last epoch
     #
     obs = rnx.decode_obs()
-    while time > obs.t and obs.t.time != 0:
-        obs = rnx.decode_obs()
+    if obs.t.time == 0:
+        break
 
-    # Loop over number of epoch from file start
-    #
-    for ne in range(nep):
-
-        # Set initial epoch
-        #
-        if ne == 0:
-            nav.t = deepcopy(obs.t)
-            t0 = deepcopy(obs.t)
-
-        # Call PPP module with IGS products
-        #
-        ppp.process(obs, orb=orb, bsx=bsx)
-
-        # Save output
-        #
-        t[ne] = timediff(nav.t, t0)/86400.0
-
-        sol = nav.xa[0:3] if nav.smode == 4 else nav.x[0:3]
-        enu[ne, :] = gn.ecef2enu(pos_ref, sol-xyz_ref)
-
-        ztd[ne] = nav.xa[ppp.IT(nav.na)] \
-            if nav.smode == 4 else nav.x[ppp.IT(nav.na)]
-        smode[ne] = nav.smode
-
-        nav.fout.write("{} {:14.4f} {:14.4f} {:14.4f} "
-                       "ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}\n"
-                       .format(time2str(obs.t),
-                               sol[0], sol[1], sol[2],
-                               enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                               np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                               smode[ne]))
-
-        # Log to standard output
-        #
-        stdout.write('\r {} ENU {:7.3f} {:7.3f} {:7.3f}, 2D {:6.3f}, mode {:1d}'
-                     .format(time2str(obs.t),
-                             enu[ne, 0], enu[ne, 1], enu[ne, 2],
-                             np.sqrt(enu[ne, 0]**2+enu[ne, 1]**2),
-                             smode[ne]))
-
-        # Get new epoch, exit after last epoch
-        #
-        obs = rnx.decode_obs()
-        if obs.t.time == 0:
-            break
-
-    # Send line-break to stdout
-    #
-    stdout.write('\n')
-
-    # Close RINEX observation file
-    #
-    rnx.fobs.close()
-
-    # Close output file
-    #
-    if nav.fout is not None:
-        nav.fout.close()
-
-fig_type = 1
-
-if fig_type == 1:
-    plot_enu(t, enu, smode, ztd)
-elif fig_type == 2:
-    plot_enu(t, enu, smode, figtype=fig_type)
-
-plotFileFormat = 'eps'
-plotFileName = '.'.join(('test_pppigs', plotFileFormat))
-
-plt.savefig(plotFileName, format=plotFileFormat, bbox_inches='tight', dpi=300)
-# plt.show()
+proc.close()
+proc.plot(ttl, fig_type=1)

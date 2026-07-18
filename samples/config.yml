@@ -1,0 +1,22 @@
+# config.yml
+
+elmin: 10.0 # minimum elevation [deg]
+atxfile: '../data/antex/igs20.atx' # ANTEX file
+
+nav:
+    monlevel: 1
+    pmode: 1 # positioning mode 0:static, 1:kinematic
+    csmooth: True # carrier smoothing is enabled
+
+    ephopt: 2 # SSR-APC
+    parmode: 2 # Partial AR 1: normal, 2: PAR
+    trop_opt: 1
+    iono_opt: 1
+    phw_opt: 1
+    cmooth: False
+    trop_model: 0
+    iono_model: 0
+
+cs:
+    monlevel: 1
+

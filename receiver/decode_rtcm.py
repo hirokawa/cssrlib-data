@@ -14,7 +14,7 @@ import numpy as np
 import os
 from pathlib import Path
 
-from cssrlib.gnss import uGNSS, uTYP, rSigRnx, Obs, gtime_t, timediff
+from cssrlib.gnss import uGNSS, uTYP, rSigRnx, Obs, gtime_t, timediff, sat2prn
 from cssrlib.rawnav import rcvDec, rcvOpt
 
 from cssrlib.rtcm import rtcm
@@ -41,13 +41,14 @@ class rtcmDec(rcvDec):
 
         if 'G' in gnss_t:
             self.sig_tab[uGNSS.GPS] = {
-                uTYP.C: [rSigRnx('GC1C'), rSigRnx('GC1W'), rSigRnx('GC2W'),
+                uTYP.C: [rSigRnx('GC1C'), rSigRnx('GC2W'),
                          rSigRnx('GC2L'), rSigRnx('GC5Q'), rSigRnx('GC1L')],
-                uTYP.L: [rSigRnx('GL1C'), rSigRnx('GL1W'), rSigRnx('GL2W'),
+                uTYP.L: [rSigRnx('GL1C'), rSigRnx('GL2W'),
                          rSigRnx('GL2L'), rSigRnx('GL5Q'), rSigRnx('GL1L')],
-                uTYP.S: [rSigRnx('GS1C'), rSigRnx('GS1W'), rSigRnx('GS2W'),
+                uTYP.S: [rSigRnx('GS1C'), rSigRnx('GS2W'),
                          rSigRnx('GS2L'), rSigRnx('GS5Q'), rSigRnx('GS1L')],
             }
+
         if 'R' in gnss_t:
             self.sig_tab[uGNSS.GLO] = {
                 uTYP.C: [rSigRnx('RC1C'), rSigRnx('RC1P'), rSigRnx('RC2C'),
@@ -57,6 +58,7 @@ class rtcmDec(rcvDec):
                 uTYP.S: [rSigRnx('RS1C'), rSigRnx('RS1P'), rSigRnx('RS2C'),
                          rSigRnx('RS2P'), rSigRnx('RS3X')],
             }
+
         if 'E' in gnss_t:
             self.sig_tab[uGNSS.GAL] = {
                 uTYP.C: [rSigRnx('EC1C'), rSigRnx('EC5Q'), rSigRnx('EC7Q'),
@@ -66,6 +68,7 @@ class rtcmDec(rcvDec):
                 uTYP.S: [rSigRnx('ES1C'), rSigRnx('ES5Q'), rSigRnx('GS7Q'),
                          rSigRnx('ES8Q'), rSigRnx('ES6C')],
             }
+
         if 'C' in gnss_t:
             self.sig_tab[uGNSS.BDS] = {
                 uTYP.C: [rSigRnx('CC1P'), rSigRnx('CC2I'), rSigRnx('CC5P'),
@@ -75,21 +78,24 @@ class rtcmDec(rcvDec):
                 uTYP.S: [rSigRnx('CS1P'), rSigRnx('CS2I'), rSigRnx('CS5P'),
                          rSigRnx('CS6I'), rSigRnx('CS7D'), rSigRnx('CS7I')],
             }
+
         if 'J' in gnss_t:
             self.sig_tab[uGNSS.QZS] = {
-                uTYP.C: [rSigRnx('JC1C'), rSigRnx('JC1L'), rSigRnx('JC2L'),
-                         rSigRnx('JC5Q'), rSigRnx('JC6X'), rSigRnx('JC1E')],
-                uTYP.L: [rSigRnx('JL1C'), rSigRnx('JL1L'), rSigRnx('JL2L'),
-                         rSigRnx('JL5Q'), rSigRnx('JL6X'), rSigRnx('JL1E')],
-                uTYP.S: [rSigRnx('JS1C'), rSigRnx('JS1L'), rSigRnx('JS2L'),
-                         rSigRnx('JS5Q'), rSigRnx('JS6X'), rSigRnx('JS1E')],
+                uTYP.C: [rSigRnx('JC1C'), rSigRnx('JC1E'), rSigRnx('JC1L'),
+                         rSigRnx('JC2L'), rSigRnx('JC5Q'), rSigRnx('JC6X')],
+                uTYP.L: [rSigRnx('JL1C'), rSigRnx('JL1E'), rSigRnx('JL1L'),
+                         rSigRnx('JL2L'), rSigRnx('JL5Q'), rSigRnx('JL6X')],
+                uTYP.S: [rSigRnx('JS1C'), rSigRnx('JS1E'), rSigRnx('JS1L'),
+                         rSigRnx('JS2L'), rSigRnx('JS5Q'), rSigRnx('JS6X')],
             }
+
         if 'S' in gnss_t:
             self.sig_tab[uGNSS.SBS] = {
                 uTYP.C: [rSigRnx('SC1C'), rSigRnx('SC5X')],
                 uTYP.L: [rSigRnx('SL1C'), rSigRnx('SL5X')],
                 uTYP.S: [rSigRnx('SS1C'), rSigRnx('SS5X')],
             }
+
         if 'I' in gnss_t:
             self.sig_tab[uGNSS.IRN] = {
                 uTYP.C: [rSigRnx('IC5A'), rSigRnx('IC1X')],
@@ -97,18 +103,23 @@ class rtcmDec(rcvDec):
                 uTYP.S: [rSigRnx('IS5A'), rSigRnx('IS1X')],
             }
 
-        self.rtcm = rtcm()
+        if opt is not None:
+            foutname = opt.foutname
+
+        self.rtcm = rtcm(foutname=foutname)
         self.time_p = gtime_t()
-        self.obs = None
 
         if opt is not None:
             self.init_param(opt=opt, prefix=prefix)
 
     def add_obs(self, obs):
+        sys = list(obs.sig)[0]
+        if sys not in self.sig_tab:
+            return
+
         self.obs.sat = np.hstack((self.obs.sat, obs.sat))
         nsat = len(obs.sat)
 
-        sys = list(obs.sig)[0]
         if sys not in self.obs.sig:
             self.obs.sig[sys] = obs.sig[sys]
 
@@ -123,13 +134,29 @@ class rtcmDec(rcvDec):
         obs.L[np.isnan(obs.L)] = 0.0
 
         for k, sig in enumerate(obs.sig[sys][uTYP.L]):
+
             if sig in self.sig_tab[sys][uTYP.L]:
                 idx = self.sig_tab[sys][uTYP.L].index(sig)
+
                 obs_.P[:, idx] = obs.P[:, k]
                 obs_.L[:, idx] = obs.L[:, k]
                 obs_.S[:, idx] = obs.S[:, k]
                 obs_.D[:, idx] = obs.D[:, k]
                 obs_.lli[:, idx] = obs.lli[:, k]
+
+        if self.useL1CB and sys == uGNSS.QZS:  # QZS L1E -> L1C
+            k = obs_.P[:, 1] != 0
+            obs_.P[k, 0] = obs_.P[k, 1]
+            obs_.L[k, 0] = obs_.L[k, 1]
+            obs_.S[k, 0] = obs_.S[k, 1]
+            obs_.D[k, 0] = obs_.D[k, 1]
+            obs_.lli[k, 0] = obs_.lli[k, 1]
+
+            obs_.P[k, 1] = 0.0
+            obs_.L[k, 1] = 0.0
+            obs_.S[k, 1] = 0.0
+            obs_.D[k, 1] = 0.0
+            obs_.lli[k, 1] = 0
 
         self.obs.P = np.vstack((self.obs.P, obs_.P))
         self.obs.L = np.vstack((self.obs.L, obs_.L))
@@ -158,52 +185,66 @@ class rtcmDec(rcvDec):
         self.obs.sat = np.empty(0, dtype=int)
         self.obs.sig = {}
 
-    def decode(self, buff, len_, sys=[], prn=[]):
+    def decode(self, buff, len_, sys=[], prn=[], scanmode=False):
+        """ decode RTCM binary messages """
 
-        _, obs, eph, geph, seph = self.rtcm.decode(buff, len_)
+        _, obs, eph, geph, seph = self.rtcm.decode(buff, scanmode=scanmode)
+
+        if scanmode:
+            self.re.anttype = self.rtcm.ant_desc
+            self.re.rectype = self.rtcm.rcv_type
+            self.re.rec = self.rtcm.rcv_serial
+            self.re.recver = self.rtcm.firm_ver
+            if self.rtcm.pos_arp is not None:
+                self.re.pos = self.rtcm.pos_arp
+            self.re.glo_bias = self.rtcm.glo_bias
 
         if self.flg_rnxobs and obs is not None:
             self.time = obs.time
-            self.re.rnx_obs_header(obs.time, self.fh_rnxobs)
 
             if timediff(self.time, self.time_p) != 0.0:
+
+                if self.time_p.time > 0:
+                    self.re.rnx_obs_header(self.obs.time, self.fh_rnxobs)
+
                 if self.obs is not None:
-                    self.re.rnx_obs_body(self.obs, self.fh_rnxobs)
+                    if self.re.rnx_obs_header_sent:
+                        self.re.rnx_obs_body(self.obs, self.fh_rnxobs)
+
                 self.init_obs(obs.time)
+
+            if not self.re.rnx_obs_header_sent:
+                for sys in obs.sig:
+                    if sys in self.sig_tab:
+                        self.re.sig_tab[sys] = obs.sig[sys]
 
             self.add_obs(obs)
 
             self.time_p = self.time
 
-        if eph is not None:
-            self.re.rnx_nav_body(eph, self.fh_rnxnav)
+        if self.flg_rnxnav:
 
-        if geph is not None:
-            self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+            if eph is not None:
+                sys, prn = sat2prn(eph.sat)
+                if sys in self.sig_tab:
+                    self.re.rnx_nav_body(eph, self.fh_rnxnav)
 
-        if seph is not None:
-            self.re.rnx_snav_body(seph, self.fh_rnxnav)
+            if geph is not None:
+                sys, prn = sat2prn(geph.sat)
+                if sys in self.sig_tab:
+                    self.re.rnx_gnav_body(geph, self.fh_rnxnav)
+
+            if seph is not None:
+                sys, prn = sat2prn(seph.sat)
+                if sys in self.sig_tab:
+                    self.re.rnx_snav_body(seph, self.fh_rnxnav)
 
 
-def decode(f, opt, args):
+def rtcm_decode(rtcmdec, path, blen, scanmode=False):
 
-    print("Decoding {}".format(f))
-
-    bdir, fname = os.path.split(f)
-
-    prefix = fname[4:].removesuffix('.rtcm3')+'_'
-    prefix = str(Path(bdir) / prefix) if bdir else prefix
-    rtcmdec = rtcmDec(opt=opt, prefix=prefix, gnss_t=args.gnss)
-    rtcmdec.monlevel = 1
-
-    rtcmdec.rtcm.week = args.weekref
-
-    path = str(Path(bdir) / fname) if bdir else fname
-    blen = os.path.getsize(path)
     with open(path, 'rb') as f:
         msg = f.read(blen)
         maxlen = len(msg)-5
-        # maxlen = 400000
         k = 0
         for _ in range(maxlen):
             if k > maxlen:
@@ -217,10 +258,32 @@ def decode(f, opt, args):
                 continue
 
             len_ = rtcmdec.rtcm.len+3
-            rtcmdec.decode(msg[k:k+len_], len_)
+            rtcmdec.decode(msg[k:k+len_], len_, scanmode=scanmode)
             k += rtcmdec.rtcm.dlen
 
+
+def decode(f, opt, args):
+
+    bdir, fname = os.path.split(f)
+
+    prefix = fname[4:].removesuffix('.rtcm3')+'_'
+    prefix = str(Path(bdir) / prefix) if bdir else prefix
+    rtcmdec = rtcmDec(opt=opt, prefix=prefix, gnss_t=args.gnss)
+    rtcmdec.monlevel = 2
+
+    rtcmdec.rtcm.week = args.weekref
+
+    path = str(Path(bdir) / fname) if bdir else fname
+    blen = os.path.getsize(path)
+
+    print(f"Pre-scanning {f}")
+    rtcm_decode(rtcmdec, path, blen, True)
+    print(f"Decoding     {f}")
+    rtcm_decode(rtcmdec, path, blen)
+
     rtcmdec.file_close()
+
+# python decode_rtcm.py ..\data\doy2025-298\CL07298j.rtc --weekref=2389
 
 
 def main():
@@ -248,6 +311,9 @@ def main():
     parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
                         type=int, help='Max. number of parallel processes')
 
+    parser.add_argument("--useL1CB", action='store_true',
+                        help="use L1C/B as like L1C/A for QZS")
+
     # Retrieve all command line arguments
     #
     args = parser.parse_args()
@@ -256,7 +322,20 @@ def main():
 
     opt.flg_rnxobs = True
     opt.flg_rnxnav = True
+    opt.useL1CB = args.useL1CB
 
+    # args.weekref = 2397  # 2025/352
+    # args.inpFileName = '..\data\doy2025-352\sept352a.rtc'
+    # args.inpFileName = '../data/doy2025-352/tr92352a.rtc'
+    # args.weekref = 2380
+    # args.inpFileName = '../data/doy2025-233/233h_qzsl6.rtcm3'
+    # args.gnss = 'GJ'
+    # opt.useL1CB = True
+
+    s = args.inpFileName
+    opt.foutname = s[:s.rfind('.')]+'.log'
+
+    # decode(args.inpFileName, opt, args)
     # Start processing pool
     #
     with mp.Pool(processes=args.jobs) as pool:

@@ -127,7 +127,7 @@ class jps(rcvDec):
              [1, 6, 2, 4, 3, 0], [1, 1, 4, 2, 3, 1], [1, 6, 2, 3, 3, 1],
              [0, 0, 0, 0, 3, 1]]
 
-    sys_t = {
+    gnss2sys_t = {
         GNSS.GPS: uGNSS.GPS, GNSS.GLO: uGNSS.GLO, GNSS.GAL: uGNSS.GAL,
         GNSS.BDS: uGNSS.BDS, GNSS.QZS: uGNSS.QZS, GNSS.SBS: uGNSS.SBS,
         GNSS.IRN: uGNSS.IRN, GNSS.GLO_C: uGNSS.GLO,
@@ -352,13 +352,15 @@ class jps(rcvDec):
             else:
                 prn = self.prn[k]
 
-            sys = self.sys_t[self.sys[k]]
+            sys = self.gnss2sys_t[self.sys[k]]
             if sys not in self.sig_tab.keys():
                 continue
             if sys == uGNSS.GLO and prn == 255:
                 continue
             if sys == uGNSS.SBS and self.prn[k] > 156:
                 continue
+            if sys == uGNSS.IRN:
+                pass
             sat = prn2sat(sys, prn)
             if sat in obs.sat:
                 jn = obs.sat.index(sat)
@@ -398,9 +400,15 @@ class jps(rcvDec):
         obs.D[np.isnan(obs.D)] = 0
         obs.S[np.isnan(obs.S)] = 0
 
+        obs.sat = np.array(obs.sat, dtype=int)
+        obs.sort()
+
         return obs
 
     def decode_nd(self, buff, sys=uGNSS.GPS):
+        if sys not in self.sys_t:
+            return 0
+
         prn, time_, type_, len_ = st.unpack_from('<BLBB', buff, 5)
         sat = prn2sat(sys, prn)
         if self.monlevel >= 2:
@@ -542,15 +550,14 @@ class jps(rcvDec):
             if self.monlevel > 1:
                 print("[xd] prn={:d} tow={:d} type={:d} len={:d}".
                       format(prn, time_, type_, len_))
-            if self.week >= 0:
-                if self.flg_qzsl6:
-                    if self.prn_ref > 0 and prn != self.prn_ref:
-                        return
-                    msg_l6 = buff[12:12+len_]
-                    self.fh_qzsl6.write(
-                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
-                        format(self.week, time_, prn, type_, len_,
-                               hexlify(msg_l6).decode()))
+            if self.week >= 0 and self.flg_qzsl6:
+                if self.prn_ref > 0 and prn != self.prn_ref:
+                    return
+                msg_l6 = buff[12:12+len_]
+                self.fh_qzsl6.write(
+                    "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
+                    format(self.week, time_, prn, type_, len_,
+                           hexlify(msg_l6).decode()))
 
             # errCorr = st.unpack_from('<B', buff, 12+len_)
         elif head == 'cd':  # BeiDou Navigation data
@@ -573,6 +580,8 @@ class jps(rcvDec):
                 return
 
             if self.flg_rnxnav:
+                if uGNSS.BDS not in self.sys_t:
+                    return 0
                 eph = None
                 if ch == 0:  # B1 (D1/D2)
                     if D2 == 0:
@@ -591,8 +600,8 @@ class jps(rcvDec):
 
             if ch == 6 and self.flg_bdsb2b and prn >= 59:  # B2b: BDS PPP
                 self.fh_bdsb2b.write(
-                    "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n".
-                    format(self.week, time_, prn, type_, len_*4,
+                    "{:4d}\t{:6d}\t{:3d}\t{:3d}\t{:s}\n".
+                    format(self.week, time_, prn, len_*4,
                            hexlify(b).decode()))
 
         elif head == 'gd':  # GPS Navigation data
@@ -606,6 +615,8 @@ class jps(rcvDec):
             b = bytes(np.array(msg, dtype='uint32'))
 
             if self.flg_rnxnav:
+                if uGNSS.IRN not in self.sys_t:
+                    return 0
                 eph = None
                 if type_ == 0:
                     eph = self.rn.decode_irn_lnav(self.week, time_, sat, b)
@@ -648,6 +659,8 @@ class jps(rcvDec):
                         bs.pack_into('u2', buff, 25*k, (d >> 23) & 0x3)
 
             if self.flg_rnxnav and type_ == 0:
+                if uGNSS.GLO not in self.sys_t:
+                    return 0
                 geph = self.rn.decode_glo_fdma(
                     self.week, self.tow, sat, buff, fcn)
 
@@ -665,6 +678,8 @@ class jps(rcvDec):
             b = bytes(np.array(msg, dtype='uint32'))
 
             if self.flg_rnxnav:
+                if uGNSS.GLO not in self.sys_t:
+                    return 0
                 geph = None
                 if type_ == 0:  # L1OC
                     geph = self.rn.decode_glo_l1oc(self.week, self.tow, sat, b)
@@ -699,6 +714,8 @@ class jps(rcvDec):
             if type_ == 0 or type_ == 2:  # INAV
                 b = buff[12:]
                 if self.flg_rnxnav:
+                    if uGNSS.GAL not in self.sys_t:
+                        return 0
                     eph = self.rn.decode_gal_inav(
                         self.week, time_, sat, type_, b)
                     if eph is not None:
@@ -711,20 +728,22 @@ class jps(rcvDec):
             elif type_ == 1:  # FNAV
                 b = buff[12:]
                 if self.flg_rnxnav:
+                    if uGNSS.GAL not in self.sys_t:
+                        return 0
                     eph = self.rn.decode_gal_fnav(
                         self.week, time_, sat, type_, b)
                     if eph is not None:
                         self.re.rnx_nav_body(eph, self.fh_rnxnav)
                 if self.flg_galfnav and self.week >= 0:
                     self.fh_galfnav.write(
-                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n"
-                        .format(self.week, time_, prn, type_, len_,
+                        "{:4d}\t{:6d}\t{:3d}\t{:3d}\t{:s}\n"
+                        .format(self.week, time_, prn, len_,
                                 hexlify(b).decode()))
             elif type_ == 6:  # CNAV
                 if self.flg_gale6 and self.week >= 0:
                     self.fh_gale6.write(
-                        "{:4d}\t{:6d}\t{:3d}\t{:1d}\t{:3d}\t{:s}\n"
-                        .format(self.week, time_, prn, type_, len_,
+                        "{:4d}\t{:6d}\t{:3d}\t{:3d}\t{:s}\n"
+                        .format(self.week, time_, prn, len_,
                                 hexlify(buff[12:]).decode()))
 
         elif head == 'WD':  # SBAS Navigation data
@@ -857,7 +876,7 @@ class jps(rcvDec):
             nsat = (len_-6)//8
             pr_ = np.array(st.unpack_from('d'*nsat, buff, 5))
             if self.navic_work_around:
-                pr_[pr_ < 0 & (np.array(self.sys) == GNSS.IRN)] = np.nan
+                pr_[((pr_ < 0) | (pr_ > 0.2))  & (np.array(self.sys) == GNSS.IRN)] = np.nan
             if head[1] == 'X':  # [RX]
                 self.PR_REF[:nsat] = pr_
             else:
@@ -869,7 +888,7 @@ class jps(rcvDec):
             nsat = (len_-6)//8
             cp_ = np.array(st.unpack_from('d'*nsat, buff, 5))
             if self.navic_work_around:
-                cp_[cp_ < 0 & (np.array(self.sys) == GNSS.IRN)] = np.nan
+                cp_[((cp_ < 0) | (cp_ > 1.0)) & (np.array(self.sys) == GNSS.IRN)] = np.nan
             self.cp[:nsat, ch] = cp_
 
         elif head[0] == 'c' and head[1] in self.ch_t.keys():
@@ -953,7 +972,7 @@ def decode(f, opt, args):
 
     bdir, fname = os.path.split(f)
 
-    prefix = fname[4:].removesuffix('.jps')+'_'
+    prefix = fname.removesuffix('.jps')
     prefix = str(Path(bdir) / prefix) if bdir else prefix
     jpsdec = jps(opt=opt, prefix=prefix, gnss_t=args.gnss)
     jpsdec.monlevel = 1
@@ -1003,11 +1022,14 @@ def main():
     parser.add_argument("--antenna", default='unknown',
                         help="Antenna type [unknown]")
 
-    parser.add_argument("-g", "--gnss", default='GRECIJ',
-                        help="GNSS [GRECIJ]")
+    parser.add_argument("-g", "--gnss", default='GRECJ',
+                        help="GNSS [GRECJ]")
 
     parser.add_argument("-j", "--jobs", default=int(mp.cpu_count() / 2),
                         type=int, help='Max. number of parallel processes')
+
+    parser.add_argument("--useL1CB", action='store_true',
+                        help="use L1C/B as like L1C/A for QZS")
 
     # Retrieve all command line arguments
     #
@@ -1020,7 +1042,7 @@ def main():
 
     opt.flg_gale6 = True
     opt.flg_galinav = True
-    opt.flg_galfnav = True
+    opt.flg_galfnav = False
 
     opt.flg_qzsl6 = True
 
@@ -1030,6 +1052,11 @@ def main():
     opt.flg_sbas = True
 
     opt.flg_gpslnav = True
+
+    opt.useL1CB = args.useL1CB
+
+    #args.inpFileName = "../data/doy2026-038/jav3038a.jps"
+    #decode(args.inpFileName, opt, args)
 
     # Start processing pool
     #
