@@ -12,7 +12,7 @@ from tqdm import tqdm  # Progress bar
 # Configuration
 #
 LOCAL_BASE_DIR = "../data"  # Data directory
-FILE_LIST = "../data/igs_files.txt"   # File containing destination & FTP URLs
+DEFAULT_FILE_LIST = "../data/igs_files.txt"   # File containing destination & FTP URLs
 
 
 def gps_to_datetime(gps_week, gps_day_of_week):
@@ -74,14 +74,14 @@ def connect_ftp(host):
     return ftp
 
 
-def read_file_list():
+def read_file_list(file_list_path=DEFAULT_FILE_LIST):
     """Read the list of destination folders and FTP URLs from a file."""
-    if not os.path.exists(FILE_LIST):
-        print(f"Error: {FILE_LIST} not found!")
+    if not os.path.exists(file_list_path):
+        print(f"Error: {file_list_path} not found!")
         return []
 
     entries = []
-    with open(FILE_LIST, "r") as f:
+    with open(file_list_path, "r") as f:
         for line in f:
             parts = line.strip().split(maxsplit=1)
             if line.startswith('#') or len(parts) == 0:
@@ -161,9 +161,9 @@ def download_http(url, filename, local_filename):
         print(f"Warning: Failed to download {filename} from {url} - {e}")
 
 
-def download_files():
+def download_files(file_list_path=DEFAULT_FILE_LIST):
     """Download files from the provided list of FTP URLs."""
-    entries = read_file_list()
+    entries = read_file_list(file_list_path)
     if not entries:
         print("No valid entries found. Exiting.")
         return
@@ -244,4 +244,14 @@ def download_files():
 
 
 if __name__ == "__main__":
-    download_files()
+    import argparse
+    parser = argparse.ArgumentParser(description="Download IGS files from a list.")
+    parser.add_argument(
+        "file_list",
+        nargs="?",
+        default=DEFAULT_FILE_LIST,
+        help=f"Path to the file containing destination folders & FTP URLs (default: {DEFAULT_FILE_LIST})"
+    )
+    args = parser.parse_args()
+
+    download_files(args.file_list)
