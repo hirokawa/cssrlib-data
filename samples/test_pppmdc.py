@@ -97,7 +97,7 @@ if file_stec is not None:
         print("ERROR: cannot open L6 message file {}!".format(file_stec))
         sys_exit(-1)
 
-iono_opt = 2 if prn_ref_ext > 0 or (file_stec is not None) else 1
+iono_opt = 3 if prn_ref_ext > 0 or (file_stec is not None) else 1
 
 rnx = rnxdec()
 nav = Nav()
@@ -185,7 +185,7 @@ for ne in range(nep):
 
         if file_stec is not None:  # STEC read from file
             cs_.decode_l6msg(fc.read(250), 0)
-            if cs_.sid == 1:  # end of sub-frame
+            if cs_.sid == 1 and cs_.buff_p is not None:  # end of sub-frame
                 cs.decode_cssr(bytes(cs_.buff_p), 0)
 
         cs.inet = cs.find_grid_index(ecef2pos(nav.x[:3]))
@@ -193,7 +193,7 @@ for ne in range(nep):
     # Call PPP module
     #
     if (cs.lc[0].cstat & 0xf) == 0xf:
-        if iono_opt == 2:  # STEC is available
+        if iono_opt in (2, 3):  # STEC is available
             mask_s = 1 << sc.STEC
             if cs.inet > 0 and \
                     cs.lc[cs.inet].cstat & mask_s == mask_s:
