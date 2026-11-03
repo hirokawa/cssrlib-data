@@ -127,9 +127,9 @@ if flg_plot:
             plt.plot(t[idx], vstatus[idx, ctr - 1] * ctr, '.',
                      label=f'CTR{ctr}')
     plt.grid()
-    plt.legend(loc='lower right', ncol=4)
+    plt.legend(loc='upper right', ncol=4)
     plt.xlim([0, t[-1] if len(t) > 0 else nep])
-    plt.ylim([0, 8])
+    plt.ylim([0, 10])
     ax.set_yticks(range(1, 8))
     ax.set_yticklabels([f'CTR{c}' for c in range(1, 8)])
     plt.ylabel('authenticated CTR', fontsize=fsz)
