@@ -20,7 +20,9 @@ def decode_msg(v, tow, prn_ref, l6_ch=0, prn_ref_ext=0, l6_ch_ext=0):
 
     msg, msg_e = None, None
 
-    vi_ = v[v['tow'] == tow]
+    i1 = np.searchsorted(v['tow'], tow, side='left')
+    i2 = np.searchsorted(v['tow'], tow, side='right')
+    vi_ = v[i1:i2]
     vi = vi_[(vi_['type'] == l6_ch) & (vi_['prn'] == prn_ref)]
     if len(vi) > 0:
         msg = unhexlify(vi['nav'][0])
