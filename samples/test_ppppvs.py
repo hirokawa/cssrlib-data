@@ -25,7 +25,10 @@ ttl = 'test_ppppvs'
 def decode_msg(v, tow, prn_ref, sbas_type=1):
     """ find valid correction message """
     msg = None
-    vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+    i1 = np.searchsorted(v['tow'], tow, side='left')
+    i2 = np.searchsorted(v['tow'], tow, side='right')
+    vi_ = v[i1:i2]
+    vi = vi_[vi_['prn'] == prn_ref]
     if sbas_type == 0:  # L1
         vi = vi[vi['type'] <= 30]
     else:  # DFMC L5
@@ -98,10 +101,12 @@ nav.pmode = 0
 #
 nav = rnx.decode_nav(navfile, nav)
 
-# cs = cssr_pvs()
-# cs.monlevel = 0
+cs = cssr_pvs()
+cs.monlevel = 0
+"""
 cs = cssr_pvs(f'{ttl}_ssr.log')
 cs.monlevel = 2
+"""
 
 # Load RINEX OBS file header
 #

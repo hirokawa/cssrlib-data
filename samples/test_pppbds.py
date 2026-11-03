@@ -14,7 +14,10 @@ from cssrlib.utils import process
 def decode_msg(v, tow, prn_ref):
     """ find valid correction message """
     msg = None
-    vi = v[(v['tow'] == tow) & (v['prn'] == prn_ref)]
+    i1 = np.searchsorted(v['tow'], tow, side='left')
+    i2 = np.searchsorted(v['tow'], tow, side='right')
+    vi_ = v[i1:i2]
+    vi = vi_[vi_['prn'] == prn_ref]
     if len(vi) > 0:
         msg = unhexlify(vi['nav'][0])
     return msg

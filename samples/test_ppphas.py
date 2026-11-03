@@ -150,7 +150,9 @@ for ne in range(nep):
     if ne == 0:
         proc.init_time(obs.t)
 
-    vi = v[v['tow'] == tow]
+    i1 = np.searchsorted(v['tow'], tow, side='left')
+    i2 = np.searchsorted(v['tow'], tow, side='right')
+    vi = v[i1:i2]
 
     HASmsg = cnav.decode_cnav(tow, vi)  # decode CNAV pages
     if HASmsg is not None:
